@@ -1,0 +1,614 @@
+# =============================================================================
+# Streaming Release Tracker — MVP schema
+#
+# Design rules held from the planning phase:
+#   1. At least one resolver does REAL computation, not passthrough.
+#      -> Release.daysUntilRelease, Release.window, Query.savingsEstimate
+#   2. Model as if a second streaming service already exists, even though only
+#      Netflix is wired up. Nothing below names Netflix. Provider is data.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# Custom scalars
+#
+# These exist so the type system carries meaning that `String` throws away.
+# Each needs a serialize/parseValue/parseLiteral implementation server-side.
+# -----------------------------------------------------------------------------
+
+"An ISO-8601 calendar date with no time component, e.g. \"2026-11-26\"."
+scalar Date
+
+"An ISO-8601 instant, e.g. \"2026-11-26T08:00:00Z\". Used for cache metadata."
+scalar DateTime
+
+"An absolute http(s) URL. Validated on serialize so clients can trust it."
+scalar URL
+
+
+# -----------------------------------------------------------------------------
+# Enums
+# -----------------------------------------------------------------------------
+
+"""
+Availability is region-scoped: a title on Netflix US may not be on Netflix GB.
+Starting with four markets keeps the enum honest; widen as coverage is verified.
+"""
+enum Region {
+  US
+  GB
+  CA
+  AU
+}
+
+"""
+How a title is available. The pause/unpause product only cares about
+SUBSCRIPTION, but upstream providers report all of these and collapsing them
+server-side would be lossy.
+"""
+enum OfferType {
+  SUBSCRIPTION
+  FREE_WITH_ADS
+  RENT
+  BUY
+}
+
+"Where a release sits relative to today. Computed, never stored."
+enum ReleaseWindow {
+  UPCOMING
+  AVAILABLE_NOW
+  LEAVING_SOON
+  DEPARTED
+}
+
+"Requested image dimension. The provider maps this onto its own size buckets."
+enum ImageSize {
+  SMALL
+  MEDIUM
+  LARGE
+  ORIGINAL
+}
+
+enum SeriesStatus {
+  RETURNING
+  ENDED
+  CANCELED
+  IN_PRODUCTION
+}
+
+"The recommendation a savings estimate makes for one provider in one month."
+enum SubscriptionAction {
+  KEEP
+  PAUSE
+}
+
+
+# -----------------------------------------------------------------------------
+# Providers
+#
+# A Provider is a streaming service. Netflix is a row, not a type. Adding Max
+# or Disney+ later touches data and one adapter class, never this schema.
+# -----------------------------------------------------------------------------
+
+type Provider {
+  id: ID!
+
+  "Stable machine name used in filters and URLs, e.g. \"netflix\"."
+  slug: String!
+
+  "Human-facing name, e.g. \"Netflix\"."
+  name: String!
+
+  logoUrl(size: ImageSize = SMALL): URL
+
+  """
+  Pricing is per-region and per-tier. Hardcoded in the MVP; this is the
+  messiest real-world data in the product and the schema should not pretend
+  otherwise.
+  """
+  plans(region: Region! = US): [SubscriptionPlan!]!
+
+  """
+  Releases for this provider only. Same shape as Query.releases so a client can
+  reuse one fragment for both the global feed and a per-service page.
+  N+1 hotspot: resolving this for a list of providers must batch.
+  """
+  releases(
+    filter: ReleaseFilter
+    first: Int = 20
+    after: String
+  ): ReleaseConnection!
+}
+
+type SubscriptionPlan {
+  id: ID!
+
+  "e.g. \"Standard with ads\"."
+  name: String!
+
+  """
+  Integer minor units, never a float. Money in a Float is a bug waiting for a
+  rounding error, and GraphQL has no decimal scalar.
+  """
+  monthlyPriceCents: Int!
+
+  "ISO-4217, e.g. \"USD\". Pairs with monthlyPriceCents; neither is useful alone."
+  currency: String!
+
+  region: Region!
+}
+
+
+# -----------------------------------------------------------------------------
+# Media
+#
+# MediaItem is an INTERFACE, not a union. Movie and Series share most of their
+# fields (title, overview, artwork, genres), and an interface lets a client
+# select those once without a fragment per concrete type, while still allowing
+# `... on Series { seasonCount }` where the types genuinely diverge.
+# A union would force fragments for even `title`, which is friction with no
+# payoff. See the note in the handoff about where a union does earn its place.
+# -----------------------------------------------------------------------------
+
+interface MediaItem {
+  id: ID!
+
+  "Localized title for the requested region, falling back to the original."
+  title: String!
+
+  "Original-language title, when it differs from `title`."
+  originalTitle: String
+
+  "Synopsis. Nullable: upstream coverage is genuinely patchy for new titles."
+  overview: String
+
+  "Vertical key art. Nullable, and clients must design for its absence."
+  posterUrl(size: ImageSize = MEDIUM): URL
+
+  "Horizontal art for hero/detail layouts."
+  backdropUrl(size: ImageSize = LARGE): URL
+
+  genres: [Genre!]!
+
+  "ISO-639-1, e.g. \"en\"."
+  originalLanguage: String
+
+  """
+  Best available trailer, chosen server-side by a ranking rule rather than
+  handing the client an unordered list to guess from.
+  """
+  trailer: Video
+
+  """
+  Every provider carrying this title, across services. This field is the entire
+  argument for the aggregation layer: one title, many services, one query.
+  """
+  releases(region: Region! = US): [Release!]!
+}
+
+type Movie implements MediaItem {
+  id: ID!
+  title: String!
+  originalTitle: String
+  overview: String
+  posterUrl(size: ImageSize = MEDIUM): URL
+  backdropUrl(size: ImageSize = LARGE): URL
+  genres: [Genre!]!
+  originalLanguage: String
+  trailer: Video
+  releases(region: Region! = US): [Release!]!
+
+  # --- Movie-only ---
+
+  runtimeMinutes: Int
+
+  "Cinema release, distinct from the date it lands on a streaming service."
+  theatricalReleaseDate: Date
+}
+
+type Series implements MediaItem {
+  id: ID!
+  title: String!
+  originalTitle: String
+  overview: String
+  posterUrl(size: ImageSize = MEDIUM): URL
+  backdropUrl(size: ImageSize = LARGE): URL
+  genres: [Genre!]!
+  originalLanguage: String
+  trailer: Video
+  releases(region: Region! = US): [Release!]!
+
+  # --- Series-only ---
+
+  seasonCount: Int
+  episodeCount: Int
+  status: SeriesStatus
+  firstAirDate: Date
+
+  """
+  A series arrives season by season, so a Release points at a season, not the
+  whole show. Nullable for providers that only report show-level availability.
+  """
+  seasonNumber: Int
+}
+
+type Genre {
+  id: ID!
+  name: String!
+}
+
+type Video {
+  id: ID!
+  name: String!
+
+  "Playback page, e.g. a YouTube watch URL. Composed server-side from key+site."
+  url: URL!
+
+  "\"Trailer\", \"Teaser\", \"Clip\"."
+  type: String!
+}
+
+
+# -----------------------------------------------------------------------------
+# Release — the aggregation join
+#
+# The thing a user tracks is not a movie; it is the EVENT of a movie arriving
+# on a service in a market on a date. Making that its own type is what lets one
+# title carry different dates on different services, and what gives the
+# computed fields somewhere sensible to live.
+# -----------------------------------------------------------------------------
+
+type Release {
+  """
+  Opaque and composed of (provider, media, region, date). Clients must not
+  parse it; it is also the cursor basis for pagination.
+  """
+  id: ID!
+
+  media: MediaItem!
+
+  provider: Provider!
+
+  region: Region!
+
+  """
+  The date the title becomes watchable on this provider in this region.
+
+  SUPERSEDED by `timing: ReleaseTiming!` below once a data source exists that
+  reports imprecise announcements. Left in place here because `window` and
+  `availableUntil` are written against it; swapping it is a coordinated change,
+  not a field rename. TMDB reports exact dates or nothing, so the MVP needs
+  only this.
+  """
+  availableFrom: Date!
+
+  "Known departure date. Null means no announced end — most of the catalogue."
+  availableUntil: Date
+
+  offerType: OfferType!
+
+  """
+  Whether this provider is the only subscription carrier in this region.
+  Derived by comparing carriers, not taken from upstream marketing copy.
+  """
+  exclusive: Boolean!
+
+  # --- Computed. These are why this is GraphQL and not a REST passthrough. ---
+
+  """
+  Whole days from today to `availableFrom`, in the caller's timezone.
+  Negative once released. Computed per-request: caching a date arithmetic
+  result across a midnight boundary is how off-by-one bugs get shipped.
+  """
+  daysUntilRelease(timezone: String = "UTC"): Int!
+
+  "Bucketed status derived from availableFrom, availableUntil and today."
+  window(timezone: String = "UTC"): ReleaseWindow!
+
+  """
+  When this row was last reconciled with upstream. Surfacing staleness beats
+  silently serving a three-day-old date for a product built on dates.
+  """
+  fetchedAt: DateTime!
+}
+
+
+# -----------------------------------------------------------------------------
+# Pagination (Relay-style cursor connections)
+#
+# Offset pagination breaks on an insert-heavy feed: a title added upstream
+# between page 1 and page 2 shifts every later row and the user sees a
+# duplicate. Cursors are stable against that.
+# -----------------------------------------------------------------------------
+
+type ReleaseConnection {
+  edges: [ReleaseEdge!]!
+  pageInfo: PageInfo!
+
+  """
+  Nullable on purpose: an exact count can be expensive or unknowable upstream,
+  and a schema that promises Int! forces a lie or a slow query.
+  """
+  totalCount: Int
+}
+
+type ReleaseEdge {
+  cursor: String!
+  node: Release!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+
+# -----------------------------------------------------------------------------
+# Filtering
+# -----------------------------------------------------------------------------
+
+input ReleaseFilter {
+  "Provider slugs. Omitted or empty means all providers."
+  providerSlugs: [String!]
+
+  region: Region = US
+
+  "Inclusive lower bound on availableFrom."
+  from: Date
+
+  "Inclusive upper bound on availableFrom."
+  to: Date
+
+  offerTypes: [OfferType!]
+
+  "Only titles carried by exactly one subscription service in this region."
+  exclusiveOnly: Boolean = false
+
+  genreIds: [ID!]
+
+  """
+  Restrict to one concrete MediaItem type. Kept as an enum rather than two
+  boolean flags so illegal combinations are unrepresentable.
+  """
+  mediaType: MediaType
+}
+
+enum MediaType {
+  MOVIE
+  SERIES
+}
+
+
+# -----------------------------------------------------------------------------
+# Savings — the real computation
+#
+# Given a set of services and a date window, decide month by month whether the
+# slate justifies the subscription, and total what pausing the rest would save.
+# This is the field that answers "why GraphQL and not a REST proxy": it joins
+# third-party catalogue data to pricing the client never sees, and returns the
+# reasoning alongside the number.
+# -----------------------------------------------------------------------------
+
+input SavingsEstimateInput {
+  "Services the user subscribes to (or is considering)."
+  providerSlugs: [String!]!
+
+  from: Date!
+  to: Date!
+
+  region: Region! = US
+
+  """
+  A month with fewer than this many qualifying releases is a dry month and the
+  estimate recommends pausing. Exposed as an input rather than buried in the
+  resolver so the client can offer a strictness slider.
+  """
+  minReleasesToJustify: Int! = 2
+
+  """
+  Only count releases matching these filters toward the threshold — e.g. only
+  exclusives, or only series. Reuses ReleaseFilter so the rules stay in one place.
+  """
+  countOnly: ReleaseFilter
+}
+
+type SavingsEstimate {
+  "Sum of savedCents across months recommending PAUSE."
+  totalSavedCents: Int!
+
+  currency: String!
+
+  "One entry per (month x provider) in the window."
+  months: [MonthlySavings!]!
+
+  "Echoes the resolved window so a client can label the result unambiguously."
+  from: Date!
+  to: Date!
+}
+
+type MonthlySavings {
+  "\"2026-11\". A String, not a Date: a month is not a day."
+  month: String!
+
+  provider: Provider!
+
+  "Releases in this month that passed `countOnly`."
+  releaseCount: Int!
+
+  recommendation: SubscriptionAction!
+
+  "Zero when the recommendation is KEEP."
+  savedCents: Int!
+
+  "The plan whose price drove the figure."
+  plan: SubscriptionPlan!
+
+  """
+  The releases behind a KEEP. Returning the evidence, not just the verdict, is
+  what makes the estimate arguable instead of magic.
+  """
+  drivingReleases: [Release!]!
+}
+
+
+# -----------------------------------------------------------------------------
+# Root
+#
+# No Mutation type in the MVP. The product is read-only until accounts exist,
+# and an empty Mutation stub would be schema noise.
+# -----------------------------------------------------------------------------
+
+type Query {
+  "All supported services."
+  providers: [Provider!]!
+
+  provider(slug: String!): Provider
+
+  """
+  The main feed: upcoming releases across every provider, newest window first.
+  """
+  releases(
+    filter: ReleaseFilter
+    first: Int = 20
+    after: String
+  ): ReleaseConnection!
+
+  release(id: ID!): Release
+
+  "Fetch one title. Returns the interface; client narrows with a fragment."
+  mediaItem(id: ID!): MediaItem
+
+  savingsEstimate(input: SavingsEstimateInput!): SavingsEstimate!
+}
+
+
+# =============================================================================
+# DEFERRED: tiered release timing
+#
+# Cut from the MVP on 2026-09-11 for one reason: TMDB has no data for it.
+# TMDB reports an exact release date or no date at all. It has no vocabulary
+# for "Fall 2026" or "sometime in 2027", so every variant below except
+# ConfirmedDate would have been an empty branch dressed up as a feature.
+#
+# Revisit when a second source lands that carries announcement text, or if
+# curated entries get added by hand. The design holds; only the pipeline is
+# missing.
+#
+# Note: `Region` is already defined above and is reused by SeasonWindow.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# ReleaseTiming — announcement precision
+#
+# Streamers do not announce at one granularity. Roughly three months out a date
+# is firm and exact; beyond that the announcement degrades to a month, and
+# further still to a year. Storing all three as `Date!` would mean writing
+# 2027-01-01 for "sometime in 2027" and hoping every client remembers it is a
+# placeholder. It will not.
+#
+# So this is a UNION, and the absence of shared fields is the entire point: a
+# client cannot render a year-level guess as a confirmed date, because there is
+# no field it could read to do so. Compare MediaItem above, which is an
+# interface precisely because sharing fields there is a convenience rather than
+# a hazard. Same codebase, opposite answer, for a reason.
+#
+# Deliberately NOT included: a shared `label: String!` display string. It would
+# have collapsed all three into an interface and let clients skip the branch —
+# which is the exact mistake this type exists to prevent. Formatting
+# "November 2026" from year+month is one line of Intl.DateTimeFormat.
+#
+# Quarters are deliberately NOT a variant: "Q3 2026" is corporate vocabulary,
+# not something a consumer UI should ever print. The adapter normalizes an
+# upstream quarter into whichever variant below actually communicates.
+# -----------------------------------------------------------------------------
+
+"""
+Meteorological seasons, three months each. Only meaningful alongside a market -
+see SeasonWindow.announcedFor.
+"""
+enum Season {
+  SPRING
+  SUMMER
+  FALL
+  WINTER
+}
+
+union ReleaseTiming =
+    ConfirmedDate
+  | MonthWindow
+  | SeasonWindow
+  | YearWindow
+
+"An announced, exact date. In practice this means roughly the next 3 months."
+type ConfirmedDate {
+  date: Date!
+
+  """
+  Whole days from today to `date`, in the caller's timezone. Negative once
+  released.
+
+  This lives here rather than on Release so it can stay non-null: asking how
+  many days until "sometime in 2027" is not a question with an answer, and
+  putting the field on the only variant that can answer it makes that
+  unrepresentable rather than merely documented.
+
+  Computed per request, never stored: "days until" is a calendar question
+  whose answer depends on the observer, and caching it across a midnight
+  boundary is how off-by-one bugs ship.
+  """
+  daysUntil(timezone: String = "UTC"): Int!
+}
+
+"Announced to the month, e.g. \"November 2026\"."
+type MonthWindow {
+  year: Int!
+
+  "1-12."
+  month: Int!
+}
+
+"""
+A season announced for a particular market, e.g. \"Fall 2026\".
+
+A season is not a date range, it is a date range *relative to where the
+announcement was aimed*: fall is Sep-Nov in the northern hemisphere and
+Mar-May in the southern. The same three words name opposite halves of the
+year. Carrying `announcedFor` is what makes the label resolvable instead of
+ambiguous, and it preserves the provenance - that Netflix said "this fall"
+to an Australian audience is a fact worth not throwing away.
+"""
+type SeasonWindow {
+  year: Int!
+
+  season: Season!
+
+  """
+  The market the announcement was made for. This disambiguates `season`; it is
+  not a claim about where the title will be available.
+  """
+  announcedFor: Region!
+
+  """
+  `season` resolved against `announcedFor`, as an explicit span.
+
+  The third resolver doing real work: hemisphere lookup plus the year-boundary
+  carry that WINTER needs - northern winter 2026 starts in December 2026 and
+  ends in February 2027, so a naive (year, startMonth, endMonth) triple cannot
+  represent it without lying.
+
+  Exposed as a PAIR on purpose. A lone `startsOn: Date!` would be the exact
+  hazard this union exists to prevent - a client would render it as the
+  release date. A span that must be read as a span is much harder to misuse,
+  and the alternative, making every client reimplement hemisphere mapping, is
+  server work being pushed downhill.
+  """
+  windowStartsOn: Date!
+  windowEndsOn: Date!
+}
+
+"Announced to the year only, e.g. \"2027\". The vaguest tier worth showing."
+type YearWindow {
+  year: Int!
+}

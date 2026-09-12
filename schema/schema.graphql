@@ -1,0 +1,210 @@
+# =============================================================================
+# Streaming Release Tracker — MVP schema
+#
+# Scope: read-only. Upcoming releases on one service (Netflix), with titles,
+# previews, thumbnails and descriptions. No auth, no user data, no persistence.
+#
+# Two rules carried over from planning, and they are the only two things here
+# that are not strictly minimal:
+#
+#   1. One resolver must do real work. -> Release.daysUntilRelease
+#   2. Model as if a second service already exists. -> Provider is a row of
+#      data, not a type. The word "Netflix" does not appear in this file.
+#
+# Everything else deferred lives in ./schema_roadmap.graphql, which is a
+# design sketch, not a build target.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# Scalars
+# -----------------------------------------------------------------------------
+
+"An ISO-8601 calendar date with no time component, e.g. \"2026-11-26\"."
+scalar Date
+
+"An absolute http(s) URL. Validated on serialize so clients can trust it."
+scalar URL
+
+
+# -----------------------------------------------------------------------------
+# Enums
+# -----------------------------------------------------------------------------
+
+"""
+Requested image dimension. The provider adapter maps this onto whatever size
+buckets the upstream API uses. Present in the MVP because thumbnails are in
+scope and a grid and a detail page need different sizes of the same image.
+"""
+enum ImageSize {
+  SMALL
+  MEDIUM
+  LARGE
+  ORIGINAL
+}
+
+# -----------------------------------------------------------------------------
+# Provider
+#
+# Deliberately thin. No pricing, no plans — that arrives with the savings
+# feature. What matters for the MVP is that a release points AT a provider
+# rather than assuming one.
+# -----------------------------------------------------------------------------
+
+type Provider {
+  id: ID!
+
+  "Stable machine name used in filters and URLs, e.g. \"netflix\"."
+  slug: String!
+
+  "Human-facing name."
+  name: String!
+
+  logoUrl(size: ImageSize = SMALL): URL
+}
+
+
+# -----------------------------------------------------------------------------
+# Media
+#
+# An interface rather than a union: Movie and Series share nearly every field,
+# so a union would force a type-conditional fragment even to read `title`.
+# Clients select the common fields once and narrow only where the types really
+# diverge.
+# -----------------------------------------------------------------------------
+
+interface MediaItem {
+  id: ID!
+
+  title: String!
+
+  "Synopsis. Nullable — upstream coverage is patchy for unannounced titles."
+  overview: String
+
+  "Vertical key art. Nullable, and the client must design for its absence."
+  posterUrl(size: ImageSize = MEDIUM): URL
+
+  "Horizontal art for hero and detail layouts."
+  backdropUrl(size: ImageSize = LARGE): URL
+
+  """
+  Best available preview, picked server-side by a ranking rule rather than
+  handing the client an unordered list to choose from.
+  """
+  trailer: Video
+}
+
+type Movie implements MediaItem {
+  id: ID!
+  title: String!
+  overview: String
+  posterUrl(size: ImageSize = MEDIUM): URL
+  backdropUrl(size: ImageSize = LARGE): URL
+  trailer: Video
+
+  runtimeMinutes: Int
+}
+
+type Series implements MediaItem {
+  id: ID!
+  title: String!
+  overview: String
+  posterUrl(size: ImageSize = MEDIUM): URL
+  backdropUrl(size: ImageSize = LARGE): URL
+  trailer: Video
+
+  seasonCount: Int
+}
+
+type Video {
+  id: ID!
+  name: String!
+
+  "Playback page. Composed server-side from the upstream key and site."
+  url: URL!
+
+  "\"Trailer\", \"Teaser\", \"Clip\"."
+  type: String!
+}
+
+
+# -----------------------------------------------------------------------------
+# Release
+#
+# The unit a user tracks is not a title, it is the EVENT of a title arriving
+# on a service on a date. Keeping this as its own type is what allows one
+# title to carry different dates on different services later without a
+# breaking change, and it gives the computed field a natural home.
+#
+# MVP simplifications, each reversible:
+#   - No region. Availability is genuinely region-scoped; the MVP assumes one
+#     market and the adapter hardcodes it.
+#   - No offer type. Subscription only.
+#   - No departure date. "Upcoming" only, not "leaving soon".
+# -----------------------------------------------------------------------------
+
+type Release {
+  "Opaque. Composed of (provider, media, date). Clients must not parse it."
+  id: ID!
+
+  media: MediaItem!
+
+  """
+  N+1 hotspot: resolving this across a list of releases is the textbook
+  DataLoader case. Batch it before the list grows.
+  """
+  provider: Provider!
+
+  "The date the title becomes watchable on this provider."
+  availableFrom: Date!
+
+  """
+  Whole days from today to `availableFrom`, in the caller's timezone.
+  Negative once released.
+
+  Computed per request, never stored: "days until" is a calendar question
+  whose answer depends on the observer, and caching it across a midnight
+  boundary is how off-by-one bugs ship.
+  """
+  daysUntilRelease(timezone: String = "UTC"): Int!
+}
+
+
+# -----------------------------------------------------------------------------
+# Root
+#
+# No Mutation: the MVP is read-only and an empty stub is noise.
+#
+# `releases` returns a plain list with a limit rather than a cursor connection.
+# Offset/limit is the wrong long-term answer for an insert-heavy feed — a title
+# added upstream between page fetches shifts every later row — but pagination
+# is not MVP logic. When it lands, this field changes shape. That is fine
+# before there is a client contract to break.
+# -----------------------------------------------------------------------------
+
+type Query {
+  """
+  The main feed: upcoming releases, soonest first.
+  """
+  releases(
+    "Filter to one service. Omitted means all providers."
+    providerSlug: String
+
+    "Inclusive lower bound on availableFrom. Defaults to today."
+    from: Date
+
+    "Inclusive upper bound on availableFrom."
+    to: Date
+
+    first: Int = 20
+  ): [Release!]!
+
+  release(id: ID!): Release
+
+  "Fetch one title. Returns the interface; the client narrows with a fragment."
+  mediaItem(id: ID!): MediaItem
+
+  providers: [Provider!]!
+
+  provider(slug: String!): Provider
+}
