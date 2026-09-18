@@ -1,7 +1,7 @@
 import type { ReleaseResolvers } from "../generated/graphql.js";
 
 export const Release: ReleaseResolvers = {
-  media: async (release, __dirname, ctx) => {
+  media: async (release, _a, ctx) => {
     const media = await ctx.loaders.media.load(release.mediaId);
     if (!media) {
       throw new Error(
