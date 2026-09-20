@@ -1,3 +1,6 @@
+import { GraphQLError } from "graphql";
+import { daysUntil } from "../dates.js";
+
 import type { ReleaseResolvers } from "../generated/graphql.js";
 
 export const Release: ReleaseResolvers = {
@@ -13,16 +16,25 @@ export const Release: ReleaseResolvers = {
 
   provider: async (release, _a, ctx) => {
     const provider = await ctx.loaders.provider.load(release.providerSlug);
-    if (!provider) {
-      throw new Error (
-        `Release ${release.id} references unknown provider ${release.providerSlug}`,
-      );
-    }
-    return provider;
-  },
+      if (!provider) {
+        throw new Error (
+          `Release ${release.id} references unknown provider ${release.providerSlug}`,
+        );
+      }
+      return provider;
+    },
 
-  daysUntilRelease: (release) =>
-    Math.ceil(
-      (new Date(release.availableFrom).getTime() - Date.now()) / 86_400_000,
-    ),
+    daysUntilRelease: (release, args, ctx) => {
+      const timezone = args.timezone ?? "UTC";
+    try {
+      return daysUntil(release.availableFrom, timezone, ctx.now);
+    } catch (err) {
+      if (err instanceof RangeError) {
+        throw new GraphQLError(`Unknown timezone "${timezone}"`, {
+          extensions: {code: "BAD_USER_INPUT"},
+        });
+      }
+      throw err;
+    }
+  },
 };
