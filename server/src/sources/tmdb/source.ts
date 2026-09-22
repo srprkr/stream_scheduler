@@ -12,6 +12,7 @@ import type {
   TmdbMovieDetail,
   TmdbMovieListItem,
   TmdbPage,
+  TmdbSeasonDetail,
   TmdbTvDetail,
   TmdbTvListItem,
   TmdbVideo,
@@ -76,6 +77,53 @@ async function mapLimit<T, R>(
   );
   await Promise.all(workers);
   return out;
+}
+
+/**
+ * Collapses a season's episode dates into the two facts the product needs:
+ * when the season is fully watchable, and whether it lands all at once.
+ *
+ * Netflix mostly full-drops, but not always - a weekly season can span two
+ * months, and treating its premiere as the binge date is what would tell a
+ * user to unpause eight weeks early.
+ */
+function analyseSeason(season: TmdbSeasonDetail): {
+  firstAirDate: string | null;
+  bingeableFrom: string | null;
+  isFullDrop: boolean;
+  episodeCount: number;
+  watchTimeMinutes: number | null;
+} {
+  const dates = season.episodes
+    .map((e) => e.air_date)
+    .filter((d): d is string => Boolean(d))
+    .sort();
+
+  const runtimes = season.episodes
+    .map((e) => e.runtime)
+    .filter((r): r is number => typeof r === "number" && r > 0);
+  // Partial runtime data would understate the season, so it is all or nothing.
+  const watchTimeMinutes =
+    runtimes.length === season.episodes.length && runtimes.length > 0
+      ? runtimes.reduce((a, b) => a + b, 0)
+      : null;
+
+  if (dates.length === 0) {
+    return {
+      firstAirDate: null,
+      bingeableFrom: null,
+      isFullDrop: true,
+      episodeCount: season.episodes.length,
+      watchTimeMinutes,
+    };
+  }
+  return {
+    firstAirDate: dates[0] as string,
+    bingeableFrom: dates[dates.length - 1] as string,
+    isFullDrop: new Set(dates).size === 1,
+    episodeCount: season.episodes.length,
+    watchTimeMinutes,
+  };
 }
 
 /**
@@ -161,7 +209,9 @@ export class TmdbSource implements CatalogSource {
       }
     });
 
-    const releases: ReleaseRecord[] = [];
+    // Seasons whose listed air_date lands in the window. Episode-level detail
+    // is fetched only for these, not for every season of every candidate.
+    const wanted: { seriesId: number; seasonNumber: number }[] = [];
     for (const detail of details) {
       if (!detail) continue;
       for (const season of detail.seasons ?? []) {
@@ -169,14 +219,45 @@ export class TmdbSource implements CatalogSource {
         if (season.season_number === 0) continue;
         if (!season.air_date) continue;
         if (season.air_date < today || season.air_date > end) continue;
-        releases.push({
-          id: `release:netflix:tv:${detail.id}:s${season.season_number}`,
-          mediaId: `tv:${detail.id}`,
-          providerSlug: "netflix",
-          availableFrom: season.air_date,
-          seasonNumber: season.season_number,
-        });
+        wanted.push({ seriesId: detail.id, seasonNumber: season.season_number });
       }
+    }
+
+    const seasonDetails = await mapLimit(wanted, CONCURRENCY, async (w) => {
+      try {
+        return await this.client.get<TmdbSeasonDetail>(
+          `/tv/${w.seriesId}/season/${w.seasonNumber}`,
+        );
+      } catch {
+        return null;
+      }
+    });
+
+    const releases: ReleaseRecord[] = [];
+    for (const [i, w] of wanted.entries()) {
+      const season = seasonDetails[i];
+      const analysis = season ? analyseSeason(season) : null;
+
+      // Episode dates are the better source: they disagree with
+      // seasons[].air_date often enough to matter. Fall back to the listed
+      // date when the season endpoint gave us nothing.
+      const listed = details
+        .find((d) => d?.id === w.seriesId)
+        ?.seasons?.find((x) => x.season_number === w.seasonNumber)?.air_date;
+      const availableFrom = analysis?.firstAirDate ?? listed;
+      if (!availableFrom) continue;
+
+      releases.push({
+        id: `release:netflix:tv:${w.seriesId}:s${w.seasonNumber}`,
+        mediaId: `tv:${w.seriesId}`,
+        providerSlug: "netflix",
+        availableFrom,
+        bingeableFrom: analysis?.bingeableFrom ?? availableFrom,
+        isFullDrop: analysis?.isFullDrop ?? true,
+        episodeCount: analysis?.episodeCount ?? null,
+        watchTimeMinutes: analysis?.watchTimeMinutes ?? null,
+        seasonNumber: w.seasonNumber,
+      });
     }
     return releases;
   }
@@ -196,10 +277,14 @@ export class TmdbSource implements CatalogSource {
       .filter((m) => m.release_date)
       .map((m) => ({
         id: `release:netflix:movie:${m.id}`,
+        episodeCount: null,
         mediaId: `movie:${m.id}`,
         providerSlug: "netflix",
         availableFrom: m.release_date,
+        bingeableFrom: m.release_date,
+        isFullDrop: true,
         seasonNumber: null,
+        watchTimeMinutes: null,
       }));
   }
 
@@ -230,10 +315,14 @@ export class TmdbSource implements CatalogSource {
         if (!d.release_date) return null;
         return {
           id,
+          episodeCount: null,          
           mediaId: `movie:${tmdbId}`,
           providerSlug: slug,
           availableFrom: d.release_date,
+          bingeableFrom: d.release_date,
+          isFullDrop: true,
           seasonNumber: null,
+          watchTimeMinutes: d.runtime,
         };
       }
 
@@ -241,14 +330,33 @@ export class TmdbSource implements CatalogSource {
         const d = await this.client.get<TmdbTvDetail>(`/tv/${tmdbId}`);
         const wanted = Number(seasonPart?.replace(/^s/, ""));
         const season = (d.seasons ?? []).find((x) => x.season_number === wanted);
-        const availableFrom = season?.air_date ?? d.first_air_date;
+        let analysis: ReturnType<typeof analyseSeason> | null = null;
+        if (season) {
+          try {
+            analysis = analyseSeason(
+              await this.client.get<TmdbSeasonDetail>(
+                `/tv/${tmdbId}/season/${season.season_number}`,
+              ),
+            );
+          } catch {
+            analysis = null;
+          }
+        }
+
+        const availableFrom =
+          analysis?.firstAirDate ?? season?.air_date ?? d.first_air_date;
+
         if (!availableFrom) return null;
         return {
+          episodeCount: analysis?.episodeCount ?? null,
           id,
           mediaId: `tv:${tmdbId}`,
           providerSlug: slug,
           availableFrom,
+          bingeableFrom: analysis?.bingeableFrom ?? availableFrom,
+          isFullDrop: analysis?.isFullDrop ?? true,
           seasonNumber: season?.season_number ?? null,
+          watchTimeMinutes: analysis?.watchTimeMinutes ?? null,
         };
       }
 

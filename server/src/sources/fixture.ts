@@ -132,11 +132,16 @@ export class FixtureSource implements CatalogSource {
   private releases(): ReleaseRecord[] {
     const today = this.now();
     return RELEASE_PLAN.map(([mediaId, providerSlug, offset, seasonNumber]) => ({
+      availableFrom: isoDate(addDays(today, offset)),
+      // media:5 airs weekly, so the fixture exercises the non-full-drop path.
+      episodeCount: seasonNumber === null ? null : 8,
       id: `release:${providerSlug}:${mediaId}`,
       mediaId,
+      isFullDrop: mediaId !== "media:5",
+      bingeableFrom: isoDate(addDays(today, mediaId === "media:5" ? offset + 63 : offset)),
       providerSlug,
-      availableFrom: isoDate(addDays(today, offset)),
       seasonNumber,
+      watchTimeMinutes: seasonNumber === null ? null : 8 * 52,
     }));
   }
 

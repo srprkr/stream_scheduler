@@ -39,6 +39,19 @@ export interface TmdbSeason {
   name: string;
 }
 
+export interface TmdbEpisode {
+  episode_number: number;
+  air_date: string | null;
+  runtime: number | null;
+}
+
+export interface TmdbSeasonDetail {
+  season_number: number;
+  air_date: string | null;
+  episodes: TmdbEpisode[];
+}
+
+
 export interface TmdbTvDetail extends TmdbTvListItem {
   number_of_seasons: number | null;
   seasons?: TmdbSeason[];

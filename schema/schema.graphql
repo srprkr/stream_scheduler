@@ -159,6 +159,14 @@ type Release {
   availableFrom: Date!
 
   """
+  The date the whole season can be watched in one sitting. Equal to
+  availableFrom for a full drop; the last episode's date when a season airs
+  weekly. This, not availableFrom, is the date a pause/resume decision should
+  be made against.
+  """
+  bingeableFrom: Date!
+
+  """
   Whole days from today to `availableFrom`, in the caller's timezone.
   Negative once released.
 
@@ -168,12 +176,30 @@ type Release {
   """
   daysUntilRelease(timezone: String = "UTC"): Int!
 
+
+  "How many episodes this season holds. Null for a film."
+  episodeCount: Int
+
+  """
+  False when a season's episodes arrive over time rather than all at once.
+  Unpausing on availableFrom for one of these wastes most of the month.
+  """
+  isFullDrop: Boolean!
+
+
   """
   Which season is arriving, when the release is a series. Null for movies.
   A value of 1 is a series premiere; anything higher is a returning season,
   which is the stronger signal for resuming a paused subscription.
   """
   seasonNumber: Int
+
+  """
+    Total viewing time for this release, in minutes: the sum of the season's
+    episode runtimes, or the film's runtime. Null when upstream has no runtimes,
+    which is common for unreleased titles.
+  """
+  watchTimeMinutes: Int
 
 }
 

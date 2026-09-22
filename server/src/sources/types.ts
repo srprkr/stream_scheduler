@@ -51,11 +51,20 @@ export interface MediaRecord {
 export interface ReleaseRecord {
   /** ISO-8601 calendar date, YYYY-MM-DD. */
   availableFrom: string;
+  /** Date the full season is watchable. Same as availableFrom for a full drop. */
+  bingeableFrom: string;
+  /** Episodes in this season. Null for a film. */
+  episodeCount: number | null;
   id: string;
+  /** False when episodes arrive over time rather than all at once. */
+  isFullDrop: boolean;
   mediaId: string;
   providerSlug: string;
+
   /** Which season is arriving. Null for movies. */
   seasonNumber: number | null;
+  /** Summed episode runtimes, in minutes. Null when upstream has none. */
+  watchTimeMinutes: number | null;
 }
 
 export interface ReleaseQuery {
