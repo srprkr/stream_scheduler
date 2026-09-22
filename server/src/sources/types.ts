@@ -49,11 +49,13 @@ export interface MediaRecord {
 }
 
 export interface ReleaseRecord {
+  /** ISO-8601 calendar date, YYYY-MM-DD. */
+  availableFrom: string;
   id: string;
   mediaId: string;
   providerSlug: string;
-  /** ISO-8601 calendar date, YYYY-MM-DD. */
-  availableFrom: string;
+  /** Which season is arriving. Null for movies. */
+  seasonNumber: number | null;
 }
 
 export interface ReleaseQuery {

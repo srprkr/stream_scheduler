@@ -104,13 +104,13 @@ const MEDIA: MediaRecord[] = [
   },
 ];
 
-/** (mediaId, providerSlug, days from today) */
-const RELEASE_PLAN: ReadonlyArray<readonly [string, string, number]> = [
-  ["media:1", "netflix", 3],
-  ["media:2", "netflix", 12],
-  ["media:3", "netflix", 28],
-  ["media:4", "max", 45],
-  ["media:5", "netflix", 71],
+/** (mediaId, providerSlug, days from today, seasonNumber) */
+const RELEASE_PLAN: ReadonlyArray<readonly [string, string, number, number | null]> = [
+  ["media:1", "netflix", 3, 2],
+  ["media:2", "netflix", 12, null],
+  ["media:3", "netflix", 28, 1],
+  ["media:4", "max", 45, null],
+  ["media:5", "netflix", 71, 3],
 ];
 
 function isoDate(d: Date): string {
@@ -131,11 +131,12 @@ export class FixtureSource implements CatalogSource {
 
   private releases(): ReleaseRecord[] {
     const today = this.now();
-    return RELEASE_PLAN.map(([mediaId, providerSlug, offset]) => ({
+    return RELEASE_PLAN.map(([mediaId, providerSlug, offset, seasonNumber]) => ({
       id: `release:${providerSlug}:${mediaId}`,
       mediaId,
       providerSlug,
       availableFrom: isoDate(addDays(today, offset)),
+      seasonNumber,
     }));
   }
 

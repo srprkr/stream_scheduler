@@ -167,6 +167,14 @@ type Release {
   boundary is how off-by-one bugs ship.
   """
   daysUntilRelease(timezone: String = "UTC"): Int!
+
+  """
+  Which season is arriving, when the release is a series. Null for movies.
+  A value of 1 is a series premiere; anything higher is a returning season,
+  which is the stronger signal for resuming a paused subscription.
+  """
+  seasonNumber: Int
+
 }
 
 
