@@ -7,3 +7,4 @@ dist/
 *.log
 server/src/generated/
 .cache/
+web/src/generated/

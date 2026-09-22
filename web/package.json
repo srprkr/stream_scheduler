@@ -1,0 +1,28 @@
+{
+  "name": "@stream-scheduler/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "codegen": "graphql-codegen --config codegen.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@apollo/client": "^4.3.1",
+    "graphql": "^16.14.2",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^7.4.1",
+    "@graphql-codegen/client-preset": "^6.2.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}
