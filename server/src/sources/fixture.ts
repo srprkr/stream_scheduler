@@ -182,4 +182,9 @@ export class FixtureSource implements CatalogSource {
   videoUrl(video: VideoRecord): string {
     return `https://www.youtube.com/watch?v=${video.key}`;
   }
+  videoEmbedUrl(video: VideoRecord): string | null {
+    if (video.site !== "YouTube") return null;
+    return `https://www.youtube-nocookie.com/embed/${video.key}`;
+  }
+
 }

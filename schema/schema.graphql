@@ -123,6 +123,12 @@ type Video {
   "Playback page. Composed server-side from the upstream key and site."
   url: URL!
 
+  """
+  Privacy-enhanced player URL for an <iframe>. Composed server-side for the
+  same reason `url` is. Null when the host has no embeddable player.
+  """
+  embedUrl: URL
+
   "\"Trailer\", \"Teaser\", \"Clip\"."
   type: String!
 }

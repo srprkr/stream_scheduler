@@ -25,4 +25,5 @@ export const Series: SeriesResolvers = shared;
 
 export const Video: VideoResolvers = {
   url: (video, _a, ctx) => ctx.source.videoUrl(video),
+  embedUrl: (video, _a, ctx) => ctx.source.videoEmbedUrl(video),
 };

@@ -94,4 +94,7 @@ export interface CatalogSource {
   imageUrl(path: string | null, size: ImageSize): string | null;
   /** Video record -> watchable URL. Composed, never stored. */
   videoUrl(video: VideoRecord): string;
+  /** Video record -> embeddable player URL, or null if the host has none. */
+  videoEmbedUrl(video: VideoRecord): string | null;
+
 }
