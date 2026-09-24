@@ -1,6 +1,6 @@
 import { skipToken, useQuery } from "@apollo/client/react";
 import { useState } from "react";
-
+import { TitleDialog } from "./TitleDialog";
 import { graphql } from "./generated";
 import { useDebounced } from "./useDebounced";
 
@@ -24,6 +24,7 @@ const MIN_LENGTH = 2;
 
 export function SearchBox() {
   const [text, setText] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
   const term = useDebounced(text.trim(), 300);
   const active = term.length >= MIN_LENGTH;
 
@@ -50,19 +51,23 @@ export function SearchBox() {
       )}
       <ul className="search__results">
         {results.map((m) => (
-          <li key={m.id} className="search__hit">
-            {m.posterUrl ? (
-              <img src={m.posterUrl} alt="" />
-            ) : (
-              <div className="search__thumb--empty" />
-            )}
-            <span>{m.title}</span>
-            <span className="search__kind">
-              {m.__typename === "Movie" ? "Film" : "Series"}
-            </span>
+          <li key={m.id}>
+            <button className="search__hit" onClick={() => setOpenId(m.id)}>
+              {m.posterUrl ? (
+                <img src={m.posterUrl} alt="" />
+              ) : (
+                <div className="search__thumb--empty" />
+              )}
+              <span>{m.title}</span>
+              <span className="search__kind">
+                {m.__typename === "Movie" ? "Film" : "Series"}
+              </span>
+            </button>
           </li>
+
         ))}
       </ul>
+      <TitleDialog id={openId} onClose={() => setOpenId(null)} />
     </section>
   );
 }

@@ -219,7 +219,23 @@ body {
 }
 .search__input:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
 .search__results { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; max-width: 480px; }
-.search__hit { display: flex; align-items: center; gap: 12px; }
+.search__hit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 4px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.search__hit:hover { background: var(--surface); }
+.search__hit:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
+
 .search__hit img,
 .search__thumb--empty {
   width: 40px;
