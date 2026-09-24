@@ -180,3 +180,28 @@ body {
 
 .sheet__link { color: var(--text); font-size: 0.875rem; font-weight: 600; text-decoration: none; }
 .sheet__link:hover { color: var(--accent); }
+
+/* --- provider filter tags --------------------------------------------- */
+.tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.tag {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+.tag:hover { color: var(--text); border-color: #3a3a46; }
+.tag--on { background: var(--text); border-color: var(--text); color: #0b0b0f; font-weight: 600; }
+.tag:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
+
+.card__provider {
+  margin: 0;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}

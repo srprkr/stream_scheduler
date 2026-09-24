@@ -4,10 +4,14 @@ import type { Release } from "./format";
 export function ReleaseCard({
   release,
   onOpen,
+  showProvider,
 }: {
   release: Release;
   onOpen: () => void;
+  /** Only worth the pixels when the feed is mixing services. */
+  showProvider: boolean;
 }) {
+
   const { media } = release;
   const { text, kind } = badge(release);
   const note = bingeNote(release);
@@ -37,7 +41,11 @@ export function ReleaseCard({
         </div>
 
         <div className="card__body">
+          {showProvider && (
+            <p className="card__provider">{release.provider.name}</p>
+          )}
           <h2 className="card__title">{media.title}</h2>
+
           <p className="card__meta">
             <span className={imminent ? "countdown countdown--soon" : "countdown"}>
               {countdown(release.daysUntilRelease)}

@@ -18,19 +18,60 @@ import type {
   TmdbVideo,
 } from "./types.js";
 
-/** TMDB's own ids for Netflix. 213 is the network, 8 the watch provider. */
-const NETFLIX_NETWORK_ID = 213;
-const NETFLIX_PROVIDER_ID = 8;
 const WATCH_REGION = "US";
 
-const NETFLIX: ProviderRecord = {
-  id: "provider:netflix",
-  slug: "netflix",
-  name: "Netflix",
-  logoPath: "/rK1KljqmbvO9HQa1PBFLILWah72.png",
-};
+/**
+ * A streaming service, plus the two different TMDB handles needed to find its
+ * content.
+ *
+ * `networkId` finds a service's own originals, including ones that have not
+ * aired yet and so appear under no watch provider. `watchProviderIds` finds
+ * what is actually streamable there now. A service needs both, and the second
+ * is a list because TMDB splits one consumer-facing service across tiers -
+ * Paramount+ has Essential and Premium. Reseller entries ("Paramount+ Amazon
+ * Channel") are deliberately excluded; they are the same catalogue and would
+ * double-count.
+ */
+interface ProviderConfig extends ProviderRecord {
+  networkId: number | null;
+  watchProviderIds: number[];
+}
 
-const PROVIDERS = [NETFLIX];
+const PROVIDER_CONFIGS: ProviderConfig[] = [
+  {
+    id: "provider:netflix",
+    slug: "netflix",
+    name: "Netflix",
+    logoPath: "/rK1KljqmbvO9HQa1PBFLILWah72.png",
+    networkId: 213,
+    watchProviderIds: [8],
+  },
+  {
+    id: "provider:peacock",
+    slug: "peacock",
+    name: "Peacock",
+    logoPath: "/a1UIdq5BrkcAxnxcUhFsNbXnxeu.png",
+    networkId: 3353,
+    watchProviderIds: [386],
+  },
+  // Verified against the TMDB API; each is a one-line addition when wanted.
+  // Every provider added multiplies the cold-feed request count, so enable
+  // them alongside a background cache refresh rather than before one.
+  //
+  //   hulu       network 453   providers [15]         logo /44uAnmSqvA4yBOdbPWN8YgQHjWm.png
+  //   prime      network 1024  providers [9]          logo /gMZdpavHmxFNnLpMHwVxfqeux2g.png
+  //   appletv    network 2552  providers [350]        logo /9icYBfYFcwgCbky5VdGUIKJ4C5i.png
+  //   disney     network 2739  providers [337]        logo /5eZ872CghnHFLB1j8grszbrx0dx.png
+  //   hbomax     network 49    providers [1899]       logo /skypuy7SXuugIQeYg0IglmzoKaS.png
+  //   paramount  network 4330  providers [2303, 2616] logo /4N4BMd0Mm0kHAmF7RZgL5lW3cwc.png
+  //
+  // Note: network 49 is HBO, the cable network, not Max. It finds HBO
+  // originals but misses Max-only titles. Good enough, not exact.
+];
+
+const PROVIDERS: ProviderRecord[] = PROVIDER_CONFIGS.map(
+  ({ id, slug, name, logoPath }) => ({ id, slug, name, logoPath }),
+);
 
 /** TMDB serves fixed width buckets; ImageSize maps onto the nearest one. */
 const IMAGE_WIDTHS: Record<ImageSize, string> = {
@@ -40,11 +81,11 @@ const IMAGE_WIDTHS: Record<ImageSize, string> = {
   ORIGINAL: "original",
 };
 
-const MOVIE_PAGES = 2; // 20 per page -> the "top 40 by popularity" backlog
+const MOVIE_PAGES = 1; // 20 per page -> the "top 40 by popularity" backlog
 /** How far ahead the feed looks. Sized to the pause/resume decision. */
 const WINDOW_DAYS = 90;
 /** Candidate series pages scanned for season premieres. 20 per page. */
-const SERIES_PAGES = 2;
+const SERIES_PAGES = 1;
 /** Ceiling on simultaneous upstream requests, so a cold feed cannot burst. */
 const CONCURRENCY = 8;
 
@@ -177,7 +218,8 @@ export class TmdbSource implements CatalogSource {
   }
 
   /**
-   * Season premieres landing in the window, for new and returning series.
+   * Season premieres landing in the window, for new and returning series,
+   * across every configured provider.
    *
    * Filtering on `first_air_date` would only find series that have never
    * aired, missing every returning season - and a returning season is the
@@ -186,24 +228,52 @@ export class TmdbSource implements CatalogSource {
    * air_date falls in the window. That second step drops shows that are
    * merely mid-season, which would otherwise flood the feed.
    */
-  private async upcomingSeasons(): Promise<ReleaseRecord[]> {
+  private async upcomingSeasons(
+    configs: ProviderConfig[],
+  ): Promise<ReleaseRecord[]> {
     const today = isoDate(this.now());
     const end = isoDate(addDays(this.now(), WINDOW_DAYS));
 
-    const pages = await Promise.all(
-      Array.from({ length: SERIES_PAGES }, (_, i) =>
-        this.client.get<TmdbPage<TmdbTvListItem>>(
-          `/discover/tv?with_networks=${NETFLIX_NETWORK_ID}` +
-            `&air_date.gte=${today}&air_date.lte=${end}` +
-            `&sort_by=popularity.desc&page=${i + 1}`,
-        ),
+    const withNetwork = configs.filter((c) => c.networkId !== null);
+
+    // One discover call per provider per page.
+    const pages = await mapLimit(
+      withNetwork.flatMap((config) =>
+        Array.from({ length: SERIES_PAGES }, (_, i) => ({ config, page: i + 1 })),
       ),
+      CONCURRENCY,
+      async ({ config, page }) => {
+        try {
+          const body = await this.client.get<TmdbPage<TmdbTvListItem>>(
+            `/discover/tv?with_networks=${config.networkId}` +
+              `&air_date.gte=${today}&air_date.lte=${end}` +
+              `&sort_by=popularity.desc&page=${page}`,
+          );
+          return { slug: config.slug, results: body.results };
+        } catch {
+          return { slug: config.slug, results: [] as TmdbTvListItem[] };
+        }
+      },
     );
 
-    const candidates = pages.flatMap((p) => p.results);
+    // A title can be carried by two services; first provider seen wins, so the
+    // same season never appears twice in one feed.
+    const seen = new Set<number>();
+    const candidates: { slug: string; item: TmdbTvListItem }[] = [];
+    for (const { slug, results } of pages) {
+      for (const item of results) {
+        if (seen.has(item.id)) continue;
+        seen.add(item.id);
+        candidates.push({ slug, item });
+      }
+    }
+
     const details = await mapLimit(candidates, CONCURRENCY, async (c) => {
       try {
-        return await this.client.get<TmdbTvDetail>(`/tv/${c.id}`);
+        return {
+          slug: c.slug,
+          detail: await this.client.get<TmdbTvDetail>(`/tv/${c.item.id}`),
+        };
       } catch {
         return null;
       }
@@ -211,15 +281,19 @@ export class TmdbSource implements CatalogSource {
 
     // Seasons whose listed air_date lands in the window. Episode-level detail
     // is fetched only for these, not for every season of every candidate.
-    const wanted: { seriesId: number; seasonNumber: number }[] = [];
-    for (const detail of details) {
-      if (!detail) continue;
-      for (const season of detail.seasons ?? []) {
+    const wanted: { slug: string; seriesId: number; seasonNumber: number }[] = [];
+    for (const entry of details) {
+      if (!entry) continue;
+      for (const season of entry.detail.seasons ?? []) {
         // Season 0 is TMDB's bucket for specials, not a real season drop.
         if (season.season_number === 0) continue;
         if (!season.air_date) continue;
         if (season.air_date < today || season.air_date > end) continue;
-        wanted.push({ seriesId: detail.id, seasonNumber: season.season_number });
+        wanted.push({
+          slug: entry.slug,
+          seriesId: entry.detail.id,
+          seasonNumber: season.season_number,
+        });
       }
     }
 
@@ -242,15 +316,16 @@ export class TmdbSource implements CatalogSource {
       // seasons[].air_date often enough to matter. Fall back to the listed
       // date when the season endpoint gave us nothing.
       const listed = details
-        .find((d) => d?.id === w.seriesId)
-        ?.seasons?.find((x) => x.season_number === w.seasonNumber)?.air_date;
+        .find((d) => d?.detail.id === w.seriesId)
+        ?.detail.seasons?.find((x) => x.season_number === w.seasonNumber)
+        ?.air_date;
       const availableFrom = analysis?.firstAirDate ?? listed;
       if (!availableFrom) continue;
 
       releases.push({
-        id: `release:netflix:tv:${w.seriesId}:s${w.seasonNumber}`,
+        id: `release:${w.slug}:tv:${w.seriesId}:s${w.seasonNumber}`,
         mediaId: `tv:${w.seriesId}`,
-        providerSlug: "netflix",
+        providerSlug: w.slug,
         availableFrom,
         bingeableFrom: analysis?.bingeableFrom ?? availableFrom,
         isFullDrop: analysis?.isFullDrop ?? true,
@@ -262,47 +337,73 @@ export class TmdbSource implements CatalogSource {
     return releases;
   }
 
-  private async availableMovies(): Promise<ReleaseRecord[]> {
-    const pages = await Promise.all(
-      Array.from({ length: MOVIE_PAGES }, (_, i) =>
-        this.client.get<TmdbPage<TmdbMovieListItem>>(
-          `/discover/movie?with_watch_providers=${NETFLIX_PROVIDER_ID}` +
-            `&watch_region=${WATCH_REGION}&with_watch_monetization_types=flatrate` +
-            `&sort_by=popularity.desc&page=${i + 1}`,
-        ),
-      ),
+
+  private async availableMovies(
+    configs: ProviderConfig[],
+  ): Promise<ReleaseRecord[]> {
+    const jobs = configs.flatMap((config) =>
+      Array.from({ length: MOVIE_PAGES }, (_, i) => ({ config, page: i + 1 })),
     );
-    return pages
-      .flatMap((p) => p.results)
-      .filter((m) => m.release_date)
-      .map((m) => ({
-        id: `release:netflix:movie:${m.id}`,
-        episodeCount: null,
-        mediaId: `movie:${m.id}`,
-        providerSlug: "netflix",
-        availableFrom: m.release_date,
-        bingeableFrom: m.release_date,
-        isFullDrop: true,
-        seasonNumber: null,
-        watchTimeMinutes: null,
-      }));
+
+    const pages = await mapLimit(jobs, CONCURRENCY, async ({ config, page }) => {
+      try {
+        // Tier ids are OR-ed: "on this service at all", not "on this tier".
+        const body = await this.client.get<TmdbPage<TmdbMovieListItem>>(
+          `/discover/movie?with_watch_providers=${config.watchProviderIds.join("|")}` +
+            `&watch_region=${WATCH_REGION}&with_watch_monetization_types=flatrate` +
+            `&sort_by=popularity.desc&page=${page}`,
+        );
+        return { slug: config.slug, results: body.results };
+      } catch {
+        return { slug: config.slug, results: [] as TmdbMovieListItem[] };
+      }
+    });
+
+    const seen = new Set<number>();
+    const releases: ReleaseRecord[] = [];
+    for (const { slug, results } of pages) {
+      for (const m of results) {
+        if (!m.release_date) continue;
+        if (seen.has(m.id)) continue;
+        seen.add(m.id);
+        releases.push({
+          id: `release:${slug}:movie:${m.id}`,
+          mediaId: `movie:${m.id}`,
+          providerSlug: slug,
+          availableFrom: m.release_date,
+          bingeableFrom: m.release_date,
+          isFullDrop: true,
+          episodeCount: null,
+          watchTimeMinutes: null,
+          seasonNumber: null,
+        });
+      }
+    }
+    return releases;
   }
 
+
   async listReleases(query: ReleaseQuery): Promise<ReleaseRecord[]> {
+    // Narrowing by provider narrows what is FETCHED, not just what is
+    // returned. Filtering after the fact would make a one-service view cost
+    // as much as the full feed.
+    const configs = query.providerSlug
+      ? PROVIDER_CONFIGS.filter((c) => c.slug === query.providerSlug)
+      : PROVIDER_CONFIGS;
+    if (configs.length === 0) return [];
+
     const [seasons, movies] = await Promise.all([
-      this.upcomingSeasons(),
-      this.availableMovies(),
+      this.upcomingSeasons(configs),
+      this.availableMovies(configs),
     ]);
     const from = query.from ?? isoDate(this.now());
     return [...seasons, ...movies]
-      .filter(
-        (r) => !query.providerSlug || r.providerSlug === query.providerSlug,
-      )
       .filter((r) => r.availableFrom >= from)
       .filter((r) => !query.to || r.availableFrom <= query.to)
       .sort((a, b) => a.availableFrom.localeCompare(b.availableFrom))
       .slice(0, query.first);
   }
+
 
   async getRelease(id: string): Promise<ReleaseRecord | null> {
     // id shape: release:<slug>:movie:<tmdbId> or release:<slug>:tv:<tmdbId>:s<n>
