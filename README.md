@@ -119,10 +119,24 @@ These are deliberate, not oversights.
 
 ## Not in scope yet
 
-`schema/schema_roadmap.graphql` sketches the rest: regions, offer types, cursor
-pagination, subscription plans, and a savings estimator that decides month by
-month whether a slate justifies the subscription. It's a design sketch, not a
-build target.
+`schema/schema_roadmap.graphql` sketches the near-term schema work: regions,
+offer types, cursor pagination and subscription plans.
+
+The product goes further than that. Pausing is only half of it — the savings are
+meant to be spent. A user's wishlist of physical media gets scored on hours of
+entertainment per dollar, against what those months of subscription would have
+cost them:
+
+    months_of_viewing = total_hours / your_hours_per_month
+
+A $45 box set holding 74 hours is 7.4 months of viewing at 10 h/month — about
+$6 per month-equivalent against a $8/month subscription, and month eight costs
+nothing. Subscriptions amortize to nothing; purchases amortize to zero cost per
+hour. Both halves of that comparison are computable: episode runtimes come from
+the same data that already powers `watchTimeMinutes`.
+
+Both files are design sketches, not build targets.
+
 
 ---
 
