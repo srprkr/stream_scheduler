@@ -7,6 +7,7 @@ import type {
   ReleaseRecord,
   VideoRecord,
 } from "../types.js";
+import { addDays, isoDate } from "../../dates.js";
 import type { TmdbClient } from "./client.js";
 import type {
   TmdbMovieDetail,
@@ -89,16 +90,6 @@ const WINDOW_DAYS = 90;
 const SERIES_PAGES = 1;
 /** Ceiling on simultaneous upstream requests, so a cold feed cannot burst. */
 const CONCURRENCY = 8;
-
-function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function addDays(base: Date, days: number): Date {
-  const next = new Date(base);
-  next.setUTCDate(next.getUTCDate() + days);
-  return next;
-}
 
 /** Promise.all with a ceiling on in-flight work. */
 async function mapLimit<T, R>(
@@ -205,7 +196,6 @@ function seriesRecord(
     seasonCount: series.number_of_seasons ?? null,
   };
 }
-
 
 /**
  * Collapses a season's episode dates into the two facts the product needs:

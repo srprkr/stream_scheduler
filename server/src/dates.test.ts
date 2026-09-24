@@ -1,8 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { daysUntil } from "./dates.js";
+import { addDays, daysUntil, isoDate } from "./dates.js";
 
 const NOW = new Date("2026-09-18T12:00:00Z");
+
+describe("addDays", () => {
+  it("rolls over month and year ends", () => {
+    expect(isoDate(addDays(new Date("2026-12-30T12:00:00Z"), 3))).toBe("2027-01-02");
+  });
+
+  it("does not mutate its input", () => {
+    const base = new Date("2026-09-18T12:00:00Z");
+    addDays(base, 5);
+    expect(isoDate(base)).toBe("2026-09-18");
+  });
+});
+
 
 describe("daysUntil", () => {
   it("counts calendar days in UTC", () => {

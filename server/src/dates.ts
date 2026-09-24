@@ -31,3 +31,19 @@ export function daysUntil(
   const today = Date.parse(todayIn(timezone, now));
   return (Date.parse(availableFrom) - today) / MS_PER_DAY
 }
+
+/**
+ * A Date's calendar date in UTC, as YYYY-MM-DD. For server-side windows
+ * ("the next 90 days") where no caller's timezone is involved. Anything a
+ * user sees as "today" goes through todayIn instead.
+ */
+export function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/** `days` calendar days after `base`, in UTC. Never mutates `base`. */
+export function addDays(base: Date, days: number): Date {
+  const next = new Date(base);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}

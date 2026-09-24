@@ -8,6 +8,8 @@ import type {
   VideoRecord,
 } from "./types.js";
 
+import { addDays, isoDate } from "../dates.js";
+
 /**
  * An in-memory CatalogSource used until the TMDB adapter lands.
  *
@@ -112,16 +114,6 @@ const RELEASE_PLAN: ReadonlyArray<readonly [string, string, number, number | nul
   ["media:4", "max", 45, null],
   ["media:5", "netflix", 71, 3],
 ];
-
-function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function addDays(base: Date, days: number): Date {
-  const next = new Date(base);
-  next.setUTCDate(next.getUTCDate() + days);
-  return next;
-}
 
 export class FixtureSource implements CatalogSource {
   readonly name = "fixture";
