@@ -46,6 +46,12 @@ export interface MediaRecord {
   runtimeMinutes: number | null;
   /** SERIES only. */
   seasonCount: number | null;
+    /**
+   * True when built from a search result, which carries no detail-only
+   * fields: trailer, runtimeMinutes and seasonCount are unknown, not null.
+   */
+  summary?: boolean;
+
 }
 
 export interface ReleaseRecord {

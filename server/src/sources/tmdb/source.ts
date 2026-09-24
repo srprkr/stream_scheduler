@@ -556,9 +556,10 @@ export class TmdbSource implements CatalogSource {
       .flatMap((item): MediaRecord[] => {
         switch (item.media_type) {
           case "movie":
-            return [movieRecord(item)];
+            return [{ ...movieRecord(item), summary: true }];
           case "tv":
-            return [seriesRecord(item)];
+            return [{ ...seriesRecord(item), summary: true }];
+
           default:
             return [];
         }

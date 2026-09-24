@@ -184,7 +184,7 @@ describe("TmdbSource.searchMedia", () => {
       ["movie:1", "MOVIE", "The Office Movie"],
       ["tv:2", "SERIES", "The Office"],
     ]);
-    expect(results.every((r) => r.trailer === null)).toBe(true);
+    expect(results.every((r) => r.summary === true)).toBe(true);
   });
 
   it("applies `first` after dropping people, not before", async () => {
