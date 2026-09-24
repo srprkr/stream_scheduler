@@ -168,6 +168,44 @@ function movieRelease(
   };
 }
 
+/**
+ * A film as a MediaRecord. Takes the list shape so search results and full
+ * details share one mapping; detail-only fields are optional and come back
+ * null when the caller only had a list item.
+ */
+function movieRecord(
+  movie: TmdbMovieListItem & Partial<Pick<TmdbMovieDetail, "runtime" | "videos">>,
+): MediaRecord {
+  return {
+    id: `movie:${movie.id}`,
+    kind: "MOVIE",
+    title: movie.title,
+    overview: movie.overview || null,
+    posterPath: movie.poster_path,
+    backdropPath: movie.backdrop_path,
+    trailer: pickTrailer(movie.videos?.results),
+    runtimeMinutes: movie.runtime ?? null,
+    seasonCount: null,
+  };
+}
+
+/** A series as a MediaRecord. Same list-or-detail contract as movieRecord. */
+function seriesRecord(
+  series: TmdbTvListItem & Partial<Pick<TmdbTvDetail, "number_of_seasons" | "videos">>,
+): MediaRecord {
+  return {
+    id: `tv:${series.id}`,
+    kind: "SERIES",
+    title: series.name,
+    overview: series.overview || null,
+    posterPath: series.poster_path,
+    backdropPath: series.backdrop_path,
+    trailer: pickTrailer(series.videos?.results),
+    runtimeMinutes: null,
+    seasonCount: series.number_of_seasons ?? null,
+  };
+}
+
 
 /**
  * Collapses a season's episode dates into the two facts the product needs:
@@ -490,37 +528,16 @@ export class TmdbSource implements CatalogSource {
 
     try {
       if (kind === "tv") {
-        const d = await this.client.get<TmdbTvDetail>(
-          `/tv/${tmdbId}?append_to_response=videos`,
+        return seriesRecord(
+          await this.client.get<TmdbTvDetail>(`/tv/${tmdbId}?append_to_response=videos`),
         );
-        return {
-          id,
-          kind: "SERIES",
-          title: d.name,
-          overview: d.overview || null,
-          posterPath: d.poster_path,
-          backdropPath: d.backdrop_path,
-          trailer: pickTrailer(d.videos?.results),
-          runtimeMinutes: null,
-          seasonCount: d.number_of_seasons,
-        };
       }
       if (kind === "movie") {
-        const d = await this.client.get<TmdbMovieDetail>(
-          `/movie/${tmdbId}?append_to_response=videos`,
+        return movieRecord(
+          await this.client.get<TmdbMovieDetail>(`/movie/${tmdbId}?append_to_response=videos`),
         );
-        return {
-          id,
-          kind: "MOVIE",
-          title: d.title,
-          overview: d.overview || null,
-          posterPath: d.poster_path,
-          backdropPath: d.backdrop_path,
-          trailer: pickTrailer(d.videos?.results),
-          runtimeMinutes: d.runtime,
-          seasonCount: null,
-        };
       }
+
       return null;
     } catch {
       // A title that 404s upstream is a missing record, not a server error.
@@ -549,29 +566,9 @@ export class TmdbSource implements CatalogSource {
       .flatMap((item): MediaRecord[] => {
         switch (item.media_type) {
           case "movie":
-            return [{
-              id: `movie:${item.id}`,
-              kind: "MOVIE",
-              title: item.title,
-              overview: item.overview || null,
-              posterPath: item.poster_path,
-              backdropPath: item.backdrop_path,
-              trailer: null,
-              runtimeMinutes: null,
-              seasonCount: null,
-            }];
+            return [movieRecord(item)];
           case "tv":
-            return [{
-              id: `tv:${item.id}`,
-              kind: "SERIES",
-              title: item.name,
-              overview: item.overview || null,
-              posterPath: item.poster_path,
-              backdropPath: item.backdrop_path,
-              trailer: null,
-              runtimeMinutes: null,
-              seasonCount: null,
-            }];
+            return [seriesRecord(item)];
           default:
             return [];
         }
