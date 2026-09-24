@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { analyseSeason, pickTrailer } from "./source.js";
-import type { TmdbEpisode, TmdbSeasonDetail, TmdbVideo } from "./types.js";
+import { analyseSeason, pickTrailer, TmdbSource } from "./source.js";
+import type {
+  TmdbEpisode,
+  TmdbMultiItem,
+  TmdbPage,
+  TmdbSeasonDetail,
+  TmdbVideo,
+} from "./types.js";
+
 
 function season(episodes: Partial<TmdbEpisode>[]): TmdbSeasonDetail {
   return {
@@ -119,5 +126,87 @@ describe("pickTrailer", () => {
 
   it("ignores hosts it cannot embed", () => {
     expect(pickTrailer([video({ site: "Vimeo" })])).toBeNull();
+  });
+});
+
+/**
+ * Answers only the paths it was given and throws on anything else, so a test
+ * fails loudly on an unexpected request instead of hanging on the network.
+ */
+function fakeClient(responses: Record<string, unknown>) {
+  const calls: string[] = [];
+  return {
+    calls,
+    async get<T>(path: string): Promise<T> {
+      calls.push(path);
+      if (!(path in responses)) throw new Error(`unexpected request: ${path}`);
+      return responses[path] as T;
+    },
+  };
+}
+
+function page(results: TmdbMultiItem[]): TmdbPage<TmdbMultiItem> {
+  return { page: 1, total_results: results.length, results };
+}
+
+function movieHit(id: number, title: string): TmdbMultiItem {
+  return {
+    media_type: "movie", id, title, overview: "",
+    poster_path: null, backdrop_path: null, release_date: "2020-01-01",
+  };
+}
+
+function tvHit(id: number, name: string): TmdbMultiItem {
+  return {
+    media_type: "tv", id, name, overview: "",
+    poster_path: null, backdrop_path: null, first_air_date: "2020-01-01",
+  };
+}
+
+const personHit: TmdbMultiItem = { media_type: "person", id: 99 };
+
+/** Takes the query already encoded, so each test states the exact URL. */
+const searchPath = (encoded: string) =>
+  `/search/multi?query=${encoded}&include_adult=false`;
+
+describe("TmdbSource.searchMedia", () => {
+  it("keeps films and series, drops people, and returns thin records", async () => {
+    const client = fakeClient({
+      [searchPath("office")]: page([
+        movieHit(1, "The Office Movie"),
+        personHit,
+        tvHit(2, "The Office"),
+      ]),
+    });
+    const results = await new TmdbSource(client).searchMedia("office", 10);
+
+    expect(results.map((r) => [r.id, r.kind, r.title])).toEqual([
+      ["movie:1", "MOVIE", "The Office Movie"],
+      ["tv:2", "SERIES", "The Office"],
+    ]);
+    expect(results.every((r) => r.trailer === null)).toBe(true);
+  });
+
+  it("applies `first` after dropping people, not before", async () => {
+    const client = fakeClient({
+      [searchPath("x")]: page([
+        personHit, movieHit(1, "A"), personHit, tvHit(2, "B"), movieHit(3, "C"),
+      ]),
+    });
+    const results = await new TmdbSource(client).searchMedia("x", 2);
+    expect(results.map((r) => r.id)).toEqual(["movie:1", "tv:2"]);
+  });
+
+  it("encodes the query", async () => {
+    const client = fakeClient({ [searchPath("Law%20%26%20Order")]: page([]) });
+    await expect(
+      new TmdbSource(client).searchMedia("Law & Order", 10),
+    ).resolves.toEqual([]);
+  });
+
+  it("makes no request for a blank query", async () => {
+    const client = fakeClient({});
+    expect(await new TmdbSource(client).searchMedia("   ", 10)).toEqual([]);
+    expect(client.calls).toEqual([]);
   });
 });

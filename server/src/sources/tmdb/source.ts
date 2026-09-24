@@ -284,7 +284,7 @@ export class TmdbSource implements CatalogSource {
   readonly name = "tmdb";
 
   constructor(
-    private readonly client: TmdbClient,
+    private readonly client: Pick<TmdbClient, "get">,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
