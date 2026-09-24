@@ -1,17 +1,24 @@
-import { ReleaseFeed } from "./ReleaseFeed";
-import { SearchBox } from "./SearchBox";
+import { NavLink, Route, Routes } from "react-router";
+
+import { ComingSoonPage } from "./ComingSoonPage";
+import { HomePage } from "./HomePage";
 
 export function App() {
   return (
     <div className="page">
-      <header className="masthead">
-        <h1>Coming Soon</h1>
-        <p>
-          Season drops in the next 90 days. Time your subscription around them to optimize savings.
-        </p>
-      </header>
-      <SearchBox />
-      <ReleaseFeed />
+      <nav className="nav" aria-label="Main">
+        <NavLink to="/" end className="nav__link">
+          Home
+        </NavLink>
+        <NavLink to="/coming-soon" className="nav__link">
+          Coming Soon
+        </NavLink>
+      </nav>
+
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/coming-soon" element={<ComingSoonPage />} />
+      </Routes>
     </div>
   );
 }

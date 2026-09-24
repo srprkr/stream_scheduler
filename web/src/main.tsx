@@ -1,4 +1,5 @@
 import { ApolloProvider } from "@apollo/client/react";
+import { BrowserRouter } from "react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -12,7 +13,9 @@ if (!root) throw new Error("#root is missing from index.html");
 createRoot(root).render(
   <StrictMode>
     <ApolloProvider client={client}>
-      <App />
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
     </ApolloProvider>
   </StrictMode>,
 );
