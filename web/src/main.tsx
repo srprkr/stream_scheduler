@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
 import { client } from "./apollo";
-import "./styles.css";
+import "./styles.scss";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("#root is missing from index.html");

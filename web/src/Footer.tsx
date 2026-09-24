@@ -8,7 +8,6 @@ import tmdbLogo from "./assets/tmdb.svg";
 export function Footer() {
   return (
     <footer className="footer">
-      <p>Your library is saved in this browser only. It isn't shared with outside sources.</p>
       <div className="footer__credits">
         <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer">
           <img src={tmdbLogo} alt="TMDB" className="footer__logo" />
@@ -22,6 +21,7 @@ export function Footer() {
           .
         </p>
       </div>
+      <p>Your library is saved in this browser only. It isn't shared with outside sources.</p>
     </footer>
   );
 }
