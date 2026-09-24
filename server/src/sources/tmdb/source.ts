@@ -11,6 +11,7 @@ import type { TmdbClient } from "./client.js";
 import type {
   TmdbMovieDetail,
   TmdbMovieListItem,
+  TmdbMultiItem,
   TmdbPage,
   TmdbSeasonDetail,
   TmdbTvDetail,
@@ -128,10 +129,10 @@ async function mapLimit<T, R>(
  * months, and treating its premiere as the binge date is what would tell a
  * user to unpause eight weeks early.
  */
-function analyseSeason(season: TmdbSeasonDetail): {
+export function analyseSeason(season: TmdbSeasonDetail): {
   firstAirDate: string | null;
   bingeableFrom: string | null;
-  isFullDrop: boolean;
+  isFullDrop: boolean | null;
   episodeCount: number;
   watchTimeMinutes: number | null;
 } {
@@ -158,10 +159,14 @@ function analyseSeason(season: TmdbSeasonDetail): {
       watchTimeMinutes,
     };
   }
+  // Two distinct dates prove a weekly season even with gaps; one date proves
+  // nothing while other episodes are undated.
+  const complete = dates.length === season.episodes.length;
+  const weekly = new Set(dates).size > 1;
   return {
     firstAirDate: dates[0] as string,
-    bingeableFrom: dates[dates.length - 1] as string,
-    isFullDrop: new Set(dates).size === 1,
+    bingeableFrom: complete ? (dates[dates.length - 1] as string) : null,
+    isFullDrop: weekly ? false : complete ? true : null,
     episodeCount: season.episodes.length,
     watchTimeMinutes,
   };
@@ -172,7 +177,7 @@ function analyseSeason(season: TmdbSeasonDetail): {
  * first, then teasers. Doing this server-side is why the schema exposes a
  * single `trailer` rather than a list for the client to sort through.
  */
-function pickTrailer(videos: TmdbVideo[] | undefined): VideoRecord | null {
+export function pickTrailer(videos: TmdbVideo[] | undefined): VideoRecord | null {
   if (!videos?.length) return null;
   const youtube = videos.filter((v) => v.site === "YouTube");
   const best =
@@ -327,8 +332,8 @@ export class TmdbSource implements CatalogSource {
         mediaId: `tv:${w.seriesId}`,
         providerSlug: w.slug,
         availableFrom,
-        bingeableFrom: analysis?.bingeableFrom ?? availableFrom,
-        isFullDrop: analysis?.isFullDrop ?? true,
+        bingeableFrom: analysis?.bingeableFrom ?? null,
+        isFullDrop: analysis?.isFullDrop ?? null,
         episodeCount: analysis?.episodeCount ?? null,
         watchTimeMinutes: analysis?.watchTimeMinutes ?? null,
         seasonNumber: w.seasonNumber,
@@ -454,8 +459,8 @@ export class TmdbSource implements CatalogSource {
           mediaId: `tv:${tmdbId}`,
           providerSlug: slug,
           availableFrom,
-          bingeableFrom: analysis?.bingeableFrom ?? availableFrom,
-          isFullDrop: analysis?.isFullDrop ?? true,
+          bingeableFrom: analysis?.bingeableFrom ?? null,
+          isFullDrop: analysis?.isFullDrop ?? null,
           seasonNumber: season?.season_number ?? null,
           watchTimeMinutes: analysis?.watchTimeMinutes ?? null,
         };
@@ -519,6 +524,58 @@ export class TmdbSource implements CatalogSource {
       return null;
     }
   }
+
+  /**
+   * One request to /search/multi rather than /search/movie + /search/tv:
+   * TMDB ranks the combined list itself, and merging two separately ranked
+   * lists has no correct answer. One page (20 results) is the ceiling.
+   *
+   * Records are thin: the search endpoint carries no videos or runtimes, so
+   * trailer, runtimeMinutes and seasonCount are null here even when the title
+   * has them. The resolver layer decides what to do about that.
+   */
+  async searchMedia(query: string, first: number): Promise<MediaRecord[]> {
+    const q = query.trim();
+    if (!q) return [];
+
+    const page = await this.client.get<TmdbPage<TmdbMultiItem>>(
+      `/search/multi?query=${encodeURIComponent(q)}&include_adult=false`,
+    );
+
+    return page.results
+      .flatMap((item): MediaRecord[] => {
+        switch (item.media_type) {
+          case "movie":
+            return [{
+              id: `movie:${item.id}`,
+              kind: "MOVIE",
+              title: item.title,
+              overview: item.overview || null,
+              posterPath: item.poster_path,
+              backdropPath: item.backdrop_path,
+              trailer: null,
+              runtimeMinutes: null,
+              seasonCount: null,
+            }];
+          case "tv":
+            return [{
+              id: `tv:${item.id}`,
+              kind: "SERIES",
+              title: item.name,
+              overview: item.overview || null,
+              posterPath: item.poster_path,
+              backdropPath: item.backdrop_path,
+              trailer: null,
+              runtimeMinutes: null,
+              seasonCount: null,
+            }];
+          default:
+            return [];
+        }
+      })
+      .slice(0, first);
+  }
+
 
   imageUrl(path: string | null, size: ImageSize): string | null {
     if (!path) return null;

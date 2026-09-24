@@ -47,5 +47,11 @@ export function watchTime(minutes: number | null | undefined): string | null {
  */
 export function bingeNote(release: Release): string | null {
   if (release.isFullDrop) return null;
+  if (!release.bingeableFrom) {
+    return release.isFullDrop === false
+      ? "Airs weekly — finale date not announced"
+      : "Episode schedule not announced";
+  }
   return `Airs weekly — complete ${formatDate(release.bingeableFrom)}`;
 }
+

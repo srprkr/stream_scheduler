@@ -170,7 +170,7 @@ type Release {
   weekly. This, not availableFrom, is the date a pause/resume decision should
   be made against.
   """
-  bingeableFrom: Date!
+  bingeableFrom: Date
 
   """
   Whole days from today to `availableFrom`, in the caller's timezone.
@@ -190,7 +190,7 @@ type Release {
   False when a season's episodes arrive over time rather than all at once.
   Unpausing on availableFrom for one of these wastes most of the month.
   """
-  isFullDrop: Boolean!
+  isFullDrop: Boolean
 
 
   """
@@ -243,6 +243,13 @@ type Query {
 
   "Fetch one title. Returns the interface; the client narrows with a fragment."
   mediaItem(id: ID!): MediaItem
+
+    """
+  Find titles by name, films and series together, best match first.
+  An empty or whitespace-only query returns an empty list rather than an error.
+  """
+  searchMedia(query: String!, first: Int = 10): [MediaItem!]!
+
 
   providers: [Provider!]!
 

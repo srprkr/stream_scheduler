@@ -83,7 +83,7 @@ export function ReleaseDialog({
         <div className="sheet__body">
           <div className="sheet__badges">
             <span className={`badge badge--${kind}`}>{text}</span>
-            {!release.isFullDrop && <span className="badge badge--weekly">Weekly</span>}
+            {release.isFullDrop === false && <span className="badge badge--weekly">Weekly</span>}
           </div>
 
           <h2 className="sheet__title">{media.title}</h2>

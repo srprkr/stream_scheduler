@@ -51,13 +51,14 @@ export interface MediaRecord {
 export interface ReleaseRecord {
   /** ISO-8601 calendar date, YYYY-MM-DD. */
   availableFrom: string;
-  /** Date the full season is watchable. Same as availableFrom for a full drop. */
-  bingeableFrom: string;
+  /** Date the full season is watchable. Null until every episode is dated. */
+  bingeableFrom: string | null;
+
   /** Episodes in this season. Null for a film. */
   episodeCount: number | null;
   id: string;
-  /** False when episodes arrive over time rather than all at once. */
-  isFullDrop: boolean;
+  /** False when episodes arrive over time. Null when upstream cannot tell yet. */
+  isFullDrop: boolean | null;
   mediaId: string;
   providerSlug: string;
 
@@ -89,6 +90,13 @@ export interface CatalogSource {
 
   /** Batched, for the same reason as getProviders. */
   getMedia(ids: readonly string[]): Promise<(MediaRecord | null)[]>;
+
+  /**
+   * Free-text title search across films and series, best match first.
+   * Not batched: there is no N+1 shape here, one query string per request.
+   */
+  searchMedia(query: string, first: number): Promise<MediaRecord[]>;
+
 
   /** Upstream path -> absolute URL. Each source has its own CDN conventions. */
   imageUrl(path: string | null, size: ImageSize): string | null;

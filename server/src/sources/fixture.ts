@@ -173,6 +173,13 @@ export class FixtureSource implements CatalogSource {
     return ids.map((id) => MEDIA.find((m) => m.id === id) ?? null);
   }
 
+  async searchMedia(query: string, first: number): Promise<MediaRecord[]> {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return MEDIA.filter((m) => m.title.toLowerCase().includes(q)).slice(0, first);
+  }
+
+
   imageUrl(path: string | null, size: ImageSize): string | null {
     if (!path) return null;
     const width = { SMALL: 154, MEDIUM: 342, LARGE: 780, ORIGINAL: 1280 }[size];

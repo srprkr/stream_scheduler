@@ -24,6 +24,17 @@ export interface TmdbMovieListItem {
   release_date: string;
 }
 
+/**
+ * /search/multi mixes films, series and people in one list, discriminated by
+ * `media_type`. Films carry `title`, series carry `name`; people are fetched
+ * and then discarded.
+ */
+export type TmdbMultiItem =
+  | (TmdbMovieListItem & { media_type: "movie" })
+  | (TmdbTvListItem & { media_type: "tv" })
+  | { media_type: "person"; id: number };
+
+
 export interface TmdbVideo {
   id: string;
   key: string;
