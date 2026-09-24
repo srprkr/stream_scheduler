@@ -205,3 +205,28 @@ body {
   letter-spacing: 0.06em;
   color: var(--muted);
 }
+
+.search { margin-bottom: 32px; }
+.search__input {
+  width: 100%;
+  max-width: 480px;
+  padding: 10px 14px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.search__input:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
+.search__results { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; max-width: 480px; }
+.search__hit { display: flex; align-items: center; gap: 12px; }
+.search__hit img,
+.search__thumb--empty {
+  width: 40px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--surface);
+  flex: none;
+}
+.search__kind { margin-left: auto; font-size: 0.75rem; color: var(--muted); }

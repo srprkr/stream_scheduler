@@ -1,4 +1,5 @@
 import { ReleaseFeed } from "./ReleaseFeed";
+import { SearchBox } from "./SearchBox";
 
 export function App() {
   return (
@@ -9,6 +10,7 @@ export function App() {
           Season drops in the next 90 days. Time your subscription around them to optimize savings.
         </p>
       </header>
+      <SearchBox />
       <ReleaseFeed />
     </div>
   );
