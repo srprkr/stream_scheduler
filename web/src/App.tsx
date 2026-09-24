@@ -1,6 +1,7 @@
 import { NavLink, Route, Routes } from "react-router";
 
 import { ComingSoonPage } from "./ComingSoonPage";
+import { Footer } from "./Footer";
 import { HomePage } from "./HomePage";
 
 export function App() {
@@ -19,6 +20,7 @@ export function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/coming-soon" element={<ComingSoonPage />} />
       </Routes>
+      <Footer />
     </div>
   );
 }
