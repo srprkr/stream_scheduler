@@ -121,6 +121,54 @@ async function mapLimit<T, R>(
   return out;
 }
 
+type SeasonAnalysis = ReturnType<typeof analyseSeason>;
+
+/**
+ * One season as a release. Shared by the feed and getRelease so the two
+ * cannot disagree about what an unscheduled season looks like.
+ */
+function seasonRelease(
+  slug: string,
+  seriesId: number | string,
+  seasonNumber: number,
+  analysis: SeasonAnalysis | null,
+  listedDate: string | null | undefined,
+): ReleaseRecord | null {
+  const availableFrom = analysis?.firstAirDate ?? listedDate;
+  if (!availableFrom) return null;
+  return {
+    id: `release:${slug}:tv:${seriesId}:s${seasonNumber}`,
+    mediaId: `tv:${seriesId}`,
+    providerSlug: slug,
+    availableFrom,
+    bingeableFrom: analysis?.bingeableFrom ?? null,
+    isFullDrop: analysis?.isFullDrop ?? null,
+    episodeCount: analysis?.episodeCount ?? null,
+    watchTimeMinutes: analysis?.watchTimeMinutes ?? null,
+    seasonNumber,
+  };
+}
+
+/** A film as a release. A film is always a full drop. */
+function movieRelease(
+  slug: string,
+  movie: TmdbMovieListItem & { runtime?: number | null },
+): ReleaseRecord | null {
+  if (!movie.release_date) return null;
+  return {
+    id: `release:${slug}:movie:${movie.id}`,
+    mediaId: `movie:${movie.id}`,
+    providerSlug: slug,
+    availableFrom: movie.release_date,
+    bingeableFrom: movie.release_date,
+    isFullDrop: true,
+    episodeCount: null,
+    watchTimeMinutes: movie.runtime ?? null,
+    seasonNumber: null,
+  };
+}
+
+
 /**
  * Collapses a season's episode dates into the two facts the product needs:
  * when the season is fully watchable, and whether it lands all at once.
@@ -154,7 +202,7 @@ export function analyseSeason(season: TmdbSeasonDetail): {
     return {
       firstAirDate: null,
       bingeableFrom: null,
-      isFullDrop: true,
+      isFullDrop: null,
       episodeCount: season.episodes.length,
       watchTimeMinutes,
     };
@@ -324,22 +372,12 @@ export class TmdbSource implements CatalogSource {
         .find((d) => d?.detail.id === w.seriesId)
         ?.detail.seasons?.find((x) => x.season_number === w.seasonNumber)
         ?.air_date;
-      const availableFrom = analysis?.firstAirDate ?? listed;
-      if (!availableFrom) continue;
 
-      releases.push({
-        id: `release:${w.slug}:tv:${w.seriesId}:s${w.seasonNumber}`,
-        mediaId: `tv:${w.seriesId}`,
-        providerSlug: w.slug,
-        availableFrom,
-        bingeableFrom: analysis?.bingeableFrom ?? null,
-        isFullDrop: analysis?.isFullDrop ?? null,
-        episodeCount: analysis?.episodeCount ?? null,
-        watchTimeMinutes: analysis?.watchTimeMinutes ?? null,
-        seasonNumber: w.seasonNumber,
-      });
+      const release = seasonRelease(w.slug, w.seriesId, w.seasonNumber, analysis, listed);
+      if (release) releases.push(release);
     }
     return releases;
+
   }
 
 
@@ -368,23 +406,14 @@ export class TmdbSource implements CatalogSource {
     const releases: ReleaseRecord[] = [];
     for (const { slug, results } of pages) {
       for (const m of results) {
-        if (!m.release_date) continue;
-        if (seen.has(m.id)) continue;
+        const release = movieRelease(slug, m);
+        if (!release || seen.has(m.id)) continue;
         seen.add(m.id);
-        releases.push({
-          id: `release:${slug}:movie:${m.id}`,
-          mediaId: `movie:${m.id}`,
-          providerSlug: slug,
-          availableFrom: m.release_date,
-          bingeableFrom: m.release_date,
-          isFullDrop: true,
-          episodeCount: null,
-          watchTimeMinutes: null,
-          seasonNumber: null,
-        });
+        releases.push(release);
       }
     }
     return releases;
+
   }
 
 
@@ -418,53 +447,27 @@ export class TmdbSource implements CatalogSource {
     try {
       if (kind === "movie") {
         const d = await this.client.get<TmdbMovieDetail>(`/movie/${tmdbId}`);
-        if (!d.release_date) return null;
-        return {
-          id,
-          episodeCount: null,          
-          mediaId: `movie:${tmdbId}`,
-          providerSlug: slug,
-          availableFrom: d.release_date,
-          bingeableFrom: d.release_date,
-          isFullDrop: true,
-          seasonNumber: null,
-          watchTimeMinutes: d.runtime,
-        };
+        return movieRelease(slug, d);
       }
+
 
       if (kind === "tv") {
         const d = await this.client.get<TmdbTvDetail>(`/tv/${tmdbId}`);
         const wanted = Number(seasonPart?.replace(/^s/, ""));
         const season = (d.seasons ?? []).find((x) => x.season_number === wanted);
-        let analysis: ReturnType<typeof analyseSeason> | null = null;
-        if (season) {
-          try {
-            analysis = analyseSeason(
-              await this.client.get<TmdbSeasonDetail>(
-                `/tv/${tmdbId}/season/${season.season_number}`,
-              ),
-            );
-          } catch {
-            analysis = null;
-          }
+        if (!season) return null;
+
+        let analysis: SeasonAnalysis | null = null;
+        try {
+          analysis = analyseSeason(
+            await this.client.get<TmdbSeasonDetail>(`/tv/${tmdbId}/season/${wanted}`),
+          );
+        } catch {
+          analysis = null;
         }
-
-        const availableFrom =
-          analysis?.firstAirDate ?? season?.air_date ?? d.first_air_date;
-
-        if (!availableFrom) return null;
-        return {
-          episodeCount: analysis?.episodeCount ?? null,
-          id,
-          mediaId: `tv:${tmdbId}`,
-          providerSlug: slug,
-          availableFrom,
-          bingeableFrom: analysis?.bingeableFrom ?? null,
-          isFullDrop: analysis?.isFullDrop ?? null,
-          seasonNumber: season?.season_number ?? null,
-          watchTimeMinutes: analysis?.watchTimeMinutes ?? null,
-        };
+        return seasonRelease(slug, tmdbId, wanted, analysis, season.air_date);
       }
+
 
       return null;
     } catch {

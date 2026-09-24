@@ -72,6 +72,7 @@ describe("analyseSeason", () => {
     expect(analyseSeason(s)).toMatchObject({
       firstAirDate: null,
       bingeableFrom: null,
+      isFullDrop: null,
     });
   });
 
