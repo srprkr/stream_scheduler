@@ -14,6 +14,7 @@ import type {
   TmdbMovieListItem,
   TmdbMultiItem,
   TmdbPage,
+  TmdbReleaseDates,
   TmdbSeasonDetail,
   TmdbTvDetail,
   TmdbTvListItem,
@@ -36,6 +37,8 @@ const WATCH_REGION = "US";
  */
 interface ProviderConfig extends ProviderRecord {
   networkId: number | null;
+    /** Lower-case names a TMDB release-date note uses for this service. */
+  noteAliases: string[];
   watchProviderIds: number[];
 }
 
@@ -46,6 +49,7 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     name: "Netflix",
     logoPath: "/rK1KljqmbvO9HQa1PBFLILWah72.png",
     networkId: 213,
+    noteAliases: ["netflix"],
     watchProviderIds: [8],
   },
   {
@@ -53,6 +57,7 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     slug: "peacock",
     name: "Peacock",
     logoPath: "/a1UIdq5BrkcAxnxcUhFsNbXnxeu.png",
+    noteAliases: ["peacock"],
     networkId: 3353,
     watchProviderIds: [386],
   },
@@ -83,8 +88,15 @@ const IMAGE_WIDTHS: Record<ImageSize, string> = {
   ORIGINAL: "original",
 };
 
-const MOVIE_PAGES = 1; // 20 per page -> the "top 40 by popularity" backlog
-/** How far ahead the feed looks. Sized to the pause/resume decision. */
+/**
+ * Ceiling on candidate film pages. The window held 14 when this was set, and
+ * Netflix premieres were spread across pages 1-12, so stopping early drops
+ * real releases rather than just the long tail.
+ */
+const FILM_PAGES = 20;
+/** TMDB release type for a digital release, streaming premieres included. */
+const DIGITAL_RELEASE = 4;
+
 const WINDOW_DAYS = 90;
 /** Candidate series pages scanned for season premieres. 20 per page. */
 const SERIES_PAGES = 1;
@@ -140,23 +152,49 @@ function seasonRelease(
   };
 }
 
-/** A film as a release. A film is always a full drop. */
+/** A film arriving on one service. A film is always a full drop. */
 function movieRelease(
   slug: string,
-  movie: TmdbMovieListItem & { runtime?: number | null },
-): ReleaseRecord | null {
-  if (!movie.release_date) return null;
+  movieId: number | string,
+  date: string,
+  runtime: number | null = null,
+): ReleaseRecord {
   return {
-    id: `release:${slug}:movie:${movie.id}`,
-    mediaId: `movie:${movie.id}`,
+    id: `release:${slug}:movie:${movieId}`,
+    mediaId: `movie:${movieId}`,
     providerSlug: slug,
-    availableFrom: movie.release_date,
-    bingeableFrom: movie.release_date,
+    availableFrom: date,
+    bingeableFrom: date,
     isFullDrop: true,
     episodeCount: null,
-    watchTimeMinutes: movie.runtime ?? null,
+    watchTimeMinutes: runtime,
     seasonNumber: null,
   };
+}
+
+/**
+ * Streaming premieres hidden in a film's release dates: US Digital entries
+ * whose note names a configured service. The note is user-entered free text
+ * ("HBO Max", "Max", "Hulu / Netflix"), so it is split on "/" and "," and each
+ * part matched exactly against the service's aliases. A blank note is a
+ * rent-or-buy release and matches nothing.
+ */
+export function streamingPremieres(
+  dates: TmdbReleaseDates,
+  configs: readonly { slug: string; noteAliases: readonly string[] }[],
+): { slug: string; date: string }[] {
+  const local = dates.results.find((c) => c.iso_3166_1 === WATCH_REGION);
+  const premieres: { slug: string; date: string }[] = [];
+  for (const d of local?.release_dates ?? []) {
+    if (d.type !== DIGITAL_RELEASE) continue;
+    const parts = d.note.toLowerCase().split(/[\/,]/).map((p) => p.trim());
+    for (const config of configs) {
+      if (parts.some((p) => config.noteAliases.includes(p))) {
+        premieres.push({ slug: config.slug, date: d.release_date.slice(0, 10) });
+      }
+    }
+  }
+  return premieres;
 }
 
 /**
@@ -276,9 +314,8 @@ export function pickTrailer(videos: TmdbVideo[] | undefined): VideoRecord | null
  * Two different questions are being asked of one API, because TMDB answers
  * them differently:
  *   - SERIES: genuinely upcoming season drops, new and returning alike.
- *   - MOVIES: TMDB does not publish future streaming dates, so these are
- *     what is on Netflix *now*, ranked by popularity, with availableFrom set
- *     to the title's release date. They land in the past by design.
+ *   - FILMS: streaming premieres recorded as US Digital release dates whose
+ *     note names the service - originals and older films moving over alike.
  */
 export class TmdbSource implements CatalogSource {
   readonly name = "tmdb";
@@ -409,40 +446,75 @@ export class TmdbSource implements CatalogSource {
   }
 
 
-  private async availableMovies(
+  /**
+   * Films arriving on a configured service in the window, originals and
+   * older films moving over alike.
+   *
+   * TMDB has no structured "arrives on Netflix" field for films. What it has
+   * is a US Digital release date whose free-text note names the service, and
+   * that note lives only on each film's release_dates. Discover cannot filter
+   * on it, so every candidate costs one request - but a single scan serves
+   * every provider, so the cost does not grow as services are added.
+   */
+  private async upcomingFilms(
     configs: ProviderConfig[],
   ): Promise<ReleaseRecord[]> {
-    const jobs = configs.flatMap((config) =>
-      Array.from({ length: MOVIE_PAGES }, (_, i) => ({ config, page: i + 1 })),
-    );
+    const today = isoDate(this.now());
+    const end = isoDate(addDays(this.now(), WINDOW_DAYS));
+    const discover = (page: number) =>
+      this.client.get<TmdbPage<TmdbMovieListItem>>(
+        `/discover/movie?with_release_type=${DIGITAL_RELEASE}&region=${WATCH_REGION}` +
+          `&release_date.gte=${today}&release_date.lte=${end}` +
+          `&sort_by=popularity.desc&page=${page}`,
+      );
 
-    const pages = await mapLimit(jobs, CONCURRENCY, async ({ config, page }) => {
+    // Page 1 says how many pages exist; the rest are fetched together.
+    let first: TmdbPage<TmdbMovieListItem>;
+    try {
+      first = await discover(1);
+    } catch {
+      return [];
+    }
+    const remaining = Array.from(
+      { length: Math.max(0, Math.min(first.total_pages, FILM_PAGES) - 1) },
+      (_, i) => i + 2,
+    );
+    const rest = await mapLimit(remaining, CONCURRENCY, async (page) => {
       try {
-        // Tier ids are OR-ed: "on this service at all", not "on this tier".
-        const body = await this.client.get<TmdbPage<TmdbMovieListItem>>(
-          `/discover/movie?with_watch_providers=${config.watchProviderIds.join("|")}` +
-            `&watch_region=${WATCH_REGION}&with_watch_monetization_types=flatrate` +
-            `&sort_by=popularity.desc&page=${page}`,
-        );
-        return { slug: config.slug, results: body.results };
+        return (await discover(page)).results;
       } catch {
-        return { slug: config.slug, results: [] as TmdbMovieListItem[] };
+        return [];
+      }
+    });
+    const candidates = [first.results, ...rest].flat();
+
+    const dated = await mapLimit(candidates, CONCURRENCY, async (m) => {
+      try {
+        return {
+          id: m.id,
+          dates: await this.client.get<TmdbReleaseDates>(`/movie/${m.id}/release_dates`),
+        };
+      } catch {
+        return null;
       }
     });
 
-    const seen = new Set<number>();
+    // Popularity can shift between page fetches, so a film may appear twice.
+    const seen = new Set<string>();
     const releases: ReleaseRecord[] = [];
-    for (const { slug, results } of pages) {
-      for (const m of results) {
-        const release = movieRelease(slug, m);
-        if (!release || seen.has(m.id)) continue;
-        seen.add(m.id);
+    for (const entry of dated) {
+      if (!entry) continue;
+      for (const { slug, date } of streamingPremieres(entry.dates, configs)) {
+        if (date < today || date > end) continue;
+        const release = movieRelease(slug, entry.id, date);
+        if (seen.has(release.id)) continue;
+        seen.add(release.id);
         releases.push(release);
       }
     }
     return releases;
-
   }
+
 
 
   async listReleases(query: ReleaseQuery): Promise<ReleaseRecord[]> {
@@ -456,7 +528,7 @@ export class TmdbSource implements CatalogSource {
 
     const [seasons, movies] = await Promise.all([
       this.upcomingSeasons(configs),
-      this.availableMovies(configs),
+      this.upcomingFilms(configs),
     ]);
     const from = query.from ?? isoDate(this.now());
     return [...seasons, ...movies]
@@ -474,9 +546,20 @@ export class TmdbSource implements CatalogSource {
 
     try {
       if (kind === "movie") {
-        const d = await this.client.get<TmdbMovieDetail>(`/movie/${tmdbId}`);
-        return movieRelease(slug, d);
+        const d = await this.client.get<TmdbMovieDetail>(
+          `/movie/${tmdbId}?append_to_response=release_dates`,
+        );
+        const config = PROVIDER_CONFIGS.find((c) => c.slug === slug);
+        if (!config || !d.release_dates) return null;
+        // The most recent arrival on this service, if it has had several.
+        const date = streamingPremieres(d.release_dates, [config])
+          .map((p) => p.date)
+          .sort()
+          .at(-1);
+        // TMDB reports 0 minutes for films it has no runtime for yet.
+        return date ? movieRelease(slug, tmdbId, date, d.runtime || null) : null;
       }
+
 
 
       if (kind === "tv") {

@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { analyseSeason, pickTrailer, TmdbSource } from "./source.js";
+import { analyseSeason, pickTrailer, streamingPremieres, TmdbSource } from "./source.js";
 import type {
   TmdbEpisode,
   TmdbMultiItem,
   TmdbPage,
+  TmdbReleaseDate,
   TmdbSeasonDetail,
   TmdbVideo,
 } from "./types.js";
@@ -146,7 +147,7 @@ function fakeClient(responses: Record<string, unknown>) {
 }
 
 function page(results: TmdbMultiItem[]): TmdbPage<TmdbMultiItem> {
-  return { page: 1, total_results: results.length, results };
+  return { page: 1, total_pages: 1, total_results: results.length, results };
 }
 
 function movieHit(id: number, title: string): TmdbMultiItem {
@@ -210,3 +211,52 @@ describe("TmdbSource.searchMedia", () => {
     expect(client.calls).toEqual([]);
   });
 });
+
+describe("streamingPremieres", () => {
+  const services = [
+    { slug: "netflix", noteAliases: ["netflix"] },
+    { slug: "hbomax", noteAliases: ["hbo max", "max"] },
+  ];
+
+  function dates(country: string, ...entries: Partial<TmdbReleaseDate>[]) {
+    return {
+      results: [
+        {
+          iso_3166_1: country,
+          release_dates: entries.map((e) => ({
+            type: 4,
+            release_date: "2026-10-16T00:00:00.000Z",
+            note: "",
+            ...e,
+          })),
+        },
+      ],
+    };
+  }
+
+  it("reads the service from a digital release's note", () => {
+    expect(streamingPremieres(dates("US", { note: "Netflix" }), services)).toEqual([
+      { slug: "netflix", date: "2026-10-16" },
+    ]);
+  });
+
+  it("matches every service in a shared note, by any alias", () => {
+    const found = streamingPremieres(dates("US", { note: "Max / Netflix" }), services);
+    expect(found.map((p) => p.slug)).toEqual(["netflix", "hbomax"]);
+  });
+
+  it("treats a blank note as rent-or-buy, not streaming", () => {
+    expect(streamingPremieres(dates("US", { note: "" }), services)).toEqual([]);
+  });
+
+  it("ignores theatrical dates and other countries", () => {
+    expect(streamingPremieres(dates("US", { type: 3, note: "Netflix" }), services)).toEqual([]);
+    expect(streamingPremieres(dates("GB", { note: "Netflix" }), services)).toEqual([]);
+  });
+
+  it("does not match a name buried in a longer note", () => {
+    const note = "Netflix Documentary Talent Fund screening";
+    expect(streamingPremieres(dates("US", { note }), services)).toEqual([]);
+  });
+});
+

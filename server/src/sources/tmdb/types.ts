@@ -2,6 +2,7 @@
 
 export interface TmdbPage<T> {
   page: number;
+  total_pages: number;
   total_results: number;
   results: T[];
 }
@@ -69,7 +70,22 @@ export interface TmdbTvDetail extends TmdbTvListItem {
   videos?: { results: TmdbVideo[] };
 }
 
+export interface TmdbReleaseDate {
+  /** 1 Premiere, 2 Limited, 3 Theatrical, 4 Digital, 5 Physical, 6 TV. */
+  type: number;
+  /** ISO timestamp, e.g. "2026-10-16T00:00:00.000Z". */
+  release_date: string;
+  /** Free text, user-entered. For type 4 it often names the service. */
+  note: string;
+}
+
+export interface TmdbReleaseDates {
+  results: { iso_3166_1: string; release_dates: TmdbReleaseDate[] }[];
+}
+
+
 export interface TmdbMovieDetail extends TmdbMovieListItem {
   runtime: number | null;
+  release_dates?: TmdbReleaseDates;
   videos?: { results: TmdbVideo[] };
 }
