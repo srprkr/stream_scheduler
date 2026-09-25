@@ -1,14 +1,18 @@
 import { badge, bingeNote, countdown, formatDate, watchTime } from "./format";
 import type { Release } from "./format";
 import { Sheet } from "./Sheet";
+import { ProviderLogos } from "./ProviderLogos";
 
 /** A release's detail: the shared sheet, plus when and where it arrives. */
 export function ReleaseDialog({
   release,
+  providers,
   onClose,
 }: {
+
   release: Release | null;
   onClose: () => void;
+  providers: readonly Release["provider"][];
 }) {
   if (!release) return <Sheet open={false} media={null} onClose={onClose} />;
 
@@ -60,8 +64,13 @@ export function ReleaseDialog({
           </div>
         )}
         <div>
-          <dt>Service</dt>
-          <dd>{release.provider.name}</dd>
+          <div>
+            <dt>{providers.length > 1 ? "Services" : "Service"}</dt>
+            <dd className="facts__services">
+              <ProviderLogos providers={providers} />
+              {providers.map((p) => p.name).join(", ")}
+            </dd>
+          </div>
         </div>
       </dl>
     </Sheet>

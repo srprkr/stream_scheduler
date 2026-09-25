@@ -1,13 +1,19 @@
 import { badge, bingeNote, countdown, formatDate, watchTime } from "./format";
 import type { Release } from "./format";
+import  { ProviderLogos } from "./ProviderLogos";
 
 export function ReleaseCard({
   release,
+  providers,
   onOpen,
   showProvider,
 }: {
+
   release: Release;
   onOpen: () => void;
+  /** Every service this title arrives on that day; usually one. */
+  providers: readonly Release["provider"][];
+
   /** Only worth the pixels when the feed is mixing services. */
   showProvider: boolean;
 }) {
@@ -41,9 +47,8 @@ export function ReleaseCard({
         </div>
 
         <div className="card__body">
-          {showProvider && (
-            <p className="card__provider">{release.provider.name}</p>
-          )}
+          {showProvider && <ProviderLogos providers={providers} />}
+
           <h2 className="card__title">{media.title}</h2>
 
           <p className="card__meta">

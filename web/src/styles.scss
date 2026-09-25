@@ -144,14 +144,6 @@ body {
   &__date { color: var(--border); margin-left: auto; }
   &__note { margin: 0; font-size: 0.75rem; color: #fbbf24; line-height: 1.35; }
   &__sub { margin: 0; font-size: 0.75rem; color: var(--muted); }
-
-  &__provider {
-    margin: 0;
-    font-size: 0.6875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--muted);
-  }
 }
 
 .countdown {
@@ -362,4 +354,31 @@ body {
   dd { margin: 0; font-size: 0.875rem; }
 
   &__warn { color: #fbbf24; }
+  &__services { display: flex; align-items: center; gap: 10px; }
 }
+
+// --- service logos --------------------------------------------------------
+
+// TMDB's provider logos are square app icons, so they sit as small tiles.
+.logos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 6px;
+
+  &__img {
+    display: block;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+  }
+
+  &__name {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+}
+

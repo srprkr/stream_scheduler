@@ -1,6 +1,7 @@
 import { useQuery } from "@apollo/client/react";
 import { useState } from "react";
 
+import { groupByArrival } from "./group";
 import { ProviderFilter } from "./ProviderFilter";
 import { ReleaseCard } from "./ReleaseCard";
 import { ReleaseDialog } from "./ReleaseDialog";
@@ -19,6 +20,7 @@ const RELEASE_FEED = graphql(`
       watchTimeMinutes
       provider {
         id
+        logoUrl(size: SMALL)
         slug
         name
       }
@@ -66,7 +68,9 @@ export function ReleaseFeed() {
   });
 
   const releases = data?.releases ?? [];
-  const open = releases.find((r) => r.id === openId) ?? null;
+  const groups = groupByArrival(releases);
+  const open = groups.find((g) => g.release.id === openId) ?? null;
+
 
   return (
     <>
@@ -79,17 +83,23 @@ export function ReleaseFeed() {
       )}
 
       <ul className="grid">
-        {releases.map((release) => (
+        {groups.map(({ release, providers }) => (
           <ReleaseCard
             key={release.id}
             release={release}
+            providers={providers}
             onOpen={() => setOpenId(release.id)}
             showProvider={providerSlug === null}
           />
         ))}
       </ul>
 
-      <ReleaseDialog release={open} onClose={() => setOpenId(null)} />
+      <ReleaseDialog
+        release={open?.release ?? null}
+        providers={open?.providers ?? []}
+        onClose={() => setOpenId(null)}
+      />
+
     </>
   );
 }
