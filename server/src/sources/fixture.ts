@@ -5,6 +5,7 @@ import type {
   ProviderRecord,
   ReleaseQuery,
   ReleaseRecord,
+  RuntimeRecord,
   VideoRecord,
 } from "./types.js";
 
@@ -164,6 +165,16 @@ export class FixtureSource implements CatalogSource {
   async getMedia(ids: readonly string[]): Promise<(MediaRecord | null)[]> {
     return ids.map((id) => MEDIA.find((m) => m.id === id) ?? null);
   }
+
+  /** Eight 50-minute episodes a season: round numbers that are easy to assert. */
+  async getSeriesRuntimes(ids: readonly string[]): Promise<(RuntimeRecord | null)[]> {
+    return ids.map((id) => {
+      const m = MEDIA.find((x) => x.id === id);
+      if (m?.kind !== "SERIES" || !m.seasonCount) return null;
+      return { minutes: m.seasonCount * 8 * 50, estimated: false };
+    });
+  }
+
 
   async searchMedia(query: string, first: number): Promise<MediaRecord[]> {
     const q = query.trim().toLowerCase();

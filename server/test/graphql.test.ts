@@ -103,4 +103,22 @@ describe("GraphQL layer", () => {
     const { getMedia } = await run(`{ searchMedia(query: "harbor") { title } }`, source);
     expect(getMedia).not.toHaveBeenCalled();
   });
+
+  it("fetches several titles in the order asked, null for unknown ids", async () => {
+    const { data, errors } = await run(`{
+      mediaItems(ids: ["media:3", "media:404", "media:2"]) {
+        title
+        totalRuntime { minutes estimated }
+      }
+    }`);
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({
+      mediaItems: [
+        { title: "Ledger", totalRuntime: { minutes: 400, estimated: false } },
+        null,
+        { title: "Nightshift at the Museum of Failure", totalRuntime: { minutes: 108, estimated: false } },
+      ],
+    });
+  });
+
 });

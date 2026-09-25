@@ -36,10 +36,16 @@ const shared = {
 export const Movie: MovieResolvers = {
   ...shared,
   runtimeMinutes: async (m, _a, ctx) => (await full(m, ctx)).runtimeMinutes,
+  // TMDB reports 0 minutes for films it has no runtime for yet.
+  totalRuntime: async (m, _a, ctx) => {
+    const minutes = (await full(m, ctx)).runtimeMinutes;
+    return minutes ? { minutes, estimated: false } : null;
+  },
 };
 export const Series: SeriesResolvers = {
   ...shared,
   seasonCount: async (m, _a, ctx) => (await full(m, ctx)).seasonCount,
+  totalRuntime: (m, _a, ctx) => ctx.loaders.runtime.load(m.id),
 };
 
 export const Video: VideoResolvers = {

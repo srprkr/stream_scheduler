@@ -5,11 +5,13 @@ import type {
   ProviderRecord,
   ReleaseQuery,
   ReleaseRecord,
+  RuntimeRecord,
   VideoRecord,
 } from "../types.js";
 import { addDays, isoDate } from "../../dates.js";
 import type { TmdbClient } from "./client.js";
 import type {
+  TmdbEpisode,
   TmdbMovieDetail,
   TmdbMovieListItem,
   TmdbMultiItem,
@@ -336,6 +338,57 @@ export function analyseSeason(season: TmdbSeasonDetail): {
     watchTimeMinutes,
   };
 }
+
+function median(values: readonly number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? (sorted[mid] as number)
+    : ((sorted[mid - 1] as number) + (sorted[mid] as number)) / 2;
+}
+
+/**
+ * Minutes to watch every aired episode of a series once.
+ *
+ * Specials (season 0) and episodes that have not aired are left out: they are
+ * not what a box set holds. An aired episode with no runtime is counted at
+ * its season's median length - or the whole series' median, if nothing in its
+ * season has one - and the total is marked as an estimate. Unlike a season's
+ * watchTimeMinutes, which refuses partial data, a library total is more useful
+ * as a close estimate than as nothing.
+ */
+export function seriesRuntime(
+  seasons: readonly TmdbSeasonDetail[],
+  today: string,
+): RuntimeRecord | null {
+  const aired = seasons
+    .filter((s) => s.season_number > 0)
+    .map((s) => s.episodes.filter((e) => e.air_date !== null && e.air_date <= today));
+  const known = (episodes: readonly TmdbEpisode[]) =>
+    episodes
+      .map((e) => e.runtime)
+      .filter((r): r is number => typeof r === "number" && r > 0);
+
+  const seriesMedian = median(aired.flatMap(known));
+  if (seriesMedian === null) return null;
+
+  let minutes = 0;
+  let estimated = false;
+  for (const episodes of aired) {
+    const fill = median(known(episodes)) ?? seriesMedian;
+    for (const e of episodes) {
+      if (e.runtime && e.runtime > 0) {
+        minutes += e.runtime;
+      } else {
+        minutes += fill;
+        estimated = true;
+      }
+    }
+  }
+  return { minutes: Math.round(minutes), estimated };
+}
+
 
 /**
  * Picks one preview from TMDB's unordered list: official YouTube trailers
@@ -701,6 +754,35 @@ export class TmdbSource implements CatalogSource {
       .slice(0, first);
   }
 
+    /**
+   * One request for the series, then one per season. TMDB's series-level
+   * episode_run_time is empty for most shows, so the only reliable total is
+   * the sum of every episode. The Office is ten requests - once, then cached.
+   * Two series at a time, each fetching its seasons in parallel, keeps the
+   * burst near CONCURRENCY rather than its square.
+   */
+  async getSeriesRuntimes(
+    ids: readonly string[],
+  ): Promise<(RuntimeRecord | null)[]> {
+    return mapLimit(ids, 2, (id) => this.getOneSeriesRuntime(id));
+  }
+
+  private async getOneSeriesRuntime(id: string): Promise<RuntimeRecord | null> {
+    const [kind, tmdbId] = id.split(":");
+    if (kind !== "tv" || !tmdbId) return null;
+    try {
+      const detail = await this.client.get<TmdbTvDetail>(`/tv/${tmdbId}`);
+      const numbers = (detail.seasons ?? [])
+        .map((s) => s.season_number)
+        .filter((n) => n > 0);
+      const seasons = await mapLimit(numbers, CONCURRENCY / 2, (n) =>
+        this.client.get<TmdbSeasonDetail>(`/tv/${tmdbId}/season/${n}`),
+      );
+      return seriesRuntime(seasons, isoDate(this.now()));
+    } catch {
+      return null;
+    }
+  }
 
   imageUrl(path: string | null, size: ImageSize): string | null {
     if (!path) return null;

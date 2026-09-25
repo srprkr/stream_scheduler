@@ -11,7 +11,13 @@ export const Query: QueryResolvers = {
 
   release: (_p, args, ctx) => ctx.source.getRelease(args.id),
   mediaItem: (_p, args, ctx) => ctx.loaders.media.load(args.id),
-    /**
+  // loadMany reports a failed key as an Error in its slot instead of
+  // rejecting the batch; the schema promises null there, not a failed list.
+  mediaItems: async (_p, args, ctx) =>
+    (await ctx.loaders.media.loadMany(args.ids)).map((m) =>
+      m instanceof Error ? null : m,
+    ),
+  /**
    * Deliberately not primed into the media loader: these records are
    * summaries, and priming them would hand a summary to anything later in the
    * request that asked the loader for the full record.

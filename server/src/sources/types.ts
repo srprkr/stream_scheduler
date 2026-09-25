@@ -54,6 +54,12 @@ export interface MediaRecord {
 
 }
 
+export interface RuntimeRecord {
+  minutes: number;
+  /** True when some episodes had no runtime and were filled in. */
+  estimated: boolean;
+}
+
 export interface ReleaseRecord {
   /** ISO-8601 calendar date, YYYY-MM-DD. */
   availableFrom: string;
@@ -96,6 +102,9 @@ export interface CatalogSource {
 
   /** Batched, for the same reason as getProviders. */
   getMedia(ids: readonly string[]): Promise<(MediaRecord | null)[]>;
+
+  /** Whole-series watch time. Batched; null for films and unknown ids. */
+  getSeriesRuntimes(ids: readonly string[]): Promise<(RuntimeRecord | null)[]>;
 
   /**
    * Free-text title search across films and series, best match first.

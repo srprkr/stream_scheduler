@@ -92,6 +92,7 @@ interface MediaItem {
   handing the client an unordered list to choose from.
   """
   trailer: Video
+  totalRuntime: Runtime
 }
 
 type Movie implements MediaItem {
@@ -101,6 +102,7 @@ type Movie implements MediaItem {
   posterUrl(size: ImageSize = MEDIUM): URL
   backdropUrl(size: ImageSize = LARGE): URL
   trailer: Video
+  totalRuntime: Runtime
 
   runtimeMinutes: Int
 }
@@ -112,9 +114,21 @@ type Series implements MediaItem {
   posterUrl(size: ImageSize = MEDIUM): URL
   backdropUrl(size: ImageSize = LARGE): URL
   trailer: Video
+  totalRuntime: Runtime
 
   seasonCount: Int
 }
+
+type Runtime {
+  minutes: Int!
+
+  """
+  True when some episodes had no runtime upstream and were counted at their
+  season's median length.
+  """
+  estimated: Boolean!
+}
+
 
 type Video {
   id: ID!
@@ -243,7 +257,7 @@ type Query {
 
   "Fetch one title. Returns the interface; the client narrows with a fragment."
   mediaItem(id: ID!): MediaItem
-
+  mediaItems(ids: [ID!]!): [MediaItem]!
     """
   Find titles by name, films and series together, best match first.
   An empty or whitespace-only query returns an empty list rather than an error.

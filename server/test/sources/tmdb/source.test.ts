@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { analyseSeason, pickTrailer, streamingPremieres, TmdbSource } from "../../../src/sources/tmdb/source.js";
+import { 
+  analyseSeason, 
+  pickTrailer, 
+  seriesRuntime,
+  streamingPremieres, 
+  TmdbSource 
+} from "../../../src/sources/tmdb/source.js";
 import type {
   TmdbEpisode,
   TmdbMultiItem,
@@ -267,3 +273,46 @@ describe("streamingPremieres", () => {
 
 });
 
+describe("seriesRuntime", () => {
+  const TODAY = "2026-09-25";
+
+  function numbered(n: number, episodes: Partial<TmdbEpisode>[]): TmdbSeasonDetail {
+    return { ...season(episodes.map((e) => ({ air_date: "2020-01-01", ...e }))), season_number: n };
+  }
+
+  it("sums every aired episode of every season", () => {
+    const total = seriesRuntime(
+      [numbered(1, [{ runtime: 30 }, { runtime: 22 }]), numbered(2, [{ runtime: 25 }])],
+      TODAY,
+    );
+    expect(total).toEqual({ minutes: 77, estimated: false });
+  });
+
+  it("leaves out specials and episodes that have not aired", () => {
+    const total = seriesRuntime(
+      [
+        numbered(0, [{ runtime: 90 }]),
+        numbered(1, [{ runtime: 30 }, { runtime: 30, air_date: "2026-12-01" }, { runtime: 30, air_date: null }]),
+      ],
+      TODAY,
+    );
+    expect(total).toEqual({ minutes: 30, estimated: false });
+  });
+
+  it("fills a missing runtime with its season's median, and says so", () => {
+    const total = seriesRuntime([numbered(1, [{ runtime: 20 }, { runtime: 24 }, { runtime: 40 }, {}])], TODAY);
+    expect(total).toEqual({ minutes: 20 + 24 + 40 + 24, estimated: true });
+  });
+
+  it("falls back to the series median when a whole season lacks runtimes", () => {
+    const total = seriesRuntime(
+      [numbered(1, [{ runtime: 50 }, { runtime: 60 }]), numbered(2, [{}, {}])],
+      TODAY,
+    );
+    expect(total).toEqual({ minutes: 50 + 60 + 55 + 55, estimated: true });
+  });
+
+  it("gives up rather than guess when nothing has a runtime", () => {
+    expect(seriesRuntime([numbered(1, [{}, {}])], TODAY)).toBeNull();
+  });
+});
