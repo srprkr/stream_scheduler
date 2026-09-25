@@ -19,7 +19,7 @@ export class TmdbClient {
   constructor(
     private readonly baseUrl: string,
     private readonly token: string,
-    private readonly cache: FileCache,
+    private readonly cache: Pick<FileCache, "read" | "write">,
   ) {}
 
   async get<T>(path: string): Promise<T> {

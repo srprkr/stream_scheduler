@@ -62,7 +62,7 @@ export function ReleaseFeed() {
   const [openId, setOpenId] = useState<string | null>(null);
 
   const { data, loading, error } = useQuery(RELEASE_FEED, {
-    variables: { first: 24, timezone, providerSlug },
+    variables: { first: 150, timezone, providerSlug },
   });
 
   const releases = data?.releases ?? [];

@@ -258,5 +258,12 @@ describe("streamingPremieres", () => {
     const note = "Netflix Documentary Talent Fund screening";
     expect(streamingPremieres(dates("US", { note }), services)).toEqual([]);
   });
+
+  it("skips rental listings that name a storefront", () => {
+    const store = [{ slug: "appletv", noteAliases: ["apple tv"] }];
+    const note = "Apple TV, Prime Video, Google VOD";
+    expect(streamingPremieres(dates("US", { note }), store)).toEqual([]);
+  });
+
 });
 

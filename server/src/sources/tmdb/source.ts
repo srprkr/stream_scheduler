@@ -61,19 +61,62 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     networkId: 3353,
     watchProviderIds: [386],
   },
-  // Verified against the TMDB API; each is a one-line addition when wanted.
-  // Every provider added multiplies the cold-feed request count, so enable
-  // them alongside a background cache refresh rather than before one.
-  //
-  //   hulu       network 453   providers [15]         logo /44uAnmSqvA4yBOdbPWN8YgQHjWm.png
-  //   prime      network 1024  providers [9]          logo /gMZdpavHmxFNnLpMHwVxfqeux2g.png
-  //   appletv    network 2552  providers [350]        logo /9icYBfYFcwgCbky5VdGUIKJ4C5i.png
-  //   disney     network 2739  providers [337]        logo /5eZ872CghnHFLB1j8grszbrx0dx.png
-  //   hbomax     network 49    providers [1899]       logo /skypuy7SXuugIQeYg0IglmzoKaS.png
-  //   paramount  network 4330  providers [2303, 2616] logo /4N4BMd0Mm0kHAmF7RZgL5lW3cwc.png
-  //
-  // Note: network 49 is HBO, the cable network, not Max. It finds HBO
-  // originals but misses Max-only titles. Good enough, not exact.
+  {
+    id: "provider:hulu",
+    slug: "hulu",
+    name: "Hulu",
+    logoPath: "/44uAnmSqvA4yBOdbPWN8YgQHjWm.png",
+    networkId: 453,
+    noteAliases: ["hulu"],
+    watchProviderIds: [15],
+  },
+  {
+    id: "provider:prime",
+    slug: "prime",
+    name: "Prime Video",
+    logoPath: "/gMZdpavHmxFNnLpMHwVxfqeux2g.png",
+    networkId: 1024,
+    noteAliases: ["prime video", "amazon prime video", "amazon prime"],
+    watchProviderIds: [9],
+  },
+  {
+    id: "provider:appletv",
+    slug: "appletv",
+    name: "Apple TV",
+    logoPath: "/9icYBfYFcwgCbky5VdGUIKJ4C5i.png",
+    networkId: 2552,
+    noteAliases: ["apple tv", "apple tv+"],
+    watchProviderIds: [350],
+  },
+  {
+    id: "provider:disney",
+    slug: "disney",
+    name: "Disney+",
+    logoPath: "/5eZ872CghnHFLB1j8grszbrx0dx.png",
+    networkId: 2739,
+    noteAliases: ["disney+", "disney plus"],
+    watchProviderIds: [337],
+  },
+  {
+    // Network 49 is HBO, the cable network, not the streaming service. It
+    // finds HBO originals but misses Max-only titles. Good enough, not exact.
+    id: "provider:hbomax",
+    slug: "hbomax",
+    name: "HBO Max",
+    logoPath: "/skypuy7SXuugIQeYg0IglmzoKaS.png",
+    networkId: 49,
+    noteAliases: ["hbo max", "max"],
+    watchProviderIds: [1899],
+  },
+  {
+    id: "provider:paramount",
+    slug: "paramount",
+    name: "Paramount+",
+    logoPath: "/4N4BMd0Mm0kHAmF7RZgL5lW3cwc.png",
+    networkId: 4330,
+    noteAliases: ["paramount+", "paramount plus"],
+    watchProviderIds: [2303, 2616],
+  },
 ];
 
 const PROVIDERS: ProviderRecord[] = PROVIDER_CONFIGS.map(
@@ -96,6 +139,13 @@ const IMAGE_WIDTHS: Record<ImageSize, string> = {
 const FILM_PAGES = 20;
 /** TMDB release type for a digital release, streaming premieres included. */
 const DIGITAL_RELEASE = 4;
+
+/**
+ * Words that mark a digital note as a rent-or-buy release. "Apple TV" and
+ * "Prime Video" are also storefronts, so "Apple TV, Prime Video, Google VOD"
+ * is a rental listing, not two streaming premieres.
+ */
+const STOREFRONT = /\b(vod|tvod|google|vudu|fandango|itunes|rent|buy)\b/;
 
 const WINDOW_DAYS = 90;
 /** Candidate series pages scanned for season premieres. 20 per page. */
@@ -188,6 +238,7 @@ export function streamingPremieres(
   for (const d of local?.release_dates ?? []) {
     if (d.type !== DIGITAL_RELEASE) continue;
     const parts = d.note.toLowerCase().split(/[\/,]/).map((p) => p.trim());
+      if (parts.some((p) => STOREFRONT.test(p))) continue;
     for (const config of configs) {
       if (parts.some((p) => config.noteAliases.includes(p))) {
         premieres.push({ slug: config.slug, date: d.release_date.slice(0, 10) });

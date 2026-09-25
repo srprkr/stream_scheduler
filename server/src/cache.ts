@@ -42,3 +42,15 @@ export class FileCache {
     await writeFile(this.path(key), JSON.stringify(entry), "utf8");
   }
 }
+
+/**
+ * The same cache with reads switched off: every request goes upstream and the
+ * fresh response overwrites the entry. The feed refresher runs through this,
+ * so it replaces entries before they expire instead of reading them back.
+ */
+export function writeOnly(cache: FileCache): Pick<FileCache, "read" | "write"> {
+  return {
+    read: async () => null,
+    write: (key, body) => cache.write(key, body),
+  };
+}
