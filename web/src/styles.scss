@@ -46,6 +46,24 @@ body {
   p { margin: 0; color: var(--muted); }
 }
 
+.home-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+
+  .masthead { margin-bottom: 0; }
+  .stats { flex: 0 0 17; margin-bottom: 0; }
+
+  @media (max-width: 720px) {
+    flex-direction: column;
+    align-items: stretch;
+
+    .stats { flex-basis: auto; }
+  }
+}
+
 .state {
   color: var(--muted);
   padding: 40px 0;
@@ -194,10 +212,37 @@ body {
 // --- search ---------------------------------------------------------------
 
 .search {
+  margin-bottom: 32px;
+
+  // The positioning context for the panel. Same width as the input, so the
+  // panel lines up under it.
+  &__field {
+    position: relative;
+    max-width: 480px;
+  }
+  
+    // Sits over the input's left padding. pointer-events: none lets a click on
+  // the icon land on the input underneath, so it still focuses the field.
+  &__icon {
+    position: absolute;
+    top: 50%;
+    left: 13px;
+    width: 18px;
+    height: 18px;
+    transform: translateY(-50%);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  &__field:focus-within &__icon { color: var(--text); }
+
   &__input {
     width: 100%;
-    max-width: 480px;
-    padding: 10px 14px;
+    padding: 10px 14px 10px 40px;
     font: inherit;
     color: var(--text);
     background: var(--surface);
@@ -207,14 +252,34 @@ body {
     &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
   }
 
+  // Absolutely positioned, so it floats over the page instead of taking up
+  // room in it: nothing below the search box moves when results appear.
+  &__panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 10;
+    max-height: min(60vh, 480px);
+    overflow-y: auto;
+    padding: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  &__empty { margin: 0; padding: 10px; color: var(--muted); }
+
   &__results {
     list-style: none;
-    margin: 12px 0 0;
+    margin: 0;
     padding: 0;
     display: grid;
-    gap: 8px;
-    max-width: 480px;
+    gap: 2px;
   }
+
+  &__row { display: flex; align-items: center; gap: 12px; padding-right: 6px; }
 
   &__hit {
     display: flex;
@@ -222,7 +287,6 @@ body {
     min-width: 0;
     align-items: center;
     gap: 12px;
-    width: 100%;
     padding: 4px;
     font: inherit;
     color: inherit;
@@ -232,7 +296,8 @@ body {
     border-radius: 8px;
     cursor: pointer;
 
-    &:hover { background: var(--surface); }
+    // The panel is already var(--surface), so hover needs a step lighter.
+    &:hover { background: var(--border); }
     &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
   }
 
@@ -242,7 +307,7 @@ body {
     aspect-ratio: 2 / 3;
     object-fit: cover;
     border-radius: 4px;
-    background: var(--surface);
+    background: var(--bg);
     flex: none;
   }
 
@@ -250,6 +315,36 @@ body {
 }
 
 // --- library --------------------------------------------------------------
+
+.stats {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 32px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  p { margin: 0; }
+  &--loading { color: var(--muted); }
+
+  &__total { font-size: 1rem; color: var(--muted); }
+  &__figure { font-size: 1.5rem; font-weight: 700; color: var(--text); }
+  &__months { font-size: 0.9375rem; }
+  &__note { font-size: 0.8125rem; color: var(--muted); }
+
+  &__input {
+    width: 4.5em;
+    padding: 2px 6px;
+    font: inherit;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+
+    &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
+  }
+}
 
 .shelf-toggle {
   display: flex;
