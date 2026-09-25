@@ -1,6 +1,7 @@
 import { skipToken, useQuery } from "@apollo/client/react";
 import { useState } from "react";
 import { TitleDialog } from "./TitleDialog";
+import { ShelfToggle } from "./ShelfToggle";
 import { graphql } from "./generated";
 import { useDebounced } from "./useDebounced";
 
@@ -51,7 +52,7 @@ export function SearchBox() {
       )}
       <ul className="search__results">
         {results.map((m) => (
-          <li key={m.id}>
+          <li key={m.id} className="search__row">
             <button className="search__hit" onClick={() => setOpenId(m.id)}>
               {m.posterUrl ? (
                 <img src={m.posterUrl} alt="" />
@@ -63,7 +64,16 @@ export function SearchBox() {
                 {m.__typename === "Movie" ? "Film" : "Series"}
               </span>
             </button>
+            <ShelfToggle
+              item={{
+                id: m.id,
+                kind: m.__typename,
+                title: m.title,
+                posterUrl: m.posterUrl ?? null,
+              }}
+            />
           </li>
+
 
         ))}
       </ul>
