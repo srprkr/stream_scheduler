@@ -297,9 +297,20 @@ body {
     gap: 20px 14px;
   }
 
-  &__item { display: flex; flex-direction: column; gap: 8px; }
+  // Grid rows stretch every item to the tallest one in the row. The poster
+  // button then takes the spare height, which pushes each item's toggles to
+  // its bottom edge - so toggles line up however many lines a title wraps to.
+  &__item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .shelf-toggle { justify-content: space-between; }
+  }
+
 
   &__open {
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 6px;

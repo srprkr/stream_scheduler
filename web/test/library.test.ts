@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { LIBRARY_KEY, localLibrary, type LibraryItem } from "./library";
+import { LIBRARY_KEY, localLibrary, type LibraryItem } from "../src/library";
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data = new Map(Object.entries(initial));

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { analyseSeason, pickTrailer, streamingPremieres, TmdbSource } from "./source.js";
+import { analyseSeason, pickTrailer, streamingPremieres, TmdbSource } from "../../../src/sources/tmdb/source.js";
 import type {
   TmdbEpisode,
   TmdbMultiItem,
@@ -8,7 +8,7 @@ import type {
   TmdbReleaseDate,
   TmdbSeasonDetail,
   TmdbVideo,
-} from "./types.js";
+} from "../../../src/sources/tmdb/types.js";
 
 
 function season(episodes: Partial<TmdbEpisode>[]): TmdbSeasonDetail {

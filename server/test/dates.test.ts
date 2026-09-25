@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { addDays, daysUntil, isoDate } from "./dates.js";
+import { addDays, daysUntil, isoDate } from "../src/dates.js";
 
 const NOW = new Date("2026-09-18T12:00:00Z");
 

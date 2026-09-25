@@ -1,11 +1,11 @@
 import { ApolloServer } from "@apollo/server";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Context } from "./context.js";
-import { createLoaders } from "./loaders.js";
-import { resolvers } from "./resolvers/index.js";
-import { typeDefs } from "./schema.js";
-import { FixtureSource } from "./sources/fixture.js";
+import type { Context } from "../src/context.js";
+import { createLoaders } from "../src/loaders.js";
+import { resolvers } from "../src/resolvers/index.js";
+import { typeDefs } from "../src/schema.js";
+import { FixtureSource } from "../src/sources/fixture.js";
 
 const NOW = new Date("2026-09-18T12:00:00Z");
 

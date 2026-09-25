@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { groupByArrival } from "./group";
+import { groupByArrival } from "../src/group";
 
 function arrival(mediaId: string, date: string, provider: string, seasonNumber: number | null = null) {
   return { media: { id: mediaId }, availableFrom: date, seasonNumber, provider };
