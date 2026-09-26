@@ -492,7 +492,6 @@ body {
 }
 
 .replaces {
-  margin-top: 8px;
   padding: 16px 20px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -661,3 +660,72 @@ body {
   }
 }
 
+// Your services and What your library replaces, side by side when there is
+// room. auto-fit drops to one column on narrow screens with no media query.
+.home-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.services {
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  &__title { margin: 0 0 4px; font-size: 1.125rem; }
+  &__lede { margin: 0 0 14px; font-size: 0.875rem; color: var(--muted); }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 32px;
+  }
+
+  &__pick {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    cursor: pointer;
+
+    input { accent-color: var(--soon); cursor: pointer; }
+  }
+
+  &__price {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.875rem;
+    color: var(--muted);
+
+    input {
+      width: 5.5em;
+      padding: 4px 8px;
+      font: inherit;
+      color: var(--text);
+      text-align: right;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+
+      &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
+      &[aria-invalid="true"] { border-color: #f87171; }
+    }
+  }
+
+  &__total { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--border); }
+  &__unpriced { color: var(--muted); font-size: 0.875rem; }
+}

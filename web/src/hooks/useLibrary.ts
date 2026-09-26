@@ -2,18 +2,7 @@ import { useSyncExternalStore } from "react";
 
 import { LIBRARY_KEY, localLibrary, type LibraryEntry } from "../lib/library";
 
-/** localStorage can throw on access in some privacy modes; fall back to memory. */
-function browserStorage(): Pick<Storage, "getItem" | "setItem"> {
-  try {
-    return window.localStorage;
-  } catch {
-    const data = new Map<string, string>();
-    return {
-      getItem: (key) => data.get(key) ?? null,
-      setItem: (key, value) => void data.set(key, value),
-    };
-  }
-}
+import { browserStorage } from "./browserStorage";
 
 /** The one library for this browser, shared by every component. */
 export const library = localLibrary(browserStorage());
