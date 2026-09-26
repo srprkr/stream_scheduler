@@ -28,30 +28,17 @@ export interface SubscriptionStore {
 export const SUBSCRIPTIONS_KEY = "stream-scheduler:subscriptions";
 const VERSION = 2;
 
-/** Version 1 stored a bare price, before plans existed. */
-interface SubscriptionV1 {
-  slug: string;
-  monthlyCents: number | null;
-}
-
 /**
- * Reads any saved version and returns the current shape. A version-1 price
- * becomes a custom price: it was typed by hand, and there is no telling
- * which plan it was.
+ * Reads the saved subscriptions. Anything unreadable, or saved under another
+ * version, is treated as none: there are no earlier versions worth keeping.
  */
 function load(raw: string | null): Subscription[] {
   if (!raw) return [];
   try {
     const saved = JSON.parse(raw) as { version: number; subscriptions: unknown };
-    if (!Array.isArray(saved.subscriptions)) return [];
-    if (saved.version === VERSION) return saved.subscriptions as Subscription[];
-    if (saved.version === 1) {
-      return (saved.subscriptions as SubscriptionV1[]).map((s) => ({
-        slug: s.slug,
-        choice: { customCents: s.monthlyCents },
-      }));
-    }
-    return [];
+    return saved.version === VERSION && Array.isArray(saved.subscriptions)
+      ? (saved.subscriptions as Subscription[])
+      : [];
   } catch {
     return [];
   }
