@@ -1,5 +1,5 @@
 import { ProviderLogos, type LogoProvider } from "./ProviderLogos";
-import { replacementSummary } from "./replaces";
+import { replacementSummary } from "../lib/replaces";
 
 /**
  * The services the owned library overlaps, and the titles no service carries.

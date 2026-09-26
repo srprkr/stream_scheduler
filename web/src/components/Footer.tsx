@@ -1,4 +1,4 @@
-import tmdbLogo from "./assets/tmdb.svg";
+import tmdbLogo from "../assets/tmdb.svg";
 
 /**
  * The attribution TMDB's terms require, the JustWatch credit for streaming

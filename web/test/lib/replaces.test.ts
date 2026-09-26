@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { replacementSummary } from "../src/replaces";
+import { replacementSummary } from "../../src/lib/replaces";
 
 const peacock = { slug: "peacock", name: "Peacock" };
 const netflix = { slug: "netflix", name: "Netflix" };

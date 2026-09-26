@@ -1,4 +1,4 @@
-import { ReleaseFeed } from "./ReleaseFeed";
+import { ReleaseFeed } from "../components/ReleaseFeed";
 
 export function ComingSoonPage() {
   return (

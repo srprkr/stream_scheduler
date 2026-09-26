@@ -1,4 +1,4 @@
-import type { ReleaseFeedQuery } from "./generated/graphql";
+import type { ReleaseFeedQuery } from "../generated/graphql";
 
 export type Release = ReleaseFeedQuery["releases"][number];
 

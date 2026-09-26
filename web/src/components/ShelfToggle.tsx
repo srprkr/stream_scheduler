@@ -1,5 +1,5 @@
-import type { LibraryItem } from "./library";
-import { library, useLibrary } from "./useLibrary";
+import type { LibraryItem } from "../lib/library";
+import { library, useLibrary } from "../hooks/useLibrary";
 
 /**
  * Own and Want for one title. They are one choice, not two: a title is owned,

@@ -1,6 +1,6 @@
 import { useQuery } from "@apollo/client/react";
 
-import { graphql } from "./generated";
+import { graphql } from "../generated";
 
 const PROVIDERS = graphql(`
   query ProviderTags {

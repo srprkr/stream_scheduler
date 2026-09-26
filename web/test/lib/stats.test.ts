@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatHours, formatMonths, libraryStats } from "../src/stats";
+import { formatHours, formatMonths, libraryStats } from "../../src/lib/stats";
 
 describe("libraryStats", () => {
   it("totals runtimes and converts them to months of viewing", () => {

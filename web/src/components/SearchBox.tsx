@@ -1,10 +1,10 @@
 import { skipToken, useQuery } from "@apollo/client/react";
 import { useEffect, useRef, useState } from "react";
 
-import { graphql } from "./generated";
+import { graphql } from "../generated";
 import { ShelfToggle } from "./ShelfToggle";
 import { TitleDialog } from "./TitleDialog";
-import { useDebounced } from "./useDebounced";
+import { useDebounced } from "../hooks/useDebounced";
 
 /**
  * Summary fields only. Selecting trailer here would cost one extra upstream

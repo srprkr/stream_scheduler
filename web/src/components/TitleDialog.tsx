@@ -1,8 +1,8 @@
 import { skipToken, useQuery } from "@apollo/client/react";
 
 import { ProviderLogos } from "./ProviderLogos";
-import { watchTime } from "./format";
-import { graphql } from "./generated";
+import { watchTime } from "../lib/format";
+import { graphql } from "../generated";
 import { Sheet } from "./Sheet";
 
 /**

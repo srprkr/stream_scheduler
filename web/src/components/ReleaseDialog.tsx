@@ -1,5 +1,5 @@
-import { badge, bingeNote, countdown, formatDate, watchTime } from "./format";
-import type { Release } from "./format";
+import { badge, bingeNote, countdown, formatDate, watchTime } from "../lib/format";
+import type { Release } from "../lib/format";
 import { Sheet } from "./Sheet";
 import { ProviderLogos } from "./ProviderLogos";
 

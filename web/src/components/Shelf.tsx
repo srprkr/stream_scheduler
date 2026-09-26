@@ -1,6 +1,6 @@
 import { ProviderLogos } from "./ProviderLogos";
-import type { LibraryDetail } from "./useLibraryDetails";
-import type { LibraryEntry } from "./library";
+import type { LibraryDetail } from "../hooks/useLibraryDetails";
+import type { LibraryEntry } from "../lib/library";
 import { ShelfToggle } from "./ShelfToggle";
 
 /** One shelf of the library as a poster grid. Renders nothing when empty. */

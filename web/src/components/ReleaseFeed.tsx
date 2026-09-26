@@ -1,11 +1,11 @@
 import { useQuery } from "@apollo/client/react";
 import { useState } from "react";
 
-import { groupByArrival } from "./group";
+import { groupByArrival } from "../lib/group";
 import { ProviderFilter } from "./ProviderFilter";
 import { ReleaseCard } from "./ReleaseCard";
 import { ReleaseDialog } from "./ReleaseDialog";
-import { graphql } from "./generated";
+import { graphql } from "../generated";
 
 const RELEASE_FEED = graphql(`
   query ReleaseFeed($first: Int!, $timezone: String!, $providerSlug: String) {

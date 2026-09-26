@@ -1,12 +1,12 @@
 import { useState } from "react";
 
-import { SearchBox } from "./SearchBox";
-import { Shelf } from "./Shelf";
-import { TitleDialog } from "./TitleDialog";
-import { LibraryStats } from "./LibraryStats";
-import { LibraryReplaces } from "./LibraryReplaces";
-import { useLibraryDetails, type LibraryDetail } from "./useLibraryDetails";
-import { useLibrary } from "./useLibrary";
+import { SearchBox } from "../components/SearchBox";
+import { Shelf } from "../components/Shelf";
+import { TitleDialog } from "../components/TitleDialog";
+import { LibraryStats } from "../components/LibraryStats";
+import { LibraryReplaces } from "../components/LibraryReplaces";
+import { useLibraryDetails, type LibraryDetail } from "../hooks/useLibraryDetails";
+import { useLibrary } from "../hooks/useLibrary";
 
 export function HomePage() {
   const entries = useLibrary();

@@ -1,6 +1,6 @@
-import type { Runtime } from "./stats";
-import { formatHours, formatMonths, libraryStats } from "./stats";
-import { useStoredNumber } from "./useStoredNumber";
+import type { Runtime } from "../lib/stats";
+import { formatHours, formatMonths, libraryStats } from "../lib/stats";
+import { useStoredNumber } from "../hooks/useStoredNumber";
 
 /** A starting point the user is asked to change, not a claim about them. */
 const DEFAULT_HOURS_PER_MONTH = 20;

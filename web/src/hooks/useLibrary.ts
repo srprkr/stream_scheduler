@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-import { LIBRARY_KEY, localLibrary, type LibraryEntry } from "./library";
+import { LIBRARY_KEY, localLibrary, type LibraryEntry } from "../lib/library";
 
 /** localStorage can throw on access in some privacy modes; fall back to memory. */
 function browserStorage(): Pick<Storage, "getItem" | "setItem"> {

@@ -1,7 +1,7 @@
 import { skipToken, useQuery } from "@apollo/client/react";
 
-import { graphql } from "./generated";
-import type { LibraryDetailsQuery } from "./generated/graphql";
+import { graphql } from "../generated";
+import type { LibraryDetailsQuery } from "../generated/graphql";
 
 /**
  * Everything the library page shows about its titles, for both shelves, in
