@@ -1,7 +1,7 @@
 import { skipToken, useQuery } from "@apollo/client/react";
 import { useState } from "react";
-import { Link } from "react-router";
 
+import { MyServices } from "../components/MyServices";
 import { ProviderLogos } from "../components/ProviderLogos";
 import { ShelfToggle } from "../components/ShelfToggle";
 import { TitleDialog } from "../components/TitleDialog";
@@ -69,17 +69,20 @@ export function WhatsOnPage() {
   );
   const page = data?.catalog;
 
+  // Nothing to browse until the user says what they pay for, so the page
+  // asks right here rather than sending them somewhere else to answer.
   if (mySlugs.length === 0) {
     return (
-      <header className="masthead">
-        <h1>What's On</h1>
-        <p>
-          <Link to="/">Tick the services you pay for</Link> and everything on
-          them shows up here, in one place.
-        </p>
-      </header>
+      <>
+        <header className="masthead">
+          <h1>What's On</h1>
+          <p>Tick the services you pay for, and everything on them shows up here.</p>
+        </header>
+        <MyServices />
+      </>
     );
   }
+
 
   const loadMore = async () => {
     if (!page?.nextCursor) return;
@@ -100,6 +103,12 @@ export function WhatsOnPage() {
           {mySlugs.length === 1 ? "service" : "services"}.
         </p>
       </header>
+
+      <details className="catalog__services">
+        <summary>Your services and plans</summary>
+        <MyServices />
+      </details>
+
 
       <div className="catalog__controls">
         <div className="tags" role="group" aria-label="Services">

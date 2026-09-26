@@ -252,7 +252,7 @@ body {
 // --- search ---------------------------------------------------------------
 
 .search {
-  margin-bottom: 32px;
+  margin: 32px 0;
 
   // The positioning context for the panel. Same width as the input, so the
   // panel lines up under it.
@@ -660,15 +660,6 @@ body {
   }
 }
 
-// Your services and What your library replaces, side by side when there is
-// room. auto-fit drops to one column on narrow screens with no media query.
-.home-panels {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 16px;
-  align-items: start;
-}
-
 .services {
   padding: 16px 20px;
   background: var(--surface);
@@ -779,6 +770,23 @@ body {
 // --- what's on ------------------------------------------------------------
 
 .catalog {
+  &__services {
+    margin-bottom: 20px;
+
+    summary {
+      width: fit-content;
+      padding: 6px 0;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+
+      &:hover { color: var(--text); }
+      &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; border-radius: 4px; }
+    }
+
+    &[open] summary { margin-bottom: 12px; color: var(--text); }
+  }
+
   &__controls {
     display: grid;
     gap: 12px;

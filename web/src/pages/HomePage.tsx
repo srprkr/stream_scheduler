@@ -5,7 +5,6 @@ import { Shelf } from "../components/Shelf";
 import { TitleDialog } from "../components/TitleDialog";
 import { LibraryStats } from "../components/LibraryStats";
 import { LibraryReplaces } from "../components/LibraryReplaces";
-import { MyServices } from "../components/MyServices";
 import { useLibraryDetails, type LibraryDetail } from "../hooks/useLibraryDetails";
 import { useLibrary } from "../hooks/useLibrary";
 
@@ -52,13 +51,8 @@ export function HomePage() {
 
         </div>
 
+      <LibraryReplaces availability={ownedDetails.map((d) => d.availableOn)} />
       <SearchBox />
-      <div className="home-panels">
-        <MyServices />
-        <LibraryReplaces availability={ownedDetails.map((d) => d.availableOn)} />
-      </div>
-
-
 
       <Shelf title="Owned" entries={owned} details={details.byId} onOpen={setOpenId} />
       <Shelf title="Wishlist" entries={wanted} details={details.byId} onOpen={setOpenId} />
