@@ -759,4 +759,76 @@ body {
   &__total { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--border); }
   &__unpriced { color: var(--muted); font-size: 0.875rem; }
   &__checked { margin: 8px 0 0; font-size: 0.75rem; color: var(--muted); }
+  // Its own line under the plan, like the note: a setting about the plan,
+  // not a second plan choice.
+  &__leave-out {
+    flex-basis: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--muted);
+    cursor: pointer;
+
+    input { accent-color: var(--soon); cursor: pointer; }
+  }
+
+}
+
+// --- what's on ------------------------------------------------------------
+
+.catalog {
+  &__controls {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 24px;
+
+    // The shared .tags row carries its own bottom margin for Coming Soon.
+    .tags { margin-bottom: 0; }
+  }
+
+  &__options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__sort {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+    color: var(--muted);
+
+    select {
+      padding: 6px 10px;
+      font: inherit;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+
+      &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
+    }
+  }
+
+  &__more {
+    display: block;
+    margin: 32px auto 0;
+    padding: 10px 24px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+
+    &:hover:not(:disabled) { border-color: #3a3a46; }
+    &:disabled { color: var(--muted); cursor: progress; }
+    &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
+  }
 }

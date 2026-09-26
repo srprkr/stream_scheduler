@@ -1,5 +1,7 @@
 import type {
   CatalogSource,
+  CatalogPageRecord,
+  CatalogQuery,
   ImageSize,
   MediaRecord,
   ProviderRecord,
@@ -107,6 +109,14 @@ const MEDIA: MediaRecord[] = [
   },
 ];
 
+/** Where each fixture title streams. media:3 is on nothing, deliberately. */
+const AVAILABILITY: Record<string, string[]> = {
+  "media:1": ["netflix"],
+  "media:2": ["netflix", "max"],
+  "media:4": ["max"],
+  "media:5": ["netflix"],
+};
+
 /** (mediaId, providerSlug, days from today, seasonNumber) */
 const RELEASE_PLAN: ReadonlyArray<readonly [string, string, number, number | null]> = [
   ["media:1", "netflix", 3, 2],
@@ -166,16 +176,24 @@ export class FixtureSource implements CatalogSource {
     return ids.map((id) => MEDIA.find((m) => m.id === id) ?? null);
   }
 
-  /** Where each fixture title streams. media:3 is on nothing, deliberately. */
   async getAvailability(ids: readonly string[]): Promise<string[][]> {
-    const on: Record<string, string[]> = {
-      "media:1": ["netflix"],
-      "media:2": ["netflix", "max"],
-      "media:4": ["max"],
-      "media:5": ["netflix"],
-    };
-    return ids.map((id) => on[id] ?? []);
+    return ids.map((id) => AVAILABILITY[id] ?? []);
   }
+
+  /** One title a page, so five titles are enough to exercise paging. */
+  async listCatalog(query: CatalogQuery): Promise<CatalogPageRecord> {
+    const matching = MEDIA.filter(
+      (m) =>
+        m.kind === query.kind &&
+        (AVAILABILITY[m.id] ?? []).some((slug) => query.providerSlugs.includes(slug)),
+    );
+    const start = query.page - 1;
+    return {
+      items: matching.slice(start, start + 1).map((m) => ({ ...m, summary: true })),
+      nextPage: start + 1 < matching.length ? query.page + 1 : null,
+    };
+  }
+
 
   /** Eight 50-minute episodes a season: round numbers that are easy to assert. */
   async getSeriesRuntimes(ids: readonly string[]): Promise<(RuntimeRecord | null)[]> {

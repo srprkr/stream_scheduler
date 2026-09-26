@@ -31,6 +31,23 @@ scalar URL
 # Enums
 # -----------------------------------------------------------------------------
 
+"Film or series, for lists that take one kind at a time."
+enum MediaKind {
+  MOVIE
+  SERIES
+}
+
+"How a catalogue is ordered."
+enum CatalogSort {
+  "Most watched right now, by TMDB's popularity score."
+  POPULAR
+  "Highest rated, among titles with enough votes to mean it."
+  TOP_RATED
+  "Most recently released first."
+  NEWEST
+}
+
+
 """
 Requested image dimension. The provider adapter maps this onto whatever size
 buckets the upstream API uses. Present in the MVP because thumbnails are in
@@ -86,6 +103,12 @@ type Plan {
 
   "The plan assumed when a user ticks the service without choosing one."
   isDefault: Boolean!
+  
+  """
+  True when the plan pays for more than streaming (Amazon Prime's shipping,
+  say), so it starts outside cost estimates until the user brings it in.
+  """
+  leaveOutByDefault: Boolean!
 
   "What sets this plan apart beyond price and ads, when anything does."
   note: String
@@ -255,6 +278,16 @@ type Release {
 }
 
 
+"""
+One page of a catalogue. `nextCursor` is opaque: pass it back as `after` to
+get the page that follows, and do not build or parse it. Null on the last page.
+"""
+type CatalogPage {
+  items: [MediaItem!]!
+  nextCursor: String
+}
+
+
 # -----------------------------------------------------------------------------
 # Root
 #
@@ -294,6 +327,19 @@ type Query {
   An empty or whitespace-only query returns an empty list rather than an error.
   """
   searchMedia(query: String!, first: Int = 10): [MediaItem!]!
+
+  """
+  Everything streaming on subscription today on any of the given services,
+  one kind at a time, a page at a time. Films and series are separate lists
+  upstream, and merging two separately ranked lists has no right answer.
+  """
+  catalog(
+    providerSlugs: [String!]!
+    kind: MediaKind!
+    sort: CatalogSort = POPULAR
+    "A cursor from a previous page's nextCursor. Omitted means the first page."
+    after: String
+  ): CatalogPage!
 
 
   providers: [Provider!]!

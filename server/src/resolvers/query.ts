@@ -1,4 +1,5 @@
 import type { QueryResolvers } from "../generated/graphql.js";
+import {decodeCursor, encodeCursor } from "../cursor.js";
 
 export const Query: QueryResolvers = {
   releases: (_p, args, ctx) => 
@@ -24,6 +25,19 @@ export const Query: QueryResolvers = {
    */
   searchMedia: (_p, args, ctx) =>
     ctx.source.searchMedia(args.query, args.first ?? 10),
+    catalog: async (_p, args, ctx) => {
+    const page = await ctx.source.listCatalog({
+      providerSlugs: args.providerSlugs,
+      kind: args.kind,
+      sort: args.sort ?? "POPULAR",
+      page: decodeCursor(args.after),
+    });
+    return {
+      items: page.items,
+      nextCursor: page.nextPage === null ? null : encodeCursor(page.nextPage),
+    };
+  },
+
   providers: (_p, _a, ctx) => ctx.source.listProviders(),
   provider: (_p, args, ctx) => ctx.loaders.provider.load(args.slug),
 }

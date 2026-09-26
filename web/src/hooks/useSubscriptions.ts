@@ -5,6 +5,7 @@ import {
   SUBSCRIPTIONS_KEY,
   type Subscription,
 } from "../lib/subscriptions";
+
 import { browserStorage } from "./browserStorage";
 
 /** The one set of subscriptions for this browser, shared by every page. */

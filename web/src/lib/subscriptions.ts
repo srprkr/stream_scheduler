@@ -8,6 +8,7 @@ export type PlanChoice = { planId: string } | { customCents: number | null };
 export interface Subscription {
   slug: string;
   choice: PlanChoice;
+  leftOut?: boolean;
 }
 
 /** The fields of a published plan that pricing needs. */
@@ -16,12 +17,25 @@ export interface PricedPlan {
   monthlyCents: number;
 }
 
+/** A published plan as the store needs it when the user picks one. */
+export interface PlanDefaults {
+  id: string;
+  leaveOutByDefault: boolean;
+}
+
 export interface SubscriptionStore {
   subscriptions(): readonly Subscription[];
   /** Ticks a service on, on its default plan if it has one, or off. */
-  setSubscribed(slug: string, subscribed: boolean, defaultPlanId?: string | null): void;
-  /** Changes how a subscribed service is paid for; ignored for any other. */
-  setChoice(slug: string, choice: PlanChoice): void;
+  setSubscribed(slug: string, subscribed: boolean, defaultPlan?: PlanDefaults | null): void;
+  /**
+   * Changes how a subscribed service is paid for. Picking a published plan
+   * also resets leftOut to that plan's default; ignored for other services.
+   */
+  setChoice(slug: string, choice: PlanChoice, plan?: PlanDefaults | null): void;
+  /** Keeps a subscribed service out of cost estimates, or brings it back. */
+  setLeftOut(slug: string, leftOut: boolean): void;
+
+
   subscribe(listener: () => void): () => void;
 }
 
@@ -71,20 +85,31 @@ export function localSubscriptions(
   return {
     subscriptions: () => snapshot,
 
-    setSubscribed(slug, subscribed, defaultPlanId = null) {
+    setSubscribed(slug, subscribed, defaultPlan = null) {
       const has = snapshot.some((s) => s.slug === slug);
       if (subscribed && !has) {
-        const choice: PlanChoice = defaultPlanId
-          ? { planId: defaultPlanId }
+        const choice: PlanChoice = defaultPlan
+          ? { planId: defaultPlan.id }
           : { customCents: null };
-        commit([...snapshot, { slug, choice }]);
+        commit([...snapshot, { slug, choice, leftOut: defaultPlan?.leaveOutByDefault ?? false }]);
       }
       if (!subscribed && has) commit(snapshot.filter((s) => s.slug !== slug));
     },
 
-    setChoice(slug, choice) {
+    setChoice(slug, choice, plan = null) {
       if (!snapshot.some((s) => s.slug === slug)) return;
-      commit(snapshot.map((s) => (s.slug === slug ? { ...s, choice } : s)));
+      commit(
+        snapshot.map((s) =>
+          s.slug === slug
+            ? { ...s, choice, leftOut: plan ? plan.leaveOutByDefault : (s.leftOut ?? false) }
+            : s,
+        ),
+      );
+    },
+
+    setLeftOut(slug, leftOut) {
+      if (!snapshot.some((s) => s.slug === slug)) return;
+      commit(snapshot.map((s) => (s.slug === slug ? { ...s, leftOut } : s)));
     },
 
     subscribe(listener) {
@@ -116,17 +141,23 @@ export function monthlyCents(
   return choice.customCents;
 }
 
-/** The monthly total of the known prices, and how many are unknown. */
+/**
+ * The monthly total of the prices that count, how many services have no
+ * price, and what the left-out services cost - shown, but kept apart.
+ */
 export function monthlySpend(
   subscriptions: readonly Subscription[],
   plansFor: (slug: string) => readonly PricedPlan[],
-): { cents: number; unpriced: number } {
+): { cents: number; unpriced: number; leftOutCents: number } {
   let cents = 0;
   let unpriced = 0;
+  let leftOutCents = 0;
   for (const s of subscriptions) {
     const price = monthlyCents(s, plansFor(s.slug));
     if (price === null) unpriced++;
+    else if (s.leftOut) leftOutCents += price;
     else cents += price;
   }
-  return { cents, unpriced };
+  return { cents, unpriced, leftOutCents };
 }
+

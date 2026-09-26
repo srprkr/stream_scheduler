@@ -1,4 +1,6 @@
 import type {
+  CatalogPageRecord,
+  CatalogQuery,
   CatalogSource,
   ImageSize,
   MediaRecord,
@@ -359,6 +361,24 @@ export function subscriptionServices(
   return configs
     .filter((c) => c.watchProviderIds.some((id) => offered.has(id)))
     .map((c) => c.slug);
+}
+
+/** TMDB's TV genre ids for talk shows and news. */
+const TALK_GENRE = 10767;
+const NEWS_GENRE = 10763;
+
+/** TMDB serves at most 500 pages of any discover query. */
+const MAX_DISCOVER_PAGE = 500;
+
+function catalogPage(
+  items: MediaRecord[],
+  totalPages: number,
+  page: number,
+): CatalogPageRecord {
+  return {
+    items: items.map((item) => ({ ...item, summary: true })),
+    nextPage: page < Math.min(totalPages, MAX_DISCOVER_PAGE) ? page + 1 : null,
+  };
 }
 
 function median(values: readonly number[]): number | null {
@@ -742,6 +762,44 @@ export class TmdbSource implements CatalogSource {
       // A title that 404s upstream is a missing record, not a server error.
       return null;
     }
+  }
+
+  /**
+   * One discover request per page. Every chosen service's provider ids are
+   * OR-ed into one query, so four services cost what one does. Sorting the
+   * ids keeps the URL - and so the cache key - the same whichever order the
+   * services were ticked in.
+   */
+  async listCatalog(query: CatalogQuery): Promise<CatalogPageRecord> {
+    const providerIds = PROVIDER_CONFIGS.filter((c) => query.providerSlugs.includes(c.slug))
+      .flatMap((c) => c.watchProviderIds)
+      .sort((a, b) => a - b);
+    if (providerIds.length === 0) return { items: [], nextPage: null };
+
+    const dated = query.kind === "MOVIE" ? "primary_release_date" : "first_air_date";
+    const order = {
+      POPULAR: "sort_by=popularity.desc",
+      // Without a vote floor, "top rated" is a list of obscure titles with a
+      // few ten-star votes.
+      TOP_RATED: "sort_by=vote_average.desc&vote_count.gte=1000",
+      // Titles can be listed on a service before they are released.
+      NEWEST: `sort_by=${dated}.desc&${dated}.lte=${isoDate(this.now())}`,
+    }[query.sort];
+    const filters =
+      `with_watch_providers=${providerIds.join("|")}&watch_region=${WATCH_REGION}` +
+      `&with_watch_monetization_types=flatrate&${order}&page=${query.page}`;
+    // Nightly talk and news shows top "popular" every day, and are nothing
+    // anyone plans a subscription around.
+    const notDaily = `without_genres=${[TALK_GENRE, NEWS_GENRE].join("|")}`;
+
+    if (query.kind === "MOVIE") {
+      const body = await this.client.get<TmdbPage<TmdbMovieListItem>>(`/discover/movie?${filters}`);
+      return catalogPage(body.results.map(movieRecord), body.total_pages, query.page);
+    }
+    const body = await this.client.get<TmdbPage<TmdbTvListItem>>(
+      `/discover/tv?${filters}&${notDaily}`,
+    );
+    return catalogPage(body.results.map(seriesRecord), body.total_pages, query.page);
   }
 
   /**

@@ -16,6 +16,12 @@ export interface PlanRecord {
   monthlyCents: number;
   hasAds: boolean;
   isDefault: boolean;
+  /**
+   * Starts outside the estimates: the plan pays for more than streaming,
+   * so pausing it is rarely the question. The user can bring it back in.
+   */
+  leaveOutByDefault: boolean;
+
   /** What sets the plan apart beyond price and ads, when anything does. */
   note: string | null;
 }
@@ -28,13 +34,14 @@ const plan = (
   name: string,
   monthlyCents: number,
   hasAds: boolean,
-  extra: { isDefault?: boolean; note?: string } = {},
+  extra: { isDefault?: boolean; leaveOutByDefault?: boolean; note?: string } = {},
 ): PlanRecord => ({
   id,
   name,
   monthlyCents,
   hasAds,
   isDefault: extra.isDefault ?? false,
+  leaveOutByDefault: extra.leaveOutByDefault ?? false,
   note: extra.note ?? null,
 });
 
@@ -42,7 +49,7 @@ export const PLANS: Record<string, PlanRecord[]> = {
   netflix: [
     plan("standard-ads", "Standard with ads", 899, true, { isDefault: true }),
     plan("standard", "Standard", 1999, false),
-    plan("premium", "Premium", 2699, false, { note: "4K and four screens at once" }),
+    plan("premium", "Premium", 2699, false),
   ],
   peacock: [
     plan("select", "Select", 899, true, {
@@ -56,16 +63,19 @@ export const PLANS: Record<string, PlanRecord[]> = {
     plan("no-ads", "No ads", 2149, false),
   ],
   prime: [
-    plan("with-prime", "Included with Amazon Prime", 0, true, {
-      isDefault: true,
-      note: "Counts as $0: most people keep Prime for shipping, so pausing saves nothing",
-    }),
-    plan("with-prime-ad-free", "Amazon Prime + ad-free add-on", 499, false, {
-      note: "Only the $4.99 add-on counts; the Prime membership is left out",
-    }),
     plan("standalone", "Prime Video only", 899, true),
     plan("standalone-ad-free", "Prime Video only, ad-free", 1398, false),
+    plan("with-prime", "Amazon Prime", 1499, true, {
+      isDefault: true,
+      leaveOutByDefault: true,
+      note: "Includes Prime shipping and other Prime benefits",
+    }),
+    plan("with-prime-ad-free", "Amazon Prime + ad-free add-on", 1998, false, {
+      leaveOutByDefault: true,
+      note: "Includes Prime shipping and other Prime benefits",
+    }),
   ],
+
   appletv: [plan("monthly", "Apple TV", 1499, false, { isDefault: true })],
   disney: [
     plan("ads", "With ads", 1249, true, { isDefault: true }),
@@ -74,7 +84,7 @@ export const PLANS: Record<string, PlanRecord[]> = {
   hbomax: [
     plan("basic-ads", "Basic with ads", 1099, true, { isDefault: true }),
     plan("standard", "Standard", 1849, false),
-    plan("premium", "Premium", 2299, false, { note: "4K and four screens at once" }),
+    plan("premium", "Premium", 2299, false),
   ],
   paramount: [
     plan("essential", "Essential", 899, true, { isDefault: true }),

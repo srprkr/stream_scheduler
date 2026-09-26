@@ -155,4 +155,28 @@ describe("GraphQL layer", () => {
     });
   });
 
+  it("pages through a catalogue with opaque cursors", async () => {
+    const page = (after?: string) =>
+      run(`{
+        catalog(providerSlugs: ["netflix"], kind: SERIES${after ? `, after: "${after}"` : ""}) {
+          items { id }
+          nextCursor
+        }
+      }`);
+
+    const first = await page();
+    const firstPage = first.data?.catalog as { items: { id: string }[]; nextCursor: string };
+    expect(firstPage.items).toEqual([{ id: "media:1" }]);
+
+    const second = await page(firstPage.nextCursor);
+    expect(second.data?.catalog).toEqual({ items: [{ id: "media:5" }], nextCursor: null });
+  });
+
+  it("rejects a forged cursor as bad input", async () => {
+    const { errors } = await run(`{
+      catalog(providerSlugs: ["netflix"], kind: SERIES, after: "forged") { nextCursor }
+    }`);
+    expect(errors?.[0]?.extensions?.code).toBe("BAD_USER_INPUT");
+  });
+
 });

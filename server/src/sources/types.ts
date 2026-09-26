@@ -12,6 +12,9 @@
 
 export type MediaKind = "MOVIE" | "SERIES";
 
+/** Catalogue order, mirroring the GraphQL CatalogSort enum. */
+export type CatalogSort = "POPULAR" | "TOP_RATED" | "NEWEST";
+
 /** Requested image dimension, mirroring the GraphQL ImageSize enum. */
 export type ImageSize = "SMALL" | "MEDIUM" | "LARGE" | "ORIGINAL";
 
@@ -89,6 +92,21 @@ export interface ReleaseQuery {
   first: number;
 }
 
+export interface CatalogQuery {
+  providerSlugs: readonly string[];
+  kind: MediaKind;
+  sort: CatalogSort;
+  /** 1-based. Cursors are the resolver's concern; sources deal in pages. */
+  page: number;
+}
+
+export interface CatalogPageRecord {
+  /** Summaries, like search results: detail fields load on demand. */
+  items: MediaRecord[];
+  nextPage: number | null;
+}
+
+
 export interface CatalogSource {
   /** Identifies the implementation in logs and errors, e.g. "fixture", "tmdb". */
   readonly name: string;
@@ -119,6 +137,8 @@ export interface CatalogSource {
    */
   searchMedia(query: string, first: number): Promise<MediaRecord[]>;
 
+  /** One page of everything the given services stream on subscription. */
+  listCatalog(query: CatalogQuery): Promise<CatalogPageRecord>;
 
   /** Upstream path -> absolute URL. Each source has its own CDN conventions. */
   imageUrl(path: string | null, size: ImageSize): string | null;

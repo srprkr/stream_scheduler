@@ -18,6 +18,7 @@ const SERVICES = graphql(`
       pricesCheckedOn
       plans {
         id
+        leaveOutByDefault
         name
         monthlyCents
         hasAds
@@ -70,7 +71,7 @@ export function MyServices() {
                     subscriptions.setSubscribed(
                       service.slug,
                       e.target.checked,
-                      service.plans.find((p) => p.isDefault)?.id,
+                      service.plans.find((p) => p.isDefault),
                     )
                   }
                 />
@@ -93,6 +94,13 @@ export function MyServices() {
               ({spend.unpriced} without a price)
             </span>
           )}
+          {spend.leftOutCents > 0 && (
+            <span className="services__unpriced">
+              {" "}
+              · plus {formatDollars(spend.leftOutCents)} left out of estimates
+            </span>
+          )}
+
         </p>
       )}
       {checkedOn && (
@@ -110,7 +118,12 @@ function PlanPicker({ service, subscription }: { service: Service; subscription:
   const { choice } = subscription;
   const selected = "planId" in choice ? choice.planId : CUSTOM;
   const plan = service.plans.find((p) => p.id === selected);
-  const change = (next: PlanChoice) => subscriptions.setChoice(service.slug, next);
+  const change = (next: PlanChoice) =>
+    subscriptions.setChoice(
+      service.slug,
+      next,
+      "planId" in next ? service.plans.find((p) => p.id === next.planId) : null,
+    );
 
   return (
     <div className="services__plan">
@@ -136,6 +149,14 @@ function PlanPicker({ service, subscription }: { service: Service; subscription:
         />
       )}
       {plan?.note && <p className="services__note">{plan.note}</p>}
+      <label className="services__leave-out">
+        <input
+          type="checkbox"
+          checked={subscription.leftOut ?? false}
+          onChange={(e) => subscriptions.setLeftOut(service.slug, e.target.checked)}
+        />
+        Leave out of estimates
+      </label>
     </div>
   );
 }
