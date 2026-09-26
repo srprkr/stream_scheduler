@@ -688,10 +688,40 @@ body {
 
   &__row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 8px 12px;
     min-height: 32px;
+  }
+
+  &__plan {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+
+    select {
+      max-width: 16em;
+      padding: 4px 8px;
+      font: inherit;
+      font-size: 0.875rem;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+
+      &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
+    }
+  }
+
+  &__note {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 0.75rem;
+    text-align: right;
+    color: var(--muted);
   }
 
   &__pick {
@@ -728,4 +758,5 @@ body {
 
   &__total { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--border); }
   &__unpriced { color: var(--muted); font-size: 0.875rem; }
+  &__checked { margin: 8px 0 0; font-size: 0.75rem; color: var(--muted); }
 }

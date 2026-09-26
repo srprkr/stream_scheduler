@@ -54,6 +54,12 @@ enum ImageSize {
 type Provider {
   id: ID!
 
+  "Ways to pay for this service, cheapest first. Empty when prices are unknown."
+  plans: [Plan!]!
+
+  "When the plan prices were last checked by hand. Null when there are none."
+  pricesCheckedOn: Date
+
   "Stable machine name used in filters and URLs, e.g. \"netflix\"."
   slug: String!
 
@@ -61,6 +67,28 @@ type Provider {
   name: String!
 
   logoUrl(size: ImageSize = SMALL): URL
+}
+
+"""
+A way to pay for a service, at its published US monthly price. No API
+publishes these, so they are checked by hand and dated on the Provider.
+"""
+type Plan {
+  "Stable within its service, e.g. \"standard-ads\"."
+  id: ID!
+
+  name: String!
+
+  "In cents. Money is kept in whole cents so sums are exact."
+  monthlyCents: Int!
+
+  hasAds: Boolean!
+
+  "The plan assumed when a user ticks the service without choosing one."
+  isDefault: Boolean!
+
+  "What sets this plan apart beyond price and ads, when anything does."
+  note: String
 }
 
 

@@ -2,9 +2,11 @@ import { useQuery } from "@apollo/client/react";
 import { useState } from "react";
 
 import { graphql } from "../generated";
+import type { MyServicesQuery } from "../generated/graphql";
 import { subscriptions, useSubscriptions } from "../hooks/useSubscriptions";
+import { formatDate } from "../lib/format";
 import { formatDollars, parseDollars } from "../lib/money";
-import { monthlySpend } from "../lib/subscriptions";
+import { monthlySpend, type PlanChoice, type Subscription } from "../lib/subscriptions";
 
 const SERVICES = graphql(`
   query MyServices {
@@ -13,19 +15,38 @@ const SERVICES = graphql(`
       slug
       name
       logoUrl(size: SMALL)
+      pricesCheckedOn
+      plans {
+        id
+        name
+        monthlyCents
+        hasAds
+        isDefault
+        note
+      }
     }
   }
 `);
 
+type Service = MyServicesQuery["providers"][number];
+
+/** The <select> value for "type my own price". Plan ids never collide with it. */
+const CUSTOM = "custom";
+
 /**
- * Which services the user pays for, and optionally what each costs. Ticking
- * is enough for What's On; prices are what make the cost views possible.
+ * Which services the user pays for, and on which plan. Ticking a service
+ * assumes its default plan at the published price, so the totals mean
+ * something without any typing; Custom covers bundles, discounts and plans
+ * the app doesn't list.
  */
 export function MyServices() {
   const { data } = useQuery(SERVICES);
+  const services = data?.providers ?? [];
   const mine = useSubscriptions();
   const bySlug = new Map(mine.map((s) => [s.slug, s]));
-  const spend = monthlySpend(mine);
+  const plansFor = (slug: string) => services.find((s) => s.slug === slug)?.plans ?? [];
+  const spend = monthlySpend(mine, plansFor);
+  const checkedOn = services.find((s) => s.pricesCheckedOn)?.pricesCheckedOn;
 
   return (
     <section className="services" aria-labelledby="services-title">
@@ -33,31 +54,30 @@ export function MyServices() {
         Your services
       </h2>
       <p className="services__lede">
-        Tick the ones you pay for now. Prices are optional; they power the
-        cost comparisons.
+        Tick the ones you pay for now, and pick your plan.
       </p>
 
       <ul className="services__list">
-        {(data?.providers ?? []).map((p) => {
-          const mineNow = bySlug.get(p.slug);
+        {services.map((service) => {
+          const subscription = bySlug.get(service.slug);
           return (
-            <li key={p.id} className="services__row">
+            <li key={service.id} className="services__row">
               <label className="services__pick">
                 <input
                   type="checkbox"
-                  checked={mineNow !== undefined}
-                  onChange={(e) => subscriptions.setSubscribed(p.slug, e.target.checked)}
+                  checked={subscription !== undefined}
+                  onChange={(e) =>
+                    subscriptions.setSubscribed(
+                      service.slug,
+                      e.target.checked,
+                      service.plans.find((p) => p.isDefault)?.id,
+                    )
+                  }
                 />
-                {p.logoUrl && <img className="logos__img" src={p.logoUrl} alt="" />}
-                {p.name}
+                {service.logoUrl && <img className="logos__img" src={service.logoUrl} alt="" />}
+                {service.name}
               </label>
-              {mineNow && (
-                <PriceInput
-                  service={p.name}
-                  cents={mineNow.monthlyCents}
-                  onChange={(cents) => subscriptions.setPrice(p.slug, cents)}
-                />
-              )}
+              {subscription && <PlanPicker service={service} subscription={subscription} />}
             </li>
           );
         })}
@@ -75,7 +95,48 @@ export function MyServices() {
           )}
         </p>
       )}
+      {checkedOn && (
+        <p className="services__checked">
+          Published US prices, checked {formatDate(checkedOn, true)}. Choose
+          Custom for bundles, annual plans or discounts.
+        </p>
+      )}
     </section>
+  );
+}
+
+/** A plan dropdown, plus a price box when the user chooses Custom. */
+function PlanPicker({ service, subscription }: { service: Service; subscription: Subscription }) {
+  const { choice } = subscription;
+  const selected = "planId" in choice ? choice.planId : CUSTOM;
+  const plan = service.plans.find((p) => p.id === selected);
+  const change = (next: PlanChoice) => subscriptions.setChoice(service.slug, next);
+
+  return (
+    <div className="services__plan">
+      <select
+        value={selected}
+        aria-label={`${service.name} plan`}
+        onChange={(e) =>
+          change(e.target.value === CUSTOM ? { customCents: null } : { planId: e.target.value })
+        }
+      >
+        {service.plans.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name} · {formatDollars(p.monthlyCents)}
+          </option>
+        ))}
+        <option value={CUSTOM}>Custom price…</option>
+      </select>
+      {"customCents" in choice && (
+        <PriceInput
+          service={service.name}
+          cents={choice.customCents}
+          onChange={(cents) => change({ customCents: cents })}
+        />
+      )}
+      {plan?.note && <p className="services__note">{plan.note}</p>}
+    </div>
   );
 }
 

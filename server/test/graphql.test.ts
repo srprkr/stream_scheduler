@@ -133,4 +133,26 @@ describe("GraphQL layer", () => {
     });
   });
 
+  it("prices a service's plans, and admits when it has none", async () => {
+    const { data, errors } = await run(`{
+      netflix: provider(slug: "netflix") {
+        pricesCheckedOn
+        plans { id monthlyCents isDefault }
+      }
+      max: provider(slug: "max") { pricesCheckedOn plans { id } }
+    }`);
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({
+      netflix: {
+        pricesCheckedOn: "2026-09-26",
+        plans: [
+          { id: "standard-ads", monthlyCents: 899, isDefault: true },
+          { id: "standard", monthlyCents: 1999, isDefault: false },
+          { id: "premium", monthlyCents: 2699, isDefault: false },
+        ],
+      },
+      max: { pricesCheckedOn: null, plans: [] },
+    });
+  });
+
 });

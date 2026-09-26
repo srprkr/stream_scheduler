@@ -1,29 +1,57 @@
+/**
+ * How the user pays for a service: one of its published plans, or a price
+ * they type themselves (a bundle, a discount, a plan the app doesn't list).
+ */
+export type PlanChoice = { planId: string } | { customCents: number | null };
+
 /** A service the user pays for now. */
 export interface Subscription {
   slug: string;
-  /** What they pay each month, in cents. Null until they say. */
-  monthlyCents: number | null;
+  choice: PlanChoice;
+}
+
+/** The fields of a published plan that pricing needs. */
+export interface PricedPlan {
+  id: string;
+  monthlyCents: number;
 }
 
 export interface SubscriptionStore {
   subscriptions(): readonly Subscription[];
-  /** Ticks a service on or off. Unticking forgets its price. */
-  setSubscribed(slug: string, subscribed: boolean): void;
-  /** Sets or clears a subscribed service's price; ignored for any other. */
-  setPrice(slug: string, monthlyCents: number | null): void;
+  /** Ticks a service on, on its default plan if it has one, or off. */
+  setSubscribed(slug: string, subscribed: boolean, defaultPlanId?: string | null): void;
+  /** Changes how a subscribed service is paid for; ignored for any other. */
+  setChoice(slug: string, choice: PlanChoice): void;
   subscribe(listener: () => void): () => void;
 }
 
 export const SUBSCRIPTIONS_KEY = "stream-scheduler:subscriptions";
-const VERSION = 1;
+const VERSION = 2;
 
+/** Version 1 stored a bare price, before plans existed. */
+interface SubscriptionV1 {
+  slug: string;
+  monthlyCents: number | null;
+}
+
+/**
+ * Reads any saved version and returns the current shape. A version-1 price
+ * becomes a custom price: it was typed by hand, and there is no telling
+ * which plan it was.
+ */
 function load(raw: string | null): Subscription[] {
   if (!raw) return [];
   try {
-    const saved = JSON.parse(raw) as { version: number; subscriptions: Subscription[] };
-    return saved.version === VERSION && Array.isArray(saved.subscriptions)
-      ? saved.subscriptions
-      : [];
+    const saved = JSON.parse(raw) as { version: number; subscriptions: unknown };
+    if (!Array.isArray(saved.subscriptions)) return [];
+    if (saved.version === VERSION) return saved.subscriptions as Subscription[];
+    if (saved.version === 1) {
+      return (saved.subscriptions as SubscriptionV1[]).map((s) => ({
+        slug: s.slug,
+        choice: { customCents: s.monthlyCents },
+      }));
+    }
+    return [];
   } catch {
     return [];
   }
@@ -56,15 +84,20 @@ export function localSubscriptions(
   return {
     subscriptions: () => snapshot,
 
-    setSubscribed(slug, subscribed) {
+    setSubscribed(slug, subscribed, defaultPlanId = null) {
       const has = snapshot.some((s) => s.slug === slug);
-      if (subscribed && !has) commit([...snapshot, { slug, monthlyCents: null }]);
+      if (subscribed && !has) {
+        const choice: PlanChoice = defaultPlanId
+          ? { planId: defaultPlanId }
+          : { customCents: null };
+        commit([...snapshot, { slug, choice }]);
+      }
       if (!subscribed && has) commit(snapshot.filter((s) => s.slug !== slug));
     },
 
-    setPrice(slug, monthlyCents) {
+    setChoice(slug, choice) {
       if (!snapshot.some((s) => s.slug === slug)) return;
-      commit(snapshot.map((s) => (s.slug === slug ? { ...s, monthlyCents } : s)));
+      commit(snapshot.map((s) => (s.slug === slug ? { ...s, choice } : s)));
     },
 
     subscribe(listener) {
@@ -81,16 +114,32 @@ export function localSubscriptions(
   };
 }
 
-/** The monthly total of the prices the user has given, and how many are missing. */
-export function monthlySpend(subscriptions: readonly Subscription[]): {
-  cents: number;
-  unpriced: number;
-} {
+/**
+ * What a subscription costs a month, in cents. Null when the user chose a
+ * custom price and hasn't given one, or picked a plan the app no longer lists.
+ */
+export function monthlyCents(
+  subscription: Subscription,
+  plans: readonly PricedPlan[],
+): number | null {
+  const { choice } = subscription;
+  if ("planId" in choice) {
+    return plans.find((p) => p.id === choice.planId)?.monthlyCents ?? null;
+  }
+  return choice.customCents;
+}
+
+/** The monthly total of the known prices, and how many are unknown. */
+export function monthlySpend(
+  subscriptions: readonly Subscription[],
+  plansFor: (slug: string) => readonly PricedPlan[],
+): { cents: number; unpriced: number } {
   let cents = 0;
   let unpriced = 0;
   for (const s of subscriptions) {
-    if (s.monthlyCents === null) unpriced++;
-    else cents += s.monthlyCents;
+    const price = monthlyCents(s, plansFor(s.slug));
+    if (price === null) unpriced++;
+    else cents += price;
   }
   return { cents, unpriced };
 }
