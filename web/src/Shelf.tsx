@@ -1,3 +1,5 @@
+import { ProviderLogos } from "./ProviderLogos";
+import type { LibraryDetail } from "./useLibraryDetails";
 import type { LibraryEntry } from "./library";
 import { ShelfToggle } from "./ShelfToggle";
 
@@ -5,9 +7,12 @@ import { ShelfToggle } from "./ShelfToggle";
 export function Shelf({
   title,
   entries,
-  onOpen,
+  details,
+onOpen,
 }: {
   title: string;
+  /** Loaded details by id; a title missing here just shows no availability. */
+  details: ReadonlyMap<string, LibraryDetail>;
   entries: readonly LibraryEntry[];
   onOpen: (id: string) => void;
 }) {
@@ -21,6 +26,7 @@ export function Shelf({
       <ul className="shelf__grid">
         {entries.map((entry) => (
           <li key={entry.id} className="shelf__item">
+            <Availability services={details.get(entry.id)?.availableOn} />
             <button className="shelf__open" onClick={() => onOpen(entry.id)}>
               {entry.posterUrl ? (
                 <img src={entry.posterUrl} alt="" loading="lazy" />
@@ -36,5 +42,21 @@ export function Shelf({
         ))}
       </ul>
     </section>
+  );
+}
+
+/**
+ * Where a title streams, or that it streams nowhere. The slot renders even
+ * while the answer is loading, at a fixed height, so every poster in a row
+ * starts at the same line whatever its tile is showing above it.
+ */
+function Availability({ services }: { services: LibraryDetail["availableOn"] | undefined }) {
+  return (
+    <div className="shelf__services">
+      {services && services.length === 0 && (
+        <span className="shelf__unhosted">Not streaming</span>
+      )}
+      {services && services.length > 0 && <ProviderLogos providers={services} />}
+    </div>
   );
 }

@@ -121,4 +121,16 @@ describe("GraphQL layer", () => {
     });
   });
 
+  it("lists the services a title streams on, and none for an unhosted one", async () => {
+    const { data, errors } = await run(`{
+      hosted: mediaItem(id: "media:2") { availableOn { slug } }
+      unhosted: mediaItem(id: "media:3") { availableOn { slug } }
+    }`);
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({
+      hosted: { availableOn: [{ slug: "netflix" }, { slug: "max" }] },
+      unhosted: { availableOn: [] },
+    });
+  });
+
 });

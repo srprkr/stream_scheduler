@@ -89,3 +89,16 @@ export interface TmdbMovieDetail extends TmdbMovieListItem {
   release_dates?: TmdbReleaseDates;
   videos?: { results: TmdbVideo[] };
 }
+
+export interface TmdbWatchProvider {
+  provider_id: number;
+  provider_name: string;
+}
+
+/** /{movie|tv}/{id}/watch/providers, keyed by country code. */
+export interface TmdbWatchProviders {
+  results: Record<
+    string,
+    { flatrate?: TmdbWatchProvider[]; ads?: TmdbWatchProvider[]; rent?: TmdbWatchProvider[] }
+  >;
+}

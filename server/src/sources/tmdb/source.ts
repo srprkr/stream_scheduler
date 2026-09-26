@@ -21,6 +21,7 @@ import type {
   TmdbTvDetail,
   TmdbTvListItem,
   TmdbVideo,
+  TmdbWatchProviders
 } from "./types.js";
 
 const WATCH_REGION = "US";
@@ -61,7 +62,9 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     logoPath: "/a1UIdq5BrkcAxnxcUhFsNbXnxeu.png",
     noteAliases: ["peacock"],
     networkId: 3353,
-    watchProviderIds: [386],
+    // Premium and Premium Plus.
+    watchProviderIds: [386, 387],
+
   },
   {
     id: "provider:hulu",
@@ -337,6 +340,25 @@ export function analyseSeason(season: TmdbSeasonDetail): {
     episodeCount: season.episodes.length,
     watchTimeMinutes,
   };
+}
+
+/**
+ * Which configured services carry a title on subscription, from TMDB's
+ * JustWatch-sourced availability. Only `flatrate` counts - rent, buy and
+ * free-with-ads are not a subscription the library could replace - and only
+ * the services' own ids, so resellers like "HBO Max Amazon Channel" and a
+ * service listed under two tiers each count once.
+ */
+export function subscriptionServices(
+  availability: TmdbWatchProviders,
+  configs: readonly { slug: string; watchProviderIds: readonly number[] }[],
+): string[] {
+  const offered = new Set(
+    (availability.results[WATCH_REGION]?.flatrate ?? []).map((p) => p.provider_id),
+  );
+  return configs
+    .filter((c) => c.watchProviderIds.some((id) => offered.has(id)))
+    .map((c) => c.slug);
 }
 
 function median(values: readonly number[]): number | null {
@@ -754,7 +776,24 @@ export class TmdbSource implements CatalogSource {
       .slice(0, first);
   }
 
-    /**
+  /** One request per title; the id's kind is TMDB's path segment. */
+  async getAvailability(ids: readonly string[]): Promise<string[][]> {
+    return mapLimit(ids, CONCURRENCY, async (id) => {
+      const [kind, tmdbId] = id.split(":");
+      if ((kind !== "movie" && kind !== "tv") || !tmdbId) return [];
+      try {
+        const availability = await this.client.get<TmdbWatchProviders>(
+          `/${kind}/${tmdbId}/watch/providers`,
+        );
+        return subscriptionServices(availability, PROVIDER_CONFIGS);
+      } catch {
+        return [];
+      }
+    });
+  }
+
+
+  /**
    * One request for the series, then one per season. TMDB's series-level
    * episode_run_time is empty for most shows, so the only reliable total is
    * the sum of every episode. The Office is ten requests - once, then cached.

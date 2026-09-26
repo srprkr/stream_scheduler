@@ -1,45 +1,30 @@
-import { skipToken, useQuery } from "@apollo/client/react";
-
-import { graphql } from "./generated";
+import type { Runtime } from "./stats";
 import { formatHours, formatMonths, libraryStats } from "./stats";
 import { useStoredNumber } from "./useStoredNumber";
-
-/**
- * One request for the whole shelf: mediaItems batches every id through the
- * server's loaders, where one query per title would be one round trip each.
- */
-const LIBRARY_RUNTIME = graphql(`
-  query LibraryRuntime($ids: [ID!]!) {
-    mediaItems(ids: $ids) {
-      id
-      totalRuntime {
-        minutes
-        estimated
-      }
-    }
-  }
-`);
 
 /** A starting point the user is asked to change, not a claim about them. */
 const DEFAULT_HOURS_PER_MONTH = 20;
 
-export function LibraryStats({ ownedIds }: { ownedIds: readonly string[] }) {
+export function LibraryStats({
+  runtimes,
+  loading,
+}: {
+  /** One entry per owned title whose details have loaded. */
+  runtimes: readonly (Runtime | null | undefined)[];
+  loading: boolean;
+}) {
   const [hoursPerMonth, setHoursPerMonth] = useStoredNumber(
     "stream-scheduler:hours-per-month",
     DEFAULT_HOURS_PER_MONTH,
   );
-  const { data, loading } = useQuery(
-    LIBRARY_RUNTIME,
-    ownedIds.length > 0 ? { variables: { ids: [...ownedIds] } } : skipToken,
-  );
 
-  if (ownedIds.length === 0) return null;
-  if (loading && !data) return <p className="stats stats--loading">Adding up your library…</p>;
+  if (loading) return <p className="stats stats--loading">Adding up your library…</p>;
+  if (runtimes.length === 0) return null;
 
-  const stats = libraryStats(
-    (data?.mediaItems ?? []).map((m) => m?.totalRuntime),
-    hoursPerMonth,
-  );
+
+
+  const stats = libraryStats(runtimes, hoursPerMonth);
+
   const approx = stats.estimated ? "about " : "";
 
   return (

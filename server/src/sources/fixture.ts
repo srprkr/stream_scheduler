@@ -166,6 +166,17 @@ export class FixtureSource implements CatalogSource {
     return ids.map((id) => MEDIA.find((m) => m.id === id) ?? null);
   }
 
+  /** Where each fixture title streams. media:3 is on nothing, deliberately. */
+  async getAvailability(ids: readonly string[]): Promise<string[][]> {
+    const on: Record<string, string[]> = {
+      "media:1": ["netflix"],
+      "media:2": ["netflix", "max"],
+      "media:4": ["max"],
+      "media:5": ["netflix"],
+    };
+    return ids.map((id) => on[id] ?? []);
+  }
+
   /** Eight 50-minute episodes a season: round numbers that are easy to assert. */
   async getSeriesRuntimes(ids: readonly string[]): Promise<(RuntimeRecord | null)[]> {
     return ids.map((id) => {

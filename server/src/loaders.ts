@@ -8,6 +8,8 @@ import type {
 } from "./sources/types.js";
 
 export interface Loaders {
+  /** Provider slugs per media id. */
+  availability: DataLoader<string, string[]>;
   media: DataLoader<string, MediaRecord | null>;
   provider: DataLoader<string, ProviderRecord | null>;
   runtime: DataLoader<string, RuntimeRecord | null>;
@@ -15,6 +17,11 @@ export interface Loaders {
 
 export function createLoaders(source: CatalogSource): Loaders {
   return {
+    availability: new DataLoader(async (ids) => {
+      console.log(`[batch] getAvailability x${ids.length}: ${ids.join(", ")}`);
+      return source.getAvailability(ids);
+    }),
+
     media: new DataLoader(async (ids) => {
       console.log(`[batch] getMedia x${ids.length}: ${ids.join(", ")}`);
       return source.getMedia(ids);

@@ -103,6 +103,13 @@ export interface CatalogSource {
   /** Batched, for the same reason as getProviders. */
   getMedia(ids: readonly string[]): Promise<(MediaRecord | null)[]>;
 
+  /**
+   * Slugs of the configured services streaming each title on subscription
+   * today. Batched; an empty list for a title on none of them or unknown.
+   */
+  getAvailability(ids: readonly string[]): Promise<string[][]>;
+
+
   /** Whole-series watch time. Batched; null for films and unknown ids. */
   getSeriesRuntimes(ids: readonly string[]): Promise<(RuntimeRecord | null)[]>;
 

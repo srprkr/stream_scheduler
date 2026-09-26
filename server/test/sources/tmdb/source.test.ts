@@ -4,7 +4,8 @@ import {
   analyseSeason, 
   pickTrailer, 
   seriesRuntime,
-  streamingPremieres, 
+  streamingPremieres,
+  subscriptionServices, 
   TmdbSource 
 } from "../../../src/sources/tmdb/source.js";
 import type {
@@ -314,5 +315,37 @@ describe("seriesRuntime", () => {
 
   it("gives up rather than guess when nothing has a runtime", () => {
     expect(seriesRuntime([numbered(1, [{}, {}])], TODAY)).toBeNull();
+  });
+});
+
+describe("subscriptionServices", () => {
+  const services = [
+    { slug: "peacock", watchProviderIds: [386, 387] },
+    { slug: "hbomax", watchProviderIds: [1899] },
+  ];
+  const offer = (provider_id: number) => ({ provider_id, provider_name: "" });
+
+  it("names the configured services offering the title on subscription", () => {
+    const found = subscriptionServices(
+      { results: { US: { flatrate: [offer(1899), offer(2528)] } } },
+      services,
+    );
+    expect(found).toEqual(["hbomax"]);
+  });
+
+  it("counts a service once when it is listed under two tiers", () => {
+    const found = subscriptionServices(
+      { results: { US: { flatrate: [offer(386), offer(387)] } } },
+      services,
+    );
+    expect(found).toEqual(["peacock"]);
+  });
+
+  it("ignores rent, free-with-ads and other countries", () => {
+    const found = subscriptionServices(
+      { results: { US: { rent: [offer(1899)], ads: [offer(386)] }, GB: { flatrate: [offer(1899)] } } },
+      services,
+    );
+    expect(found).toEqual([]);
   });
 });

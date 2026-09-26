@@ -439,7 +439,54 @@ body {
   }
 
   &__name { font-size: 0.8125rem; font-weight: 600; line-height: 1.3; }
+    // Reserved at the logos' height (22px) whether it holds logos, the
+  // "Not streaming" note, or nothing yet - so posters never shift.
+  &__services {
+    display: flex;
+    align-items: center;
+    height: 22px;
+  }
+
+  &__unhosted { font-size: 0.75rem; color: #fbbf24; }
+
 }
+
+.replaces {
+  margin-top: 8px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  &__title { margin: 0 0 4px; font-size: 1.125rem; }
+  &__lede { margin: 0 0 14px; font-size: 0.875rem; color: var(--muted); }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    &--unhosted { padding-top: 10px; border-top: 1px solid var(--border); }
+  }
+
+  &__mark {
+    width: 22px;
+    text-align: center;
+    color: #fbbf24;
+  }
+
+  &__name { font-weight: 600; }
+  &__count { margin-left: auto; font-size: 0.875rem; color: var(--muted); }
+}
+
 
 // --- detail dialog --------------------------------------------------------
 

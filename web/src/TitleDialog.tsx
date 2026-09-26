@@ -1,5 +1,6 @@
 import { skipToken, useQuery } from "@apollo/client/react";
 
+import { ProviderLogos } from "./ProviderLogos";
 import { watchTime } from "./format";
 import { graphql } from "./generated";
 import { Sheet } from "./Sheet";
@@ -21,6 +22,11 @@ const TITLE_DETAIL = graphql(`
         name
         url
         embedUrl
+      }
+      availableOn {
+        id
+        name
+        logoUrl(size: SMALL)
       }
       ... on Series {
         seasonCount
@@ -63,7 +69,7 @@ export function TitleDialog({
         )
       }
     >
-      {(seasons || runtime) && (
+      {media && (
         <dl className="facts">
           {seasons && (
             <div>
@@ -77,8 +83,20 @@ export function TitleDialog({
               <dd>{runtime}</dd>
             </div>
           )}
+          <div>
+            <dt>Streams on</dt>
+            {media.availableOn.length > 0 ? (
+              <dd className="facts__services">
+                <ProviderLogos providers={media.availableOn} />
+                {media.availableOn.map((p) => p.name).join(", ")}
+              </dd>
+            ) : (
+              <dd>Not on any tracked service</dd>
+            )}
+          </div>
         </dl>
-      )}
+      )}ProviderLogos, 
+
     </Sheet>
   );
 }

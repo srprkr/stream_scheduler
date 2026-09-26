@@ -1,5 +1,5 @@
 import type { Context } from "../context.js";
-import type { MediaRecord } from "../sources/types.js";
+import type { MediaRecord, ProviderRecord } from "../sources/types.js";
 import type {
   MediaItemResolvers,
   MovieResolvers,
@@ -31,6 +31,15 @@ const shared = {
   backdropUrl: (m, args, ctx) =>
     ctx.source.imageUrl(m.backdropPath, args.size ?? "LARGE"),
   trailer: async (m, _a, ctx) => (await full(m, ctx)).trailer,
+    // Two batched hops: slugs for every title in the query, then every
+  // provider those slugs name - two loader calls, however long the list.
+  availableOn: async (m, _a, ctx) => {
+    const slugs = await ctx.loaders.availability.load(m.id);
+    const providers = await ctx.loaders.provider.loadMany(slugs);
+    return providers.filter(
+      (p): p is ProviderRecord => p !== null && !(p instanceof Error),
+    );
+  },
 } satisfies MovieResolvers;
 
 export const Movie: MovieResolvers = {
