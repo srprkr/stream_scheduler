@@ -8,6 +8,7 @@ import type {
   ReleaseQuery,
   ReleaseRecord,
   RuntimeRecord,
+  SeasonScheduleRecord,
   VideoRecord,
 } from "../types.js";
 import { addDays, isoDate } from "../../dates.js";
@@ -333,14 +334,23 @@ export function analyseSeason(season: TmdbSeasonDetail): {
   }
   // Two distinct dates prove a weekly season even with gaps; one date proves
   // nothing while other episodes are undated.
-  const complete = dates.length === season.episodes.length;
+  // Two distinct dates prove a weekly season even with gaps.
   const weekly = new Set(dates).size > 1;
+  // TMDB lists a season's episodes as they are announced, so two dated
+  // episodes of a twenty-two-episode season look finished. Only a finale
+  // marker settles it - or one shared date across several episodes, which
+  // is a full drop released whole. Until then the finale date, and the
+  // season's total runtime, are unknown.
+  const hasFinale = season.episodes.some((e) => e.episode_type === "finale");
+  const complete =
+    dates.length === season.episodes.length &&
+    (hasFinale || (!weekly && season.episodes.length > 1));
   return {
     firstAirDate: dates[0] as string,
     bingeableFrom: complete ? (dates[dates.length - 1] as string) : null,
     isFullDrop: weekly ? false : complete ? true : null,
     episodeCount: season.episodes.length,
-    watchTimeMinutes,
+    watchTimeMinutes: complete ? watchTimeMinutes : null,
   };
 }
 
@@ -431,6 +441,24 @@ export function seriesRuntime(
   return { minutes: Math.round(minutes), estimated };
 }
 
+/**
+ * Which season a series is releasing now or will release next, or null.
+ *
+ * A dated next episode settles it. Failing that, a returning series may
+ * already list a season it hasn't dated yet - Severance's third, say - and
+ * that is worth knowing too: it says "stay paused, nothing to watch yet".
+ * Finished, cancelled and between-announcement shows have no next season.
+ */
+export function nextSeasonNumber(detail: TmdbTvDetail): number | null {
+  if (detail.next_episode_to_air) return detail.next_episode_to_air.season_number;
+  if (detail.status !== "Returning Series") return null;
+  const lastAired = detail.last_episode_to_air?.season_number ?? 0;
+  const announced = (detail.seasons ?? [])
+    .map((s) => s.season_number)
+    .filter((n) => n > lastAired)
+    .sort((a, b) => a - b);
+  return announced[0] ?? null;
+}
 
 /**
  * Picks one preview from TMDB's unordered list: official YouTube trailers
@@ -879,6 +907,39 @@ export class TmdbSource implements CatalogSource {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * The series detail (the same URL the Coming Soon feed fetches, so often
+   * already cached), then the one season it points to. Its episode dates go
+   * through analyseSeason, so an unscheduled finale is null here exactly as
+   * it is on a Release.
+   */
+  async getNextSeasons(
+    ids: readonly string[],
+  ): Promise<(SeasonScheduleRecord | null)[]> {
+    return mapLimit(ids, CONCURRENCY, async (id) => {
+      const [kind, tmdbId] = id.split(":");
+      if (kind !== "tv" || !tmdbId) return null;
+      try {
+        const detail = await this.client.get<TmdbTvDetail>(`/tv/${tmdbId}`);
+        const seasonNumber = nextSeasonNumber(detail);
+        if (seasonNumber === null) return null;
+        const listed = detail.seasons?.find((x) => x.season_number === seasonNumber);
+        const analysis = analyseSeason(
+          await this.client.get<TmdbSeasonDetail>(`/tv/${tmdbId}/season/${seasonNumber}`),
+        );
+        return {
+          seasonNumber,
+          premieresOn: analysis.firstAirDate ?? listed?.air_date ?? null,
+          fullyOutOn: analysis.bingeableFrom,
+          isFullDrop: analysis.isFullDrop,
+          episodeCount: analysis.episodeCount || null,
+        };
+      } catch {
+        return null;
+      }
+    });
   }
 
   imageUrl(path: string | null, size: ImageSize): string | null {

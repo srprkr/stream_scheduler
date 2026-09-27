@@ -8,6 +8,7 @@ import type {
   ReleaseQuery,
   ReleaseRecord,
   RuntimeRecord,
+  SeasonScheduleRecord,
   VideoRecord,
 } from "./types.js";
 
@@ -194,6 +195,21 @@ export class FixtureSource implements CatalogSource {
     };
   }
 
+  /** Read off the release plan, so a series' next season matches its Release. */
+  async getNextSeasons(ids: readonly string[]): Promise<(SeasonScheduleRecord | null)[]> {
+    const releases = this.releases();
+    return ids.map((id) => {
+      const r = releases.find((x) => x.mediaId === id && x.seasonNumber !== null);
+      if (!r || r.seasonNumber === null) return null;
+      return {
+        seasonNumber: r.seasonNumber,
+        premieresOn: r.availableFrom,
+        fullyOutOn: r.bingeableFrom,
+        isFullDrop: r.isFullDrop,
+        episodeCount: r.episodeCount,
+      };
+    });
+  }
 
   /** Eight 50-minute episodes a season: round numbers that are easy to assert. */
   async getSeriesRuntimes(ids: readonly string[]): Promise<(RuntimeRecord | null)[]> {

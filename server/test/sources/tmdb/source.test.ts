@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { 
-  analyseSeason, 
+  analyseSeason,
+  nextSeasonNumber, 
   pickTrailer, 
   seriesRuntime,
   streamingPremieres,
@@ -14,6 +15,7 @@ import type {
   TmdbPage,
   TmdbReleaseDate,
   TmdbSeasonDetail,
+  TmdbTvDetail,
   TmdbVideo,
 } from "../../../src/sources/tmdb/types.js";
 
@@ -61,7 +63,7 @@ describe("analyseSeason", () => {
 
   it("dates a weekly season by its last episode, whatever order upstream sends", () => {
     const s = season([
-      { air_date: "2026-10-15" },
+      { air_date: "2026-10-15", episode_type: "finale" },
       { air_date: "2026-10-01" },
       { air_date: "2026-10-08" },
     ]);
@@ -71,6 +73,29 @@ describe("analyseSeason", () => {
       isFullDrop: false,
     });
   });
+
+  it("won't call a weekly season finished before its finale is listed", () => {
+    // Abbott Elementary season 6, a week before it premiered: two of its
+    // episodes listed and dated, the other twenty not yet announced.
+    const s = season([
+      { air_date: "2026-10-07", runtime: 22, episode_type: "standard" },
+      { air_date: "2026-10-14", runtime: 22, episode_type: "standard" },
+    ]);
+    expect(analyseSeason(s)).toMatchObject({
+      firstAirDate: "2026-10-07",
+      bingeableFrom: null,
+      isFullDrop: false,
+      watchTimeMinutes: null,
+    });
+  });
+
+  it("proves nothing from a single listed episode", () => {
+    expect(analyseSeason(season([{ air_date: "2026-10-01" }]))).toMatchObject({
+      bingeableFrom: null,
+      isFullDrop: null,
+    });
+  });
+
 
   it("refuses to sum partial runtimes", () => {
     const s = season([{ runtime: 50 }, { runtime: null }, { runtime: 50 }]);
@@ -347,5 +372,43 @@ describe("subscriptionServices", () => {
       services,
     );
     expect(found).toEqual([]);
+  });
+});
+
+describe("nextSeasonNumber", () => {
+  function series(overrides: Partial<TmdbTvDetail>): TmdbTvDetail {
+    return {
+      id: 1, name: "Show", overview: "", poster_path: null, backdrop_path: null,
+      first_air_date: "2020-01-01", number_of_seasons: 2,
+      ...overrides,
+    };
+  }
+
+  it("follows a dated next episode", () => {
+    const next = { season_number: 6, episode_number: 1, air_date: "2026-10-07" };
+    expect(nextSeasonNumber(series({ next_episode_to_air: next }))).toBe(6);
+  });
+
+  it("finds an announced but undated season of a returning show", () => {
+    const detail = series({
+      status: "Returning Series",
+      last_episode_to_air: { season_number: 2, episode_number: 10, air_date: "2025-03-20" },
+      seasons: [
+        { season_number: 1, air_date: "2022-02-17", name: "" },
+        { season_number: 2, air_date: "2025-01-16", name: "" },
+        { season_number: 3, air_date: null, name: "" },
+      ],
+    });
+    expect(nextSeasonNumber(detail)).toBe(3);
+  });
+
+  it("has nothing for a finished show, or a returning one with nothing announced", () => {
+    expect(nextSeasonNumber(series({ status: "Ended" }))).toBeNull();
+    const detail = series({
+      status: "Returning Series",
+      last_episode_to_air: { season_number: 3, episode_number: 8, air_date: "2026-08-09" },
+      seasons: [{ season_number: 3, air_date: "2026-06-21", name: "" }],
+    });
+    expect(nextSeasonNumber(detail)).toBeNull();
   });
 });

@@ -25,6 +25,15 @@ const CATALOG = graphql(`
           name
           logoUrl(size: SMALL)
         }
+        ... on Series {
+          nextSeason {
+            seasonNumber
+            premieresOn
+            fullyOutOn
+            isFullDrop
+          }
+        }
+
       }
     }
   }
@@ -43,6 +52,14 @@ const SEARCH_MINE = graphql(`
         slug
         name
         logoUrl(size: SMALL)
+      }
+      ... on Series {
+        nextSeason {
+          seasonNumber
+          premieresOn
+          fullyOutOn
+          isFullDrop
+        }
       }
     }
   }

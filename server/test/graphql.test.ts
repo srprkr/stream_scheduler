@@ -193,5 +193,25 @@ describe("GraphQL layer", () => {
     expect(getAvailability).toHaveBeenCalledTimes(1);
   });
 
+    it("gives a weekly series its next season, dated like its release", async () => {
+    const { data, errors } = await run(`{
+      mediaItem(id: "media:5") {
+        ... on Series {
+          nextSeason { seasonNumber premieresOn fullyOutOn isFullDrop }
+        }
+      }
+    }`);
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({
+      mediaItem: {
+        nextSeason: {
+          seasonNumber: 3,
+          premieresOn: "2026-11-28",
+          fullyOutOn: "2027-01-30",
+          isFullDrop: false,
+        },
+      },
+    });
+  });
 
 });

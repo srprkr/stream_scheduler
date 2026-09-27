@@ -53,6 +53,7 @@ export const Movie: MovieResolvers = {
 };
 export const Series: SeriesResolvers = {
   ...shared,
+  nextSeason: (m, _a, ctx) => ctx.loaders.nextSeason.load(m.id),
   seasonCount: async (m, _a, ctx) => (await full(m, ctx)).seasonCount,
   totalRuntime: (m, _a, ctx) => ctx.loaders.runtime.load(m.id),
 };

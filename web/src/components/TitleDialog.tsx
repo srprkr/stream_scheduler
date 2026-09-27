@@ -5,6 +5,8 @@ import { watchTime } from "../lib/format";
 import { graphql } from "../generated";
 import { Sheet } from "./Sheet";
 
+import { localToday, seasonLine } from "../lib/seasons";
+
 /**
  * Fetched on open, not with the search: the search list selects summary
  * fields only, and this is the one title whose detail is actually wanted.
@@ -30,6 +32,12 @@ const TITLE_DETAIL = graphql(`
       }
       ... on Series {
         seasonCount
+        nextSeason {
+          seasonNumber
+          premieresOn
+          fullyOutOn
+          isFullDrop
+        }
       }
       ... on Movie {
         runtimeMinutes
@@ -55,6 +63,7 @@ export function TitleDialog({
   const runtime =
     media?.__typename === "Movie" ? watchTime(media.runtimeMinutes) : null;
   const seasons = media?.__typename === "Series" ? media.seasonCount : null;
+  const nextSeason = media?.__typename === "Series" ? media.nextSeason : null;
 
   return (
     <Sheet
@@ -81,6 +90,12 @@ export function TitleDialog({
             <div>
               <dt>Runtime</dt>
               <dd>{runtime}</dd>
+            </div>
+          )}
+          {nextSeason && (
+            <div>
+              <dt>Next season</dt>
+              <dd>{seasonLine(nextSeason, localToday())}</dd>
             </div>
           )}
           <div>

@@ -53,6 +53,9 @@ export interface TmdbSeason {
 
 export interface TmdbEpisode {
   episode_number: number;
+  /** "standard", "mid_season" or "finale". Only a finished season has a finale. */
+  episode_type?: string;
+
   air_date: string | null;
   runtime: number | null;
 }
@@ -63,10 +66,21 @@ export interface TmdbSeasonDetail {
   episodes: TmdbEpisode[];
 }
 
+/** Where a series is in its run, per TMDB. */
+export interface TmdbEpisodeRef {
+  season_number: number;
+  episode_number: number;
+  air_date: string | null;
+}
+
 
 export interface TmdbTvDetail extends TmdbTvListItem {
   number_of_seasons: number | null;
   seasons?: TmdbSeason[];
+  /** "Returning Series", "Ended", "Canceled", "In Production", ... */
+  status?: string;
+  next_episode_to_air?: TmdbEpisodeRef | null;
+  last_episode_to_air?: TmdbEpisodeRef | null;
   videos?: { results: TmdbVideo[] };
 }
 

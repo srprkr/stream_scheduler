@@ -57,6 +57,17 @@ export interface MediaRecord {
 
 }
 
+/** A season being released now, or next. Dates are YYYY-MM-DD. */
+export interface SeasonScheduleRecord {
+  seasonNumber: number;
+  /** First episode's date; in the past while a weekly season is airing. */
+  premieresOn: string | null;
+  /** Last episode's date; null until every episode is dated. */
+  fullyOutOn: string | null;
+  isFullDrop: boolean | null;
+  episodeCount: number | null;
+}
+
 export interface RuntimeRecord {
   minutes: number;
   /** True when some episodes had no runtime and were filled in. */
@@ -127,6 +138,11 @@ export interface CatalogSource {
    */
   getAvailability(ids: readonly string[]): Promise<string[][]>;
 
+  /**
+   * The season each series is releasing now or will release next. Batched;
+   * null for films, finished shows, and shows with nothing announced.
+   */
+  getNextSeasons(ids: readonly string[]): Promise<(SeasonScheduleRecord | null)[]>;
 
   /** Whole-series watch time. Batched; null for films and unknown ids. */
   getSeriesRuntimes(ids: readonly string[]): Promise<(RuntimeRecord | null)[]>;

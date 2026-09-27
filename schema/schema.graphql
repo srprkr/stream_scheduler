@@ -169,9 +169,31 @@ type Series implements MediaItem {
   trailer: Video
   totalRuntime: Runtime
   availableOn: [Provider!]!
-
   seasonCount: Int
+  nextSeason: SeasonSchedule
 }
+
+
+"""
+When a season starts and when it can be watched in one sitting - the date a
+paused subscription should wait for. Built from the same episode dates as a
+Release, so an unscheduled finale is null here too, never a guess.
+"""
+type SeasonSchedule {
+  seasonNumber: Int!
+
+  "First episode. In the past while a weekly season is still airing; null if undated."
+  premieresOn: Date
+
+  "Last episode. Null until every episode is dated upstream."
+  fullyOutOn: Date
+
+  "Null when too few episodes are dated to tell."
+  isFullDrop: Boolean
+
+  episodeCount: Int
+}
+
 
 type Runtime {
   minutes: Int!

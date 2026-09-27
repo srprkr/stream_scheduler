@@ -5,12 +5,14 @@ import type {
   MediaRecord,
   ProviderRecord,
   RuntimeRecord,
+  SeasonScheduleRecord,
 } from "./sources/types.js";
 
 export interface Loaders {
   /** Provider slugs per media id. */
   availability: DataLoader<string, string[]>;
   media: DataLoader<string, MediaRecord | null>;
+  nextSeason: DataLoader<string, SeasonScheduleRecord | null>;
   provider: DataLoader<string, ProviderRecord | null>;
   runtime: DataLoader<string, RuntimeRecord | null>;
 }
@@ -21,10 +23,13 @@ export function createLoaders(source: CatalogSource): Loaders {
       console.log(`[batch] getAvailability x${ids.length}: ${ids.join(", ")}`);
       return source.getAvailability(ids);
     }),
-
     media: new DataLoader(async (ids) => {
       console.log(`[batch] getMedia x${ids.length}: ${ids.join(", ")}`);
       return source.getMedia(ids);
+    }),
+    nextSeason: new DataLoader(async (ids) => {
+      console.log(`[batch] getNextSeasons x${ids.length}: ${ids.join(", ")}`);
+      return source.getNextSeasons(ids);
     }),
     provider: new DataLoader(async (slugs) => {
       console.log(`[batch] getProviders x${slugs.length}: ${slugs.join(", ")}`);
