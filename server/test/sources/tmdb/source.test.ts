@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { 
+import {
   analyseSeason,
-  nextSeasonNumber, 
-  pickTrailer, 
+  expectedFinale,
+  nextSeasonNumber,
+  pickTrailer,
   seriesRuntime,
   streamingPremieres,
-  subscriptionServices, 
-  TmdbSource 
+  subscriptionServices,
+  TmdbSource,
 } from "../../../src/sources/tmdb/source.js";
 import type {
   TmdbEpisode,
@@ -18,7 +19,6 @@ import type {
   TmdbTvDetail,
   TmdbVideo,
 } from "../../../src/sources/tmdb/types.js";
-
 
 function season(episodes: Partial<TmdbEpisode>[]): TmdbSeasonDetail {
   return {
@@ -410,5 +410,33 @@ describe("nextSeasonNumber", () => {
       seasons: [{ season_number: 3, air_date: "2026-06-21", name: "" }],
     });
     expect(nextSeasonNumber(detail)).toBeNull();
+  });
+});
+
+describe("expectedFinale", () => {
+  // Abbott Elementary season 5: premiered Oct 1, finale Apr 22 - 203 days.
+  const lastSeason = season([
+    { air_date: "2025-10-01" },
+    { air_date: "2025-10-08" },
+    { air_date: "2026-04-22", episode_type: "finale" },
+  ]);
+
+  it("adds the previous season's run to the new premiere", () => {
+    expect(expectedFinale("2026-10-07", lastSeason)).toBe("2027-04-28");
+  });
+
+  it("won't estimate from a previous season that never listed its finale", () => {
+    const unfinished = season([{ air_date: "2025-10-01" }, { air_date: "2025-10-08" }]);
+    expect(expectedFinale("2026-10-07", unfinished)).toBeNull();
+  });
+
+  it("won't copy a full drop's run, which is no run at all", () => {
+    const fullDrop = season([{ air_date: "2025-10-01" }, { air_date: "2025-10-01" }]);
+    expect(expectedFinale("2026-10-07", fullDrop)).toBeNull();
+  });
+
+  it("needs a premiere and a previous season to work from", () => {
+    expect(expectedFinale(null, lastSeason)).toBeNull();
+    expect(expectedFinale("2026-10-07", null)).toBeNull();
   });
 });

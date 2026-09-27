@@ -15,7 +15,8 @@ import type {
 import { addDays, isoDate } from "../dates.js";
 
 /**
- * An in-memory CatalogSource used until the TMDB adapter lands.
+ * An in-memory CatalogSource: what the tests run against, and what
+ * CATALOG_SOURCE=fixture serves with no network and no TMDB token.
  *
  * This is NOT a mock in the test-double sense - it is a real implementation of
  * the interface that happens to read from an array. The resolvers, the loaders
@@ -205,6 +206,8 @@ export class FixtureSource implements CatalogSource {
         seasonNumber: r.seasonNumber,
         premieresOn: r.availableFrom,
         fullyOutOn: r.bingeableFrom,
+        // Every fixture season is fully dated, so there is nothing to estimate.
+        expectedFullyOutOn: null,
         isFullDrop: r.isFullDrop,
         episodeCount: r.episodeCount,
       };

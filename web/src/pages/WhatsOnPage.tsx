@@ -30,6 +30,7 @@ const CATALOG = graphql(`
             seasonNumber
             premieresOn
             fullyOutOn
+            expectedFullyOutOn
             isFullDrop
           }
         }
@@ -58,6 +59,7 @@ const SEARCH_MINE = graphql(`
           seasonNumber
           premieresOn
           fullyOutOn
+          expectedFullyOutOn
           isFullDrop
         }
       }

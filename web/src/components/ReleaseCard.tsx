@@ -57,8 +57,8 @@ export function ReleaseCard({
             </span>
             <span className="card__date">{formatDate(release.availableFrom)}</span>
           </p>
-          {/* The whole point of Stage 7: a weekly season must not read as
-              "Today" when it is not watchable for another two months. */}
+          {/* A weekly season must not read as "Today" when it won't be
+              watchable in full for another two months. */}
           {note && <p className="card__note">{note}</p>}
           {!note && release.episodeCount && (
             <p className="card__sub">

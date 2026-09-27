@@ -64,6 +64,11 @@ export interface SeasonScheduleRecord {
   premieresOn: string | null;
   /** Last episode's date; null until every episode is dated. */
   fullyOutOn: string | null;
+  /**
+   * A guess, not a date: premiere plus the previous season's run. Only set
+   * while fullyOutOn is unknown, and never used in its place.
+   */
+  expectedFullyOutOn: string | null;
   isFullDrop: boolean | null;
   episodeCount: number | null;
 }

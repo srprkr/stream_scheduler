@@ -441,6 +441,31 @@ export function seriesRuntime(
   return { minutes: Math.round(minutes), estimated };
 }
 
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * When a still-unscheduled weekly season will probably end: its premiere plus
+ * how long the previous season ran, premiere to finale. Abbott Elementary's
+ * fifth season ran 203 days, so a sixth premiering Oct 7 is estimated for late
+ * April.
+ *
+ * Only a previous season that is known to be complete (it has a finale) and
+ * aired weekly gives a span worth copying; anything else gives no estimate.
+ * Episode orders do change - a strike-shortened season runs half as long -
+ * which is why this stays a separate, labelled estimate.
+ */
+export function expectedFinale(
+  premieresOn: string | null,
+  previous: TmdbSeasonDetail | null,
+): string | null {
+  if (!premieresOn || !previous) return null;
+  const last = analyseSeason(previous);
+  if (!last.firstAirDate || !last.bingeableFrom || last.isFullDrop !== false) return null;
+  // Both are calendar dates parsed at UTC midnight, so the gap is whole days.
+  const span = (Date.parse(last.bingeableFrom) - Date.parse(last.firstAirDate)) / MS_PER_DAY;
+  return isoDate(addDays(new Date(Date.parse(premieresOn)), span));
+}
+
 /**
  * Which season a series is releasing now or will release next, or null.
  *
@@ -929,11 +954,25 @@ export class TmdbSource implements CatalogSource {
         const analysis = analyseSeason(
           await this.client.get<TmdbSeasonDetail>(`/tv/${tmdbId}/season/${seasonNumber}`),
         );
+        const premieresOn = analysis.firstAirDate ?? listed?.air_date ?? null;
+
+        // Estimate only what is actually unknown: a weekly (or not yet known)
+        // season with no finale date. One more request, for the season before.
+        const needsEstimate =
+          analysis.bingeableFrom === null && analysis.isFullDrop !== true && seasonNumber > 1;
+        const previous = needsEstimate
+          ? await this.client
+              .get<TmdbSeasonDetail>(`/tv/${tmdbId}/season/${seasonNumber - 1}`)
+              .catch(() => null)
+          : null;
+
         return {
           seasonNumber,
-          premieresOn: analysis.firstAirDate ?? listed?.air_date ?? null,
+          premieresOn,
           fullyOutOn: analysis.bingeableFrom,
+          expectedFullyOutOn: expectedFinale(premieresOn, previous),
           isFullDrop: analysis.isFullDrop,
+          // Zero listed episodes means "not announced", not "no episodes".
           episodeCount: analysis.episodeCount || null,
         };
       } catch {

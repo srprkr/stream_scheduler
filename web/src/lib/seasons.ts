@@ -5,6 +5,8 @@ export interface SeasonSchedule {
   seasonNumber: number;
   premieresOn?: string | null;
   fullyOutOn?: string | null;
+  /** An estimate from the previous season's run; shown only as a month. */
+  expectedFullyOutOn?: string | null;
   isFullDrop?: boolean | null;
 }
 
@@ -27,12 +29,27 @@ function when(iso: string, today: string): string {
 }
 
 /**
+ * An estimate, said as loosely as it deserves: "April", or "April 2027" when
+ * the year changes. Never a day - that would promise precision it hasn't got.
+ */
+function roughly(iso: string, today: string): string {
+  const month = new Intl.DateTimeFormat(undefined, { month: "long", timeZone: "UTC" }).format(
+    new Date(iso),
+  );
+  return iso.slice(0, 4) === today.slice(0, 4) ? month : `${month} ${iso.slice(0, 4)}`;
+}
+
+/**
  * One line on where a series' next season stands - the question a paused
  * subscription waits on. Unknown dates are said to be unknown, never guessed.
  */
 export function seasonLine(season: SeasonSchedule, today: string): string {
   const n = `Season ${season.seasonNumber}`;
-  const { premieresOn, fullyOutOn, isFullDrop } = season;
+  const { premieresOn, fullyOutOn, expectedFullyOutOn, isFullDrop } = season;
+  // Said when the real finale date isn't known yet.
+  const noFinale = expectedFullyOutOn
+    ? `finale estimated for ${roughly(expectedFullyOutOn, today)}`
+    : "finale date not announced";
 
   if (!premieresOn) return `${n} announced · no date yet`;
 
@@ -41,10 +58,10 @@ export function seasonLine(season: SeasonSchedule, today: string): string {
     if (fullyOutOn) {
       return `${n} premieres ${when(premieresOn, today)} · fully out ${when(fullyOutOn, today)}`;
     }
-    return `${n} premieres ${when(premieresOn, today)} · finale date not announced`;
+    return `${n} premieres ${when(premieresOn, today)} · ${noFinale}`;
   }
 
-  if (!fullyOutOn) return `${n} airing now · finale date not announced`;
+  if (!fullyOutOn) return `${n} airing now · ${noFinale}`;
   if (fullyOutOn > today) return `${n} airing weekly · finale ${when(fullyOutOn, today)}`;
   return `${n} fully out since ${when(fullyOutOn, today)}`;
 }

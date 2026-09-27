@@ -1,18 +1,20 @@
 # =============================================================================
-# Streaming Release Tracker — MVP schema
+# StreamHopper schema
 #
-# Scope: read-only. Upcoming releases on one service (Netflix), with titles,
-# previews, thumbnails and descriptions. No auth, no user data, no persistence.
+# The single source of truth for both halves: codegen turns it into resolver
+# types on the server and query types on the web client.
 #
-# Two rules carried over from planning, and they are the only two things here
-# that are not strictly minimal:
+# Read-only. The user's own data - library, services, prices paid - lives in
+# their browser, so there is no Mutation yet (see Root, below).
 #
-#   1. One resolver must do real work. -> Release.daysUntilRelease
-#   2. Model as if a second service already exists. -> Provider is a row of
-#      data, not a type. The word "Netflix" does not appear in this file.
+# Two rules from the start still hold:
 #
-# Everything else deferred lives in ./schema_roadmap.graphql, which is a
-# design sketch, not a build target.
+#   1. Services are rows of data, not types. The word "Netflix" does not
+#      appear in this file; adding a service touches no schema.
+#   2. Computed fields are computed per request, never stored - see
+#      Release.daysUntilRelease.
+#
+# ./schema_roadmap.graphql is an older design sketch, not a build target.
 # =============================================================================
 
 
@@ -49,9 +51,9 @@ enum CatalogSort {
 
 
 """
-Requested image dimension. The provider adapter maps this onto whatever size
-buckets the upstream API uses. Present in the MVP because thumbnails are in
-scope and a grid and a detail page need different sizes of the same image.
+Requested image dimension. The source maps this onto whatever size buckets
+its upstream serves: a grid and a detail page want different sizes of one
+image.
 """
 enum ImageSize {
   SMALL
@@ -63,9 +65,8 @@ enum ImageSize {
 # -----------------------------------------------------------------------------
 # Provider
 #
-# Deliberately thin. No pricing, no plans — that arrives with the savings
-# feature. What matters for the MVP is that a release points AT a provider
-# rather than assuming one.
+# A streaming service, and what it costs. A release points AT a provider
+# rather than assuming one, which is what lets one title arrive on several.
 # -----------------------------------------------------------------------------
 
 type Provider {
@@ -188,6 +189,13 @@ type SeasonSchedule {
   "Last episode. Null until every episode is dated upstream."
   fullyOutOn: Date
 
+  """
+  An estimate, not a date: the premiere plus the previous season's run. Set
+  only while fullyOutOn is unknown; show it as an estimate, never plan
+  reminders on it.
+  """
+  expectedFullyOutOn: Date
+
   "Null when too few episodes are dated to tell."
   isFullDrop: Boolean
 
@@ -232,9 +240,9 @@ type Video {
 # title to carry different dates on different services later without a
 # breaking change, and it gives the computed field a natural home.
 #
-# MVP simplifications, each reversible:
-#   - No region. Availability is genuinely region-scoped; the MVP assumes one
-#     market and the adapter hardcodes it.
+# Simplifications, each reversible:
+#   - No region. Availability is genuinely region-scoped; everything here
+#     assumes the US and the adapter hardcodes it.
 #   - No offer type. Subscription only.
 #   - No departure date. "Upcoming" only, not "leaving soon".
 # -----------------------------------------------------------------------------
@@ -313,13 +321,13 @@ type CatalogPage {
 # -----------------------------------------------------------------------------
 # Root
 #
-# No Mutation: the MVP is read-only and an empty stub is noise.
+# No Mutation: nothing is saved server-side yet, and an empty stub is noise.
+# It arrives with accounts, when libraries sync across devices.
 #
-# `releases` returns a plain list with a limit rather than a cursor connection.
-# Offset/limit is the wrong long-term answer for an insert-heavy feed — a title
-# added upstream between page fetches shifts every later row — but pagination
-# is not MVP logic. When it lands, this field changes shape. That is fine
-# before there is a client contract to break.
+# `releases` is a plain list with a limit: the 90-day feed is small and read
+# whole. `catalog` is the one list deep enough to page, and it pages with an
+# opaque cursor rather than offset/limit, which shifts rows whenever upstream
+# inserts one.
 # -----------------------------------------------------------------------------
 
 type Query {

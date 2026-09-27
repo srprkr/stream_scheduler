@@ -36,6 +36,7 @@ const TITLE_DETAIL = graphql(`
           seasonNumber
           premieresOn
           fullyOutOn
+          expectedFullyOutOn
           isFullDrop
         }
       }
