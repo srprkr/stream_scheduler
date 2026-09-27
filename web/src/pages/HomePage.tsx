@@ -51,7 +51,12 @@ export function HomePage() {
 
         </div>
 
-      <LibraryReplaces availability={ownedDetails.map((d) => d.availableOn)} />
+      <LibraryReplaces
+        owned={owned.flatMap((entry) => {
+          const detail = details.byId.get(entry.id);
+          return detail ? [{ title: entry.title, availableOn: detail.availableOn }] : [];
+        })}
+      />
       <SearchBox />
 
       <Shelf title="Owned" entries={owned} details={details.byId} onOpen={setOpenId} />

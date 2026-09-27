@@ -7,6 +7,7 @@ import { subscriptions, useSubscriptions } from "../hooks/useSubscriptions";
 import { formatDate } from "../lib/format";
 import { formatDollars, parseDollars } from "../lib/money";
 import { monthlySpend, type PlanChoice, type Subscription } from "../lib/subscriptions";
+import { Modal } from "./Modal";
 
 const SERVICES = graphql(`
   query MyServices {
@@ -35,10 +36,10 @@ type Service = MyServicesQuery["providers"][number];
 const CUSTOM = "custom";
 
 /**
- * Which services the user pays for, and on which plan. Ticking a service
- * assumes its default plan at the published price, so the totals mean
- * something without any typing; Custom covers bundles, discounts and plans
- * the app doesn't list.
+ * Which services the user pays for, and on which plan. Tapping a grey logo
+ * subscribes on the service's default plan and opens its options, so the
+ * total means something straight away; the ⋯ on a subscribed logo reopens
+ * them. Custom covers bundles, discounts and plans the app doesn't list.
  */
 export function MyServices() {
   const { data } = useQuery(SERVICES);
@@ -49,36 +50,65 @@ export function MyServices() {
   const spend = monthlySpend(mine, plansFor);
   const checkedOn = services.find((s) => s.pricesCheckedOn)?.pricesCheckedOn;
 
+  // The service whose options dialog is open. It only shows while that
+  // service is still subscribed, so removing it closes the dialog too.
+  const [editing, setEditing] = useState<string | null>(null);
+  const editingService = services.find((s) => s.slug === editing);
+  const editingSubscription = editing ? bySlug.get(editing) : undefined;
+
+  const toggle = (service: Service, on: boolean) => {
+    subscriptions.setSubscribed(service.slug, !on, service.plans.find((p) => p.isDefault));
+    // Turning one on asks for its plan right away; turning one off doesn't.
+    setEditing(on ? null : service.slug);
+  };
+
   return (
     <section className="services" aria-labelledby="services-title">
       <h2 id="services-title" className="services__title">
         Your services
       </h2>
       <p className="services__lede">
-        Tick the ones you pay for now, and pick your plan.
+        Tap the services you pay for now. Use ⋯ to change a plan.
       </p>
 
-      <ul className="services__list">
+      {/* One toggle per service: colour when it's yours, grey when not. The
+          ⋯ button is a sibling of the tile, not inside it - a button can't
+          hold another button. */}
+      <ul className="service-grid">
         {services.map((service) => {
-          const subscription = bySlug.get(service.slug);
+          const on = bySlug.has(service.slug);
           return (
-            <li key={service.id} className="services__row">
-              <label className="services__pick">
-                <input
-                  type="checkbox"
-                  checked={subscription !== undefined}
-                  onChange={(e) =>
-                    subscriptions.setSubscribed(
-                      service.slug,
-                      e.target.checked,
-                      service.plans.find((p) => p.isDefault),
-                    )
-                  }
-                />
-                {service.logoUrl && <img className="logos__img" src={service.logoUrl} alt="" />}
-                {service.name}
-              </label>
-              {subscription && <PlanPicker service={service} subscription={subscription} />}
+            <li key={service.id} className="service-grid__cell">
+              <button
+                type="button"
+                className="service-tile"
+                data-active={on}
+                aria-pressed={on}
+                title={service.name}
+                onClick={() => toggle(service, on)}
+              >
+                {service.logoUrl ? (
+                  <img src={service.logoUrl} alt="" />
+                ) : (
+                  <span className="service-tile__initial">{service.name.slice(0, 1)}</span>
+                )}
+                <span className="sr-only">{service.name}</span>
+              </button>
+              {on && (
+                <button
+                  type="button"
+                  className="service-tile__more"
+                  aria-label={`${service.name} plan and options`}
+                  aria-haspopup="dialog"
+                  onClick={() => setEditing(service.slug)}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <circle cx="5" cy="12" r="2" />
+                    <circle cx="12" cy="12" r="2" />
+                    <circle cx="19" cy="12" r="2" />
+                  </svg>
+                </button>
+              )}
             </li>
           );
         })}
@@ -86,34 +116,85 @@ export function MyServices() {
 
       {mine.length > 0 && (
         <p className="services__total">
-          {mine.length} {mine.length === 1 ? "service" : "services"}
-          {spend.cents > 0 && <> · <strong>{formatDollars(spend.cents)}</strong>/month</>}
-          {spend.unpriced > 0 && (
-            <span className="services__unpriced">
-              {" "}
-              ({spend.unpriced} without a price)
+          <span>
+            {mine.length} {mine.length === 1 ? "service" : "services"}
+            {spend.cents > 0 && <> · <strong>{formatDollars(spend.cents)}</strong>/month</>}
+            {spend.unpriced > 0 && (
+              <span className="services__unpriced">
+                {" "}
+                ({spend.unpriced} without a price)
+              </span>
+            )}
+            {spend.leftOutCents > 0 && (
+              <span className="services__unpriced">
+                {" "}
+                · plus {formatDollars(spend.leftOutCents)} left out of estimates
+              </span>
+            )}
+          </span>
+          {/* Twelve months of the same total: what staying subscribed to all
+              of it costs over a year. Left-out services stay out here too. */}
+          {spend.cents > 0 && (
+            // The asterisk is visual; aria-describedby reads the note itself.
+            <span className="services__annual" aria-describedby="annual-note">
+              <strong>{formatDollars(spend.cents * 12)}</strong>/year
+              <span aria-hidden="true">*</span>
             </span>
           )}
-          {spend.leftOutCents > 0 && (
-            <span className="services__unpriced">
-              {" "}
-              · plus {formatDollars(spend.leftOutCents)} left out of estimates
-            </span>
-          )}
+        </p>
+      )}
+      {/* The small print, on one row: where prices come from on the left,
+          the note on the yearly total under it on the right. */}
+      <div className="services__notes">
+        {checkedOn && (
+          <p className="services__checked">
+            Published US prices, checked {formatDate(checkedOn, true)}. Choose
+            Custom for bundles, annual plans or discounts.
+          </p>
+        )}
+        {mine.length > 0 && spend.cents > 0 && (
+          <p id="annual-note" className="services__footnote">
+            *Prices fluctuate throughout the year.
+          </p>
+        )}
+      </div>
 
-        </p>
-      )}
-      {checkedOn && (
-        <p className="services__checked">
-          Published US prices, checked {formatDate(checkedOn, true)}. Choose
-          Custom for bundles, annual plans or discounts.
-        </p>
-      )}
+      <Modal
+        open={editingService !== undefined && editingSubscription !== undefined}
+        onClose={() => setEditing(null)}
+        labelledBy="service-options-title"
+      >
+        {editingService && editingSubscription && (
+          <>
+            <header className="modal__head">
+              {editingService.logoUrl && <img src={editingService.logoUrl} alt="" />}
+              <h2 id="service-options-title">{editingService.name}</h2>
+            </header>
+            <PlanPicker service={editingService} subscription={editingSubscription} />
+            <div className="modal__actions">
+              <button
+                type="button"
+                className="button button--quiet"
+                onClick={() => subscriptions.setSubscribed(editingService.slug, false)}
+              >
+                Remove service
+              </button>
+              <button type="button" className="button" onClick={() => setEditing(null)}>
+                Done
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
     </section>
   );
 }
 
-/** A plan dropdown, plus a price box when the user chooses Custom. */
+/**
+ * The plan dropdown, a price box when the user chooses Custom, the plan's
+ * note, and whether the service counts toward estimates. Laid out as a small
+ * form for the options dialog.
+ */
 function PlanPicker({ service, subscription }: { service: Service; subscription: Subscription }) {
   const { choice } = subscription;
   const selected = "planId" in choice ? choice.planId : CUSTOM;
@@ -127,9 +208,12 @@ function PlanPicker({ service, subscription }: { service: Service; subscription:
 
   return (
     <div className="services__plan">
+      <label className="services__field" htmlFor={`plan-${service.slug}`}>
+        Plan
+      </label>
       <select
+        id={`plan-${service.slug}`}
         value={selected}
-        aria-label={`${service.name} plan`}
         onChange={(e) =>
           change(e.target.value === CUSTOM ? { customCents: null } : { planId: e.target.value })
         }

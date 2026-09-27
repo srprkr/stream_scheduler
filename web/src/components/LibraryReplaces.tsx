@@ -1,19 +1,40 @@
-import { ProviderLogos, type LogoProvider } from "./ProviderLogos";
-import { replacementSummary } from "../lib/replaces";
+import { useQuery } from "@apollo/client/react";
+import { useState } from "react";
+
+import { graphql } from "../generated";
+import { useSubscriptions } from "../hooks/useSubscriptions";
+import { listTitles, replacementSummary, type OwnedTitle } from "../lib/replaces";
+
+const TRACKED_SERVICES = graphql(`
+  query TrackedServices {
+    providers {
+      id
+      slug
+      name
+      logoUrl(size: SMALL)
+    }
+  }
+`);
 
 /**
- * The services the owned library overlaps, and the titles no service carries.
- * Current availability only: it says what a subscription would be paying for
- * today, not what it might carry later.
+ * Every tracked service, each with the number of the user's owned titles it
+ * streams today. Services they pay for are in colour; the rest are greyed but
+ * keep their counts - "14 on a service you don't pay for" is worth seeing too.
+ *
+ * The titles behind a count show in the line under the row, for whichever
+ * service is hovered, focused or tapped. A line under the row, not a tooltip,
+ * so it works the same on a phone, where nothing hovers.
  */
-export function LibraryReplaces({
-  availability,
-}: {
-  /** One entry per owned title whose details have loaded. */
-  availability: readonly (readonly (LogoProvider & { slug: string })[])[];
-}) {
-  if (availability.length === 0) return null;
-  const { services, unhosted } = replacementSummary(availability);
+export function LibraryReplaces({ owned }: { owned: readonly OwnedTitle[] }) {
+  const providers = useQuery(TRACKED_SERVICES).data?.providers ?? [];
+  const subscribed = new Set(useSubscriptions().map((s) => s.slug));
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
+
+  if (owned.length === 0) return null;
+  const { bySlug, unhosted } = replacementSummary(owned);
+  const shown = providers.find((p) => p.slug === (hovered ?? picked));
+  const shownTitles = shown ? (bySlug.get(shown.slug) ?? []) : [];
 
   return (
     <section className="replaces" aria-labelledby="replaces-title">
@@ -21,30 +42,62 @@ export function LibraryReplaces({
         What your library replaces
       </h2>
       <p className="replaces__lede">
-        Titles you own that these services stream today. For these, your copy
-        does the job the subscription would.
+        How many titles you own each service streams today. Greyed services are
+        ones you don't pay for.
       </p>
-      <ul className="replaces__list">
-        {services.map(({ provider, titles }) => (
-          <li key={provider.slug} className="replaces__row">
-            <ProviderLogos providers={[provider]} />
-            <span className="replaces__name">{provider.name}</span>
-            <span className="replaces__count">
-              {titles} {titles === 1 ? "title" : "titles"} you own
-            </span>
-          </li>
-        ))}
-        {unhosted > 0 && (
-          <li className="replaces__row replaces__row--unhosted">
-            <span className="replaces__mark" aria-hidden="true">◆</span>
-            <span className="replaces__name">Not on any tracked service</span>
-            <span className="replaces__count">
-              {unhosted} {unhosted === 1 ? "title" : "titles"}: only your copy plays{" "}
-              {unhosted === 1 ? "it" : "these"}
-            </span>
-          </li>
-        )}
+
+      <ul className="service-grid">
+        {providers.map((p) => {
+          const count = bySlug.get(p.slug)?.length ?? 0;
+          const mine = subscribed.has(p.slug);
+          return (
+            <li key={p.id}>
+              <button
+                type="button"
+                className="service-tile"
+                data-active={mine}
+                aria-pressed={picked === p.slug}
+                aria-controls="replaces-detail"
+                title={p.name}
+                onClick={() => setPicked(picked === p.slug ? null : p.slug)}
+                onMouseEnter={() => setHovered(p.slug)}
+                onMouseLeave={() => setHovered(null)}
+                onFocus={() => setHovered(p.slug)}
+                onBlur={() => setHovered(null)}
+              >
+                {p.logoUrl ? (
+                  <img src={p.logoUrl} alt="" />
+                ) : (
+                  <span className="service-tile__initial">{p.name.slice(0, 1)}</span>
+                )}
+                {count > 0 && <span className="service-tile__count">{count}</span>}
+                <span className="sr-only">
+                  {p.name}: {count} of your titles{mine ? "" : ", not subscribed"}
+                </span>
+              </button>
+            </li>
+          );
+        })}
       </ul>
+
+      {/* Announced as it changes, so keyboard users hear what focus reveals. */}
+      <p id="replaces-detail" className="replaces__detail" aria-live="polite">
+        {!shown
+          ? "Hover or tap a service to see which of your titles it streams."
+          : shownTitles.length === 0
+            ? `None of your titles stream on ${shown.name}.`
+            : `${shown.name}${subscribed.has(shown.slug) ? "" : " (not subscribed)"}: ${listTitles(shownTitles)}`}
+      </p>
+
+      {unhosted.length > 0 && (
+        <p className="replaces__unhosted">
+          <span className="replaces__mark" aria-hidden="true">◆</span>
+          <span>
+            <strong>Not on any tracked service:</strong> {listTitles(unhosted)}. Only
+            your copy plays {unhosted.length === 1 ? "it" : "these"}.
+          </span>
+        </p>
+      )}
     </section>
   );
 }

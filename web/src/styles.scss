@@ -503,30 +503,24 @@ body {
   &__title { margin: 0 0 4px; font-size: 1.125rem; }
   &__lede { margin: 0 0 14px; font-size: 0.875rem; color: var(--muted); }
 
-  &__list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 10px;
-  }
+  &__detail { min-height: 1.4em; margin: 14px 0 0; font-size: 0.875rem; color: var(--muted); }
 
-  &__row {
+  // Its own line, apart from the services: these are the titles only the
+  // user's copy can play.
+  &__unhosted {
     display: flex;
-    align-items: center;
-    gap: 12px;
-
-    &--unhosted { padding-top: 10px; border-top: 1px solid var(--border); }
+    gap: 10px;
+    margin: 12px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 0.875rem;
   }
 
-  &__mark {
-    width: 22px;
-    text-align: center;
-    color: #fbbf24;
-  }
+  &__mark { color: #fbbf24; }
 
-  &__name { font-weight: 600; }
-  &__count { margin-left: auto; font-size: 0.875rem; color: var(--muted); }
+  // The tile whose titles are showing in the line below: marked in white,
+  // over the green that says "subscribed".
+  .service-tile[aria-pressed="true"] { border-color: var(--text); }
 }
 
 
@@ -672,102 +666,89 @@ body {
   &__title { margin: 0 0 4px; font-size: 1.125rem; }
   &__lede { margin: 0 0 14px; font-size: 0.875rem; color: var(--muted); }
 
-  &__list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 8px;
-  }
-
-  &__row {
+  // The monthly figures on the left, the yearly total pushed to the right.
+  // Wraps under on a narrow screen rather than squeezing.
+  &__total {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
-    gap: 8px 12px;
-    min-height: 32px;
+    gap: 4px 16px;
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
   }
 
-  &__plan {
+  &__annual { margin-left: auto; white-space: nowrap; }
+
+  // Under the yearly total it qualifies, at the right-hand end of the notes.
+  &__footnote { margin: 0 0 0 auto; font-size: 0.75rem; white-space: nowrap; color: var(--muted); }
+  &__unpriced { color: var(--muted); font-size: 0.875rem; }
+  // Source line on the left, the yearly-total footnote pushed right; on a
+  // narrow screen the footnote wraps onto its own line.
+  &__notes {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
+    justify-content: space-between;
+    gap: 4px 16px;
+    margin-top: 8px;
+  }
+
+  &__checked { margin: 0; font-size: 0.75rem; color: var(--muted); }
+
+  // The plan form, as laid out inside the options dialog: one control per
+  // line, full width, label above.
+  &__plan {
+    display: grid;
+    gap: 10px;
 
     select {
-      max-width: 16em;
-      padding: 4px 8px;
+      width: 100%;
+      padding: 8px 10px;
       font: inherit;
-      font-size: 0.875rem;
       color: var(--text);
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 8px;
 
       &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
     }
   }
 
-  &__note {
-    flex-basis: 100%;
-    margin: 0;
-    font-size: 0.75rem;
-    text-align: right;
-    color: var(--muted);
-  }
-
-  &__pick {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 600;
-    cursor: pointer;
-
-    input { accent-color: var(--soon); cursor: pointer; }
-  }
+  &__field { font-size: 0.8125rem; font-weight: 600; color: var(--muted); }
+  &__note { margin: 0; font-size: 0.8125rem; color: var(--muted); }
 
   &__price {
     display: flex;
     align-items: center;
-    gap: 4px;
-    font-size: 0.875rem;
+    gap: 6px;
     color: var(--muted);
 
     input {
-      width: 5.5em;
-      padding: 4px 8px;
+      width: 7em;
+      padding: 6px 10px;
       font: inherit;
       color: var(--text);
       text-align: right;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 8px;
 
       &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
       &[aria-invalid="true"] { border-color: #f87171; }
     }
   }
 
-  &__total { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--border); }
-  &__unpriced { color: var(--muted); font-size: 0.875rem; }
-  &__checked { margin: 8px 0 0; font-size: 0.75rem; color: var(--muted); }
-  // Its own line under the plan, like the note: a setting about the plan,
-  // not a second plan choice.
   &__leave-out {
-    flex-basis: 100%;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: 6px;
-    font-size: 0.75rem;
-    color: var(--muted);
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 0.875rem;
     cursor: pointer;
 
     input { accent-color: var(--soon); cursor: pointer; }
   }
-
 }
 
 // --- what's on ------------------------------------------------------------
@@ -858,4 +839,150 @@ body {
   margin-bottom: 20px;
 
   .tags { margin-bottom: 0; }
+}
+
+// --- service tiles ----------------------------------------------------------
+
+// A row of service logos. auto-fill packs as many 64px columns as fit, so a
+// desktop gets one long row and a phone gets a grid, with no media query.
+.service-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 12px;
+}
+
+// Positions the ⋯ button over its tile's corner.
+.service-grid__cell { position: relative; width: 64px; margin: 0 auto; }
+
+.service-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  padding: 6px;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 120ms ease;
+
+  img { display: block; width: 100%; border-radius: 10px; transition: filter 120ms ease, opacity 120ms ease; }
+
+  // Not the user's: greyed, but still readable.
+  &[data-active="false"] img,
+  &[data-active="false"] .service-tile__initial { filter: grayscale(1); opacity: 0.4; }
+
+  &[data-active="true"] { border-color: var(--soon); }
+  &:hover { border-color: #3a3a46; }
+  &[data-active="true"]:hover { border-color: var(--soon); }
+  &:focus-visible { outline: 2px solid var(--soon); outline-offset: 3px; }
+
+  &__initial { font-size: 1.5rem; font-weight: 700; color: var(--muted); }
+
+  &__count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    display: grid;
+    place-items: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--bg);
+    background: var(--text);
+  }
+
+  &[data-active="false"] &__count { background: var(--muted); }
+
+  // Reopens a subscribed service's options. It sits on the tile's corner,
+  // where the library panel puts its count badge.
+  &__more {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+
+    svg { width: 14px; height: 14px; fill: currentColor; }
+    &:hover { border-color: var(--text); }
+    &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
+  }
+}
+
+// --- modal and buttons -------------------------------------------------------
+
+// A small dialog for a form, on the same <dialog> behaviour as .sheet.
+.modal {
+  width: min(420px, calc(100vw - 32px));
+  padding: 0;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+
+  &::backdrop { background: rgba(0, 0, 0, 0.72); backdrop-filter: blur(3px); }
+
+  &__body { display: grid; gap: 18px; padding: 20px 22px 22px; }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    img { width: 36px; height: 36px; border-radius: 8px; }
+    h2 { margin: 0; font-size: 1.25rem; }
+  }
+
+  &__actions { display: flex; justify-content: space-between; gap: 12px; }
+}
+
+.button {
+  padding: 8px 18px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--text);
+  border: 1px solid var(--text);
+  border-radius: 999px;
+  cursor: pointer;
+
+  &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
+
+  // A secondary action: outlined, and it doesn't compete with the main one.
+  &--quiet {
+    color: var(--muted);
+    background: none;
+    border-color: var(--border);
+
+    &:hover { color: var(--text); border-color: #3a3a46; }
+  }
+}
+
+// Read by screen readers, invisible on screen: the name behind each logo.
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
