@@ -1,12 +1,13 @@
 import { skipToken, useQuery } from "@apollo/client/react";
 import { useState } from "react";
 
+import { CatalogTile } from "../components/CatalogTile";
+import { FilterInput } from "../components/FilterInput";
 import { MyServices } from "../components/MyServices";
-import { ProviderLogos } from "../components/ProviderLogos";
-import { ShelfToggle } from "../components/ShelfToggle";
 import { TitleDialog } from "../components/TitleDialog";
 import { graphql } from "../generated";
 import type { CatalogSort, MediaKind } from "../generated/graphql";
+import { useDebounced } from "../hooks/useDebounced";
 import { useSubscriptions } from "../hooks/useSubscriptions";
 
 const CATALOG = graphql(`
@@ -29,6 +30,27 @@ const CATALOG = graphql(`
   }
 `);
 
+/** Same fields as the catalogue, so both lists render with one tile. */
+const SEARCH_MINE = graphql(`
+  query SearchMyServices($query: String!, $providerSlugs: [String!]!) {
+    searchMedia(query: $query, first: 20, providerSlugs: $providerSlugs) {
+      __typename
+      id
+      title
+      posterUrl(size: MEDIUM)
+      availableOn {
+        id
+        slug
+        name
+        logoUrl(size: SMALL)
+      }
+    }
+  }
+`);
+
+/** Shorter than this matches too much to be useful, and still costs a request. */
+const MIN_LENGTH = 2;
+
 const SERVICE_NAMES = graphql(`
   query ServiceNames {
     providers {
@@ -46,8 +68,9 @@ const SORTS: { value: CatalogSort; label: string }[] = [
 ];
 
 /**
- * Everything on the services the user pays for, in one grid. It reads their
- * services from the shared store, so ticking one on Home changes this list.
+ * Everything on the services the user pays for, in one grid, and a search
+ * across them. It reads their services from the shared store, so ticking one
+ * anywhere changes what this page shows.
  */
 export function WhatsOnPage() {
   const mine = useSubscriptions();
@@ -57,9 +80,12 @@ export function WhatsOnPage() {
   const [only, setOnly] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [text, setText] = useState("");
+  const term = useDebounced(text.trim(), 300);
+  const searching = term.length >= MIN_LENGTH;
 
   const mySlugs = mine.map((s) => s.slug).sort();
-  // A service chosen and then unticked on Home no longer narrows anything.
+  // A service chosen and then unticked no longer narrows anything.
   const narrowedTo = only && mySlugs.includes(only) ? only : null;
   const slugs = narrowedTo ? [narrowedTo] : mySlugs;
 
@@ -68,6 +94,14 @@ export function WhatsOnPage() {
     slugs.length > 0 ? { variables: { providerSlugs: slugs, kind, sort } } : skipToken,
   );
   const page = data?.catalog;
+
+  // Searching replaces the catalogue in the grid; clearing the box brings
+  // the catalogue back, with every page already loaded still in the cache.
+  const search = useQuery(
+    SEARCH_MINE,
+    searching && slugs.length > 0 ? { variables: { query: term, providerSlugs: slugs } } : skipToken,
+  );
+  const results = (search.data ?? search.previousData)?.searchMedia;
 
   // Nothing to browse until the user says what they pay for, so the page
   // asks right here rather than sending them somewhere else to answer.
@@ -82,7 +116,6 @@ export function WhatsOnPage() {
       </>
     );
   }
-
 
   const loadMore = async () => {
     if (!page?.nextCursor) return;
@@ -109,8 +142,9 @@ export function WhatsOnPage() {
         <MyServices />
       </details>
 
-
       <div className="catalog__controls">
+        <FilterInput value={text} onChange={setText} label="Search your services" />
+
         <div className="tags" role="group" aria-label="Services">
           <button
             className={`tag${narrowedTo === null ? " tag--on" : ""}`}
@@ -157,46 +191,39 @@ export function WhatsOnPage() {
         </div>
       </div>
 
-      {loading && !page && <p className="state">Loading what's on…</p>}
-      {error && <p className="state state--error">{error.message}</p>}
-      {page && page.items.length === 0 && (
-        <p className="state">Nothing here yet for this combination.</p>
-      )}
-
-      {/* The same tile as the library shelves: poster, where it streams,
-          and Own / Want, so shopping is one click from browsing. */}
-      <ul className="shelf__grid">
-        {page?.items.map((item) => (
-          <li key={item.id} className="shelf__item">
-            <div className="shelf__services">
-              <ProviderLogos providers={item.availableOn} />
-            </div>
-            <button className="shelf__open" onClick={() => setOpenId(item.id)}>
-              {item.posterUrl ? (
-                <img src={item.posterUrl} alt="" loading="lazy" />
-              ) : (
-                <div className="shelf__poster--empty" aria-hidden="true">
-                  {item.title.slice(0, 1)}
-                </div>
-              )}
-              <span className="shelf__name">{item.title}</span>
+      {searching ? (
+        <>
+          <p className="state state--count" role="status">
+            {search.loading && !results
+              ? "Searching…"
+              : `${results?.length ?? 0} ${results?.length === 1 ? "result" : "results"} for “${term}” on ${
+                  narrowedTo ? "this service" : "your services"
+                }`}
+          </p>
+          <ul className="shelf__grid">
+            {results?.map((item) => (
+              <CatalogTile key={item.id} item={item} onOpen={() => setOpenId(item.id)} />
+            ))}
+          </ul>
+        </>
+      ) : (
+        <>
+          {loading && !page && <p className="state">Loading what's on…</p>}
+          {error && <p className="state state--error">{error.message}</p>}
+          {page && page.items.length === 0 && (
+            <p className="state">Nothing here yet for this combination.</p>
+          )}
+          <ul className="shelf__grid">
+            {page?.items.map((item) => (
+              <CatalogTile key={item.id} item={item} onOpen={() => setOpenId(item.id)} />
+            ))}
+          </ul>
+          {page?.nextCursor && (
+            <button className="catalog__more" onClick={loadMore} disabled={loadingMore}>
+              {loadingMore ? "Loading…" : "Load more"}
             </button>
-            <ShelfToggle
-              item={{
-                id: item.id,
-                kind: item.__typename,
-                title: item.title,
-                posterUrl: item.posterUrl ?? null,
-              }}
-            />
-          </li>
-        ))}
-      </ul>
-
-      {page?.nextCursor && (
-        <button className="catalog__more" onClick={loadMore} disabled={loadingMore}>
-          {loadingMore ? "Loading…" : "Load more"}
-        </button>
+          )}
+        </>
       )}
 
       <TitleDialog id={openId} onClose={() => setOpenId(null)} />

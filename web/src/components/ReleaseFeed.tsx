@@ -2,6 +2,8 @@ import { useQuery } from "@apollo/client/react";
 import { useState } from "react";
 
 import { groupByArrival } from "../lib/group";
+import { matchesTitle } from "../lib/search";
+import { FilterInput } from "./FilterInput";
 import { ProviderFilter } from "./ProviderFilter";
 import { ReleaseCard } from "./ReleaseCard";
 import { ReleaseDialog } from "./ReleaseDialog";
@@ -62,19 +64,34 @@ export function ReleaseFeed() {
   // Which release the dialog is showing. One dialog for the whole grid
   // rather than one per card, so only a single <dialog> is ever mounted.
   const [openId, setOpenId] = useState<string | null>(null);
+  // Filters the feed already on screen: no request, so no debounce.
+  const [text, setText] = useState("");
 
   const { data, loading, error } = useQuery(RELEASE_FEED, {
     variables: { first: 150, timezone, providerSlug },
   });
 
   const releases = data?.releases ?? [];
-  const groups = groupByArrival(releases);
+  const groups = groupByArrival(releases).filter((g) =>
+    matchesTitle(g.release.media.title, text),
+  );
+  const filtering = text.trim() !== "";
+
   const open = groups.find((g) => g.release.id === openId) ?? null;
 
 
   return (
     <>
-      <ProviderFilter selected={providerSlug} onSelect={setProviderSlug} />
+      <div className="feed__controls">
+        <FilterInput value={text} onChange={setText} label="Filter by title" />
+        <ProviderFilter selected={providerSlug} onSelect={setProviderSlug} />
+      </div>
+      {filtering && (
+        <p className="state state--count" role="status">
+          {groups.length} {groups.length === 1 ? "match" : "matches"} for “{text.trim()}”
+        </p>
+      )}
+
 
       {loading && <p className="state">Loading the schedule…</p>}
       {error && <p className="state state--error">{error.message}</p>}

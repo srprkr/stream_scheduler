@@ -1,5 +1,8 @@
 import type { QueryResolvers } from "../generated/graphql.js";
-import {decodeCursor, encodeCursor } from "../cursor.js";
+import { decodeCursor, encodeCursor } from "../cursor.js";
+
+/** One page of upstream matches: what a service-filtered search chooses from. */
+const SEARCH_POOL = 20;
 
 export const Query: QueryResolvers = {
   releases: (_p, args, ctx) => 
@@ -23,9 +26,26 @@ export const Query: QueryResolvers = {
    * summaries, and priming them would hand a summary to anything later in the
    * request that asked the loader for the full record.
    */
-  searchMedia: (_p, args, ctx) =>
-    ctx.source.searchMedia(args.query, args.first ?? 10),
-    catalog: async (_p, args, ctx) => {
+  searchMedia: async (_p, args, ctx) => {
+    const first = args.first ?? 10;
+    if (!args.providerSlugs) return ctx.source.searchMedia(args.query, first);
+
+    // Search can't filter by service upstream, so fetch a full page of
+    // matches and keep the ones on the given services. The availability
+    // loader batches the lookups - and caches them, so each result's
+    // availableOn later in the same request costs nothing more.
+    const wanted = new Set(args.providerSlugs);
+    const hits = await ctx.source.searchMedia(args.query, SEARCH_POOL);
+    const availability = await ctx.loaders.availability.loadMany(hits.map((h) => h.id));
+    return hits
+      .filter((_, i) => {
+        const slugs = availability[i];
+        return Array.isArray(slugs) && slugs.some((slug) => wanted.has(slug));
+      })
+      .slice(0, first);
+  },
+
+  catalog: async (_p, args, ctx) => {
     const page = await ctx.source.listCatalog({
       providerSlugs: args.providerSlugs,
       kind: args.kind,
@@ -37,6 +57,7 @@ export const Query: QueryResolvers = {
       nextCursor: page.nextPage === null ? null : encodeCursor(page.nextPage),
     };
   },
+
 
   providers: (_p, _a, ctx) => ctx.source.listProviders(),
   provider: (_p, args, ctx) => ctx.loaders.provider.load(args.slug),

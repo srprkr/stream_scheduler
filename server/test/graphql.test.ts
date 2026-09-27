@@ -179,4 +179,19 @@ describe("GraphQL layer", () => {
     expect(errors?.[0]?.extensions?.code).toBe("BAD_USER_INPUT");
   });
 
+  it("narrows a search to titles on the given services, in one availability batch", async () => {
+    const source = new FixtureSource(() => NOW);
+    const getAvailability = vi.spyOn(source, "getAvailability");
+    const { data, errors } = await run(
+      `{ searchMedia(query: "the", providerSlugs: ["max"]) { id availableOn { slug } } }`,
+      source,
+    );
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({
+      searchMedia: [{ id: "media:2", availableOn: [{ slug: "netflix" }, { slug: "max" }] }],
+    });
+    expect(getAvailability).toHaveBeenCalledTimes(1);
+  });
+
+
 });

@@ -322,11 +322,22 @@ type Query {
   "Fetch one title. Returns the interface; the client narrows with a fragment."
   mediaItem(id: ID!): MediaItem
   mediaItems(ids: [ID!]!): [MediaItem]!
-    """
+  
+  """
   Find titles by name, films and series together, best match first.
   An empty or whitespace-only query returns an empty list rather than an error.
   """
-  searchMedia(query: String!, first: Int = 10): [MediaItem!]!
+  searchMedia(
+    query: String!
+    first: Int = 10
+    """
+    Keep only titles streaming on subscription on at least one of these
+    services. Only the best 20 matches upstream are considered, so a common
+    word can return fewer than `first`.
+    """
+    providerSlugs: [String!]
+  ): [MediaItem!]!
+
 
   """
   Everything streaming on subscription today on any of the given services,

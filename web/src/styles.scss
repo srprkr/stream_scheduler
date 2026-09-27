@@ -840,3 +840,19 @@ body {
     &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
   }
 }
+
+// A filter box above a grid: the search field's look, at a width that suits
+// a toolbar rather than a page heading.
+.filter { max-width: 360px; }
+
+// "12 results for …" - a quiet status line, announced by screen readers
+// through role="status" as the count changes.
+.state--count { padding: 0 0 16px; font-size: 0.875rem; }
+
+.feed__controls {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  .tags { margin-bottom: 0; }
+}
