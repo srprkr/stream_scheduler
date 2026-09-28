@@ -149,6 +149,12 @@ export interface CatalogSource {
    */
   getNextSeasons(ids: readonly string[]): Promise<(SeasonScheduleRecord | null)[]>;
 
+  /**
+   * Whether each title has been released on DVD or Blu-ray - whether a copy
+   * can be owned. Batched; false for unknown ids.
+   */
+  getOnDisc(ids: readonly string[]): Promise<boolean[]>;
+
   /** Whole-series watch time. Batched; null for films and unknown ids. */
   getSeriesRuntimes(ids: readonly string[]): Promise<(RuntimeRecord | null)[]>;
 

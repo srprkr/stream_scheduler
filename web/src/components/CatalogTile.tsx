@@ -15,6 +15,8 @@ export interface CatalogItem {
   nextSeason?: SeasonSchedule | null;
   posterUrl?: string | null;
   availableOn: readonly LogoProvider[];
+  /** On DVD or Blu-ray: Own/Want if so, Watchlist if it's streaming only. */
+  onDisc: boolean;
 }
 
 /**
@@ -28,7 +30,9 @@ export function CatalogTile({ item, onOpen }: { item: CatalogItem; onOpen: () =>
       <div className="shelf__services">
         <ProviderLogos providers={item.availableOn} />
       </div>
-      <button className="shelf__open" onClick={onOpen}>
+      {/* Poster, then the toggles, then the title and season line: toggles
+          sit on one line across a row because every poster is the same height. */}
+      <button className="shelf__open" onClick={onOpen} aria-label={item.title}>
         {item.posterUrl ? (
           <img src={item.posterUrl} alt="" loading="lazy" />
         ) : (
@@ -36,13 +40,9 @@ export function CatalogTile({ item, onOpen }: { item: CatalogItem; onOpen: () =>
             {item.title.slice(0, 1)}
           </div>
         )}
-        <span className="shelf__name">{item.title}</span>
-        {item.nextSeason && (
-          <span className="shelf__next">{seasonLine(item.nextSeason, localToday())}</span>
-        )}
-
       </button>
       <ShelfToggle
+        ownable={item.onDisc}
         item={{
           id: item.id,
           kind: item.__typename,
@@ -50,6 +50,15 @@ export function CatalogTile({ item, onOpen }: { item: CatalogItem; onOpen: () =>
           posterUrl: item.posterUrl ?? null,
         }}
       />
+      {/* A second way in for the mouse: clicking the title opens the same
+          dialog as the poster. Not a button, so keyboard and screen-reader
+          users don't meet the same action twice; the poster is theirs. */}
+      <span className="shelf__name opens-dialog" onClick={onOpen}>
+        {item.title}
+      </span>
+      {item.nextSeason && (
+        <span className="shelf__next">{seasonLine(item.nextSeason, localToday())}</span>
+      )}
     </li>
   );
 }

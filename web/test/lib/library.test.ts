@@ -77,4 +77,12 @@ describe("localLibrary", () => {
     library.shelve(heat, "owned");
     expect(library.entries()).toHaveLength(1);
   });
+
+  it("keeps a watchlisted exclusive on its own shelf, and moves it off like any other", () => {
+    const library = localLibrary(memoryStorage());
+    library.shelve(heat, "watchlist");
+    expect(library.entries().map((e) => e.shelf)).toEqual(["watchlist"]);
+    library.shelve(heat, null);
+    expect(library.entries()).toEqual([]);
+  });
 });

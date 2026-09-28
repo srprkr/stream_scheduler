@@ -143,6 +143,8 @@ body {
   flex-direction: column;
   gap: 10px;
 
+  .shelf-toggle { justify-content: space-between; }
+
   &__art {
     position: relative;
     aspect-ratio: 2 / 3;
@@ -393,28 +395,57 @@ body {
   flex: none;
   font-size: 0.8125rem;
 
+  // On a narrow tile, an expanded pill needs the room: the "Own" word gives
+  // way (min-width: 0 lets it shrink) while the checkbox itself never does.
   &__own {
     display: flex;
     align-items: center;
     gap: 5px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
     color: var(--muted);
     cursor: pointer;
 
-    input { accent-color: var(--soon); cursor: pointer; }
+    input { flex: none; accent-color: var(--soon); cursor: pointer; }
   }
 
-  &__want {
-    padding: 3px 9px;
-    font: inherit;
-    color: var(--muted);
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    cursor: pointer;
+  &__icons { display: flex; flex: none; gap: 6px; }
 
-    &[aria-pressed="true"] { color: #fbbf24; border-color: #fbbf24; }
-    &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
-  }
+  // Pressed colours say which plan it is: amber for "buy a copy" (the same
+  // amber as elsewhere for things worth attention), green for "watch it on a
+  // service".
+  &__want[aria-pressed="true"] { color: #fbbf24; border-color: #fbbf24; }
+  &__watch[aria-pressed="true"] { color: var(--soon); border-color: var(--soon); }
+
+  // A streaming-only title has one option and the width to spell it out.
+  &--solo .icon-toggle__text { display: inline; }
+}
+
+// An icon-only pill that shows its word for a moment after a click, as
+// confirmation. No width animation: the word simply appears and fades, which
+// avoids the jitter of neighbours being pushed along frame by frame.
+.icon-toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  font: inherit;
+  line-height: 1.2;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+
+  &__icon { display: inline-block; min-width: 1ch; text-align: center; }
+
+  &__text { display: none; margin-left: 4px; white-space: nowrap; }
+
+  &[data-flash="true"] &__text { display: inline; animation: icon-toggle-word 160ms ease; }
+
+  // Only unpressed pills brighten: a pressed one keeps its amber or green.
+  &:not([aria-pressed="true"]):hover { color: var(--text); }
+  &:focus-visible { outline: 2px solid var(--soon); outline-offset: 2px; }
 }
 
 .shelf {
@@ -432,9 +463,8 @@ body {
     gap: 20px 14px;
   }
 
-  // Grid rows stretch every item to the tallest one in the row. The poster
-  // button then takes the spare height, which pushes each item's toggles to
-  // its bottom edge - so toggles line up however many lines a title wraps to.
+  // Poster, toggles, then title. Every poster is the same 2:3 shape, so the
+  // toggles land on one line across a row, whatever the titles below say.
   &__item {
     display: flex;
     flex-direction: column;
@@ -445,7 +475,6 @@ body {
 
 
   &__open {
-    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -985,4 +1014,17 @@ body {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+// A title that opens its tile's dialog on click - a mouse shortcut to the
+// same action as the poster, which stays the keyboard's way in.
+.opens-dialog {
+  cursor: pointer;
+
+  &:hover { text-decoration: underline; text-underline-offset: 3px; }
+}
+
+@keyframes icon-toggle-word {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

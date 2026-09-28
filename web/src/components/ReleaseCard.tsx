@@ -1,6 +1,7 @@
 import { badge, bingeNote, countdown, formatDate, watchTime } from "../lib/format";
 import type { Release } from "../lib/format";
-import  { ProviderLogos } from "./ProviderLogos";
+import { ProviderLogos } from "./ProviderLogos";
+import { ShelfToggle } from "./ShelfToggle";
 
 export function ReleaseCard({
   release,
@@ -29,9 +30,11 @@ export function ReleaseCard({
 
   return (
     <li className="card">
-      {/* A button, not a div with onClick: keyboard and screen readers get
-          this for free, and the dialog needs something to return focus to. */}
-      <button className="card__button" onClick={onOpen}>
+      {/* The poster is the button that opens the release: keyboard and screen
+          readers get it for free, and the dialog needs something to return
+          focus to. The toggles sit right under it, above the details, so they
+          line up across a row - every poster is the same height. */}
+      <button className="card__button" onClick={onOpen} aria-label={media.title}>
         <div className="card__art">
           {media.posterUrl ? (
             <img src={media.posterUrl} alt="" loading="lazy" />
@@ -45,28 +48,44 @@ export function ReleaseCard({
             <span className="card__has-trailer" aria-hidden="true">▶</span>
           )}
         </div>
-
-        <div className="card__body">
-          {showProvider && <ProviderLogos providers={providers} />}
-
-          <h2 className="card__title">{media.title}</h2>
-
-          <p className="card__meta">
-            <span className={imminent ? "countdown countdown--soon" : "countdown"}>
-              {countdown(release.daysUntilRelease)}
-            </span>
-            <span className="card__date">{formatDate(release.availableFrom)}</span>
-          </p>
-          {/* A weekly season must not read as "Today" when it won't be
-              watchable in full for another two months. */}
-          {note && <p className="card__note">{note}</p>}
-          {!note && release.episodeCount && (
-            <p className="card__sub">
-              {release.episodeCount} eps{runtime ? ` · ${runtime}` : ""}
-            </p>
-          )}
-        </div>
       </button>
+
+      {/* Own/Want if it is on disc; Watchlist for streaming-only titles. */}
+      <ShelfToggle
+        ownable={media.onDisc}
+        item={{
+          id: media.id,
+          kind: media.__typename,
+          title: media.title,
+          posterUrl: media.posterUrl ?? null,
+        }}
+      />
+
+      <div className="card__body">
+        {showProvider && <ProviderLogos providers={providers} />}
+
+        {/* A second way in for the mouse: clicking the title opens the same
+            dialog as the poster. Not a button, so keyboard and screen-reader
+            users don't meet the same action twice; the poster is theirs. */}
+        <h2 className="card__title opens-dialog" onClick={onOpen}>
+          {media.title}
+        </h2>
+
+        <p className="card__meta">
+          <span className={imminent ? "countdown countdown--soon" : "countdown"}>
+            {countdown(release.daysUntilRelease)}
+          </span>
+          <span className="card__date">{formatDate(release.availableFrom)}</span>
+        </p>
+        {/* A weekly season must not read as "Today" when it won't be
+            watchable in full for another two months. */}
+        {note && <p className="card__note">{note}</p>}
+        {!note && release.episodeCount && (
+          <p className="card__sub">
+            {release.episodeCount} eps{runtime ? ` · ${runtime}` : ""}
+          </p>
+        )}
+      </div>
     </li>
   );
 }

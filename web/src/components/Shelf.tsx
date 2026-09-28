@@ -27,7 +27,9 @@ onOpen,
         {entries.map((entry) => (
           <li key={entry.id} className="shelf__item">
             <Availability services={details.get(entry.id)?.availableOn} />
-            <button className="shelf__open" onClick={() => onOpen(entry.id)}>
+            {/* Poster, then the toggles, then the title: toggles sit on one
+                line across a row because every poster is the same height. */}
+            <button className="shelf__open" onClick={() => onOpen(entry.id)} aria-label={entry.title}>
               {entry.posterUrl ? (
                 <img src={entry.posterUrl} alt="" loading="lazy" />
               ) : (
@@ -35,9 +37,14 @@ onOpen,
                   {entry.title.slice(0, 1)}
                 </div>
               )}
-              <span className="shelf__name">{entry.title}</span>
             </button>
             <ShelfToggle item={entry} />
+            {/* A second way in for the mouse: clicking the title opens the same
+                dialog as the poster. Not a button, so keyboard and screen-reader
+                users don't meet the same action twice; the poster is theirs. */}
+            <span className="shelf__name opens-dialog" onClick={() => onOpen(entry.id)}>
+              {entry.title}
+            </span>
           </li>
         ))}
       </ul>

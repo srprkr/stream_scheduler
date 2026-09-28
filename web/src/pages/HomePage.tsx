@@ -15,7 +15,11 @@ export function HomePage() {
   const owned = entries.filter((e) => e.shelf === "owned");
   const wanted = entries.filter((e) => e.shelf === "wanted");
 
-  const details = useLibraryDetails(entries.map((e) => e.id));
+  // Home is about owning, so it only fetches details for owned and wanted
+  // titles; watchlisted exclusives belong to the planning side.
+  const details = useLibraryDetails(
+    entries.filter((e) => e.shelf !== "watchlist").map((e) => e.id),
+  );
   // Only owned titles whose details have arrived. A title ticked a moment ago
   // is left out until its details load, rather than counted as missing data.
   const ownedDetails = owned
@@ -27,7 +31,7 @@ export function HomePage() {
     <>
       <div className="home-top">
         <header className="masthead">
-          {entries.length === 0 ? (
+          {owned.length + wanted.length === 0 ? (
             <>
               <h1>What do you own on DVD or Blu-ray?</h1>
               <p>

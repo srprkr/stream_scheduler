@@ -81,6 +81,8 @@ export interface TmdbTvDetail extends TmdbTvListItem {
   status?: string;
   next_episode_to_air?: TmdbEpisodeRef | null;
   last_episode_to_air?: TmdbEpisodeRef | null;
+  /** Where it was made for: a broadcaster, cable channel or streaming service. */
+  networks?: { id: number; name: string }[];
   videos?: { results: TmdbVideo[] };
 }
 

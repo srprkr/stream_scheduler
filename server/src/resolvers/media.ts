@@ -40,6 +40,7 @@ const shared = {
       (p): p is ProviderRecord => p !== null && !(p instanceof Error),
     );
   },
+  onDisc: (m, _a, ctx) => ctx.loaders.onDisc.load(m.id),
 } satisfies MovieResolvers;
 
 export const Movie: MovieResolvers = {

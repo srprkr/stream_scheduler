@@ -119,6 +119,9 @@ const AVAILABILITY: Record<string, string[]> = {
   "media:5": ["netflix"],
 };
 
+/** media:1 is a streaming exclusive with no disc release. */
+const NOT_ON_DISC = new Set(["media:1"]);
+
 /** (mediaId, providerSlug, days from today, seasonNumber) */
 const RELEASE_PLAN: ReadonlyArray<readonly [string, string, number, number | null]> = [
   ["media:1", "netflix", 3, 2],
@@ -180,6 +183,10 @@ export class FixtureSource implements CatalogSource {
 
   async getAvailability(ids: readonly string[]): Promise<string[][]> {
     return ids.map((id) => AVAILABILITY[id] ?? []);
+  }
+
+  async getOnDisc(ids: readonly string[]): Promise<boolean[]> {
+    return ids.map((id) => MEDIA.some((m) => m.id === id) && !NOT_ON_DISC.has(id));
   }
 
   /** One title a page, so five titles are enough to exercise paging. */

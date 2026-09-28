@@ -13,6 +13,7 @@ export interface Loaders {
   availability: DataLoader<string, string[]>;
   media: DataLoader<string, MediaRecord | null>;
   nextSeason: DataLoader<string, SeasonScheduleRecord | null>;
+  onDisc: DataLoader<string, boolean>;
   provider: DataLoader<string, ProviderRecord | null>;
   runtime: DataLoader<string, RuntimeRecord | null>;
 }
@@ -26,6 +27,10 @@ export function createLoaders(source: CatalogSource): Loaders {
     media: new DataLoader(async (ids) => {
       console.log(`[batch] getMedia x${ids.length}: ${ids.join(", ")}`);
       return source.getMedia(ids);
+    }),
+    onDisc: new DataLoader(async (ids) => {
+      console.log(`[batch] getOnDisc x${ids.length}: ${ids.join(", ")}`);
+      return source.getOnDisc(ids);
     }),
     nextSeason: new DataLoader(async (ids) => {
       console.log(`[batch] getNextSeasons x${ids.length}: ${ids.join(", ")}`);

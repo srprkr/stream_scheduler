@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   analyseSeason,
   expectedFinale,
+  filmOnDisc,
   nextSeasonNumber,
   pickTrailer,
   seriesRuntime,
@@ -19,6 +20,7 @@ import type {
   TmdbTvDetail,
   TmdbVideo,
 } from "../../../src/sources/tmdb/types.js";
+import { seriesOnDisc } from "../../../src/sources/tmdb/discs.js";
 
 function season(episodes: Partial<TmdbEpisode>[]): TmdbSeasonDetail {
   return {
@@ -438,5 +440,35 @@ describe("expectedFinale", () => {
   it("needs a premiere and a previous season to work from", () => {
     expect(expectedFinale(null, lastSeason)).toBeNull();
     expect(expectedFinale("2026-10-07", null)).toBeNull();
+  });
+});
+
+describe("filmOnDisc", () => {
+  const dates = (country: string, type: number) => ({
+    results: [{ iso_3166_1: country, release_dates: [{ type, release_date: "2024-05-14", note: "" }] }],
+  });
+
+  it("counts a disc release in any country", () => {
+    // Heat: discs on record in the UK, none in TMDB's US rows.
+    expect(filmOnDisc(dates("GB", 5))).toBe(true);
+  });
+
+  it("doesn't count a digital release as ownable", () => {
+    expect(filmOnDisc(dates("US", 4))).toBe(false);
+  });
+});
+
+describe("seriesOnDisc", () => {
+  it("counts broadcast and cable shows as on disc", () => {
+    expect(seriesOnDisc(456, [19])).toBe(true); // The Simpsons, FOX
+    expect(seriesOnDisc(1399, [49])).toBe(true); // Game of Thrones, HBO
+  });
+
+  it("doesn't count streaming originals", () => {
+    expect(seriesOnDisc(108978, [1024])).toBe(false); // Reacher, Prime Video
+  });
+
+  it("lets the exceptions list overrule the network", () => {
+    expect(seriesOnDisc(65494, [213])).toBe(true); // The Crown, Netflix, on disc
   });
 });

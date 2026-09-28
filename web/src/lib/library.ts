@@ -1,4 +1,10 @@
-export type Shelf = "owned" | "wanted";
+/**
+ * Owned and wanted are for titles out on disc; the watchlist is for
+ * streaming-only titles, which can only ever be watched on their service -
+ * the ones worth unpausing a subscription for. Adding a shelf needs no version
+ * bump: entries saved before it existed are all still valid.
+ */
+export type Shelf = "owned" | "wanted" | "watchlist";
 
 /**
  * A title on one of the user's shelves, with enough of it copied in to render

@@ -146,6 +146,14 @@ interface MediaItem {
   trailer: Video
   totalRuntime: Runtime
   availableOn: [Provider!]!
+
+  """
+  True when it has been released on DVD or Blu-ray, so a copy can be owned.
+  A digital "purchase" doesn't count: it's a licence the store can lose.
+  Films use recorded disc releases; series follow the network they were made
+  for, with a hand-kept list of exceptions (TMDB has no disc data for TV).
+  """
+  onDisc: Boolean!
 }
 
 type Movie implements MediaItem {
@@ -157,6 +165,7 @@ type Movie implements MediaItem {
   trailer: Video
   totalRuntime: Runtime
   availableOn: [Provider!]!
+  onDisc: Boolean!
 
   runtimeMinutes: Int
 }
@@ -170,6 +179,7 @@ type Series implements MediaItem {
   trailer: Video
   totalRuntime: Runtime
   availableOn: [Provider!]!
+  onDisc: Boolean!
   seasonCount: Int
   nextSeason: SeasonSchedule
 }

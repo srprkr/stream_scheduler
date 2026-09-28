@@ -30,6 +30,7 @@ const RELEASE_FEED = graphql(`
         __typename
         id
         title
+        onDisc
         overview
         posterUrl(size: MEDIUM)
         backdropUrl(size: LARGE)

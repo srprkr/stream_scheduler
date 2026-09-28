@@ -5,10 +5,21 @@ interface CatalogPageShape {
   nextCursor: string | null;
 }
 
-export const client = new ApolloClient({
-  link: new HttpLink({ uri: "/graphql" }),
-  cache: new InMemoryCache({
+/**
+ * The client's cache rules. Exported separately from the client so tests can
+ * build the same cache without a network link.
+ */
+export function createCache(): InMemoryCache {
+  return new InMemoryCache({
     typePolicies: {
+      // Apollo files every object with an id under one shared key,
+      // "Plan:premium". But plan ids are only unique within a service -
+      // Netflix, Peacock, Disney+, HBO Max and Paramount+ all have a
+      // "premium" - so five different plans would share one entry, and the
+      // last one loaded would overwrite the rest. keyFields: false keeps each
+      // plan inside the provider it belongs to instead.
+      Plan: { keyFields: false },
+
       Query: {
         fields: {
           catalog: {
@@ -24,5 +35,10 @@ export const client = new ApolloClient({
         },
       },
     },
-  }),
+  });
+}
+
+export const client = new ApolloClient({
+  link: new HttpLink({ uri: "/graphql" }),
+  cache: createCache(),
 });

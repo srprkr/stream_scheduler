@@ -13,6 +13,7 @@ import type {
 } from "../types.js";
 import { addDays, isoDate } from "../../dates.js";
 import type { TmdbClient } from "./client.js";
+import { seriesOnDisc } from "./discs.js";
 import type {
   TmdbEpisode,
   TmdbMovieDetail,
@@ -389,6 +390,21 @@ function catalogPage(
     items: items.map((item) => ({ ...item, summary: true })),
     nextPage: page < Math.min(totalPages, MAX_DISCOVER_PAGE) ? page + 1 : null,
   };
+}
+
+/** TMDB's release type for a physical release: DVD, Blu-ray or 4K disc. */
+const PHYSICAL_RELEASE = 5;
+
+/**
+ * Whether a film has been released on disc anywhere. Any country, not just
+ * the US: TMDB's US entries have gaps - Heat has discs in Canada, the UK,
+ * Germany and France on record, but no US row - and a film on disc abroad is
+ * on disc here too.
+ */
+export function filmOnDisc(dates: TmdbReleaseDates): boolean {
+  return dates.results.some((country) =>
+    country.release_dates.some((d) => d.type === PHYSICAL_RELEASE),
+  );
 }
 
 function median(values: readonly number[]): number | null {
@@ -903,6 +919,32 @@ export class TmdbSource implements CatalogSource {
     });
   }
 
+
+  /**
+   * Films: their release dates, the same URL the Coming Soon film scan
+   * fetches. Series: their detail, the same URL the feed and next-season
+   * lookups fetch. So this is usually answered from the cache.
+   */
+  async getOnDisc(ids: readonly string[]): Promise<boolean[]> {
+    return mapLimit(ids, CONCURRENCY, async (id) => {
+      const [kind, tmdbId] = id.split(":");
+      if (!tmdbId) return false;
+      try {
+        if (kind === "movie") {
+          return filmOnDisc(
+            await this.client.get<TmdbReleaseDates>(`/movie/${tmdbId}/release_dates`),
+          );
+        }
+        if (kind === "tv") {
+          const detail = await this.client.get<TmdbTvDetail>(`/tv/${tmdbId}`);
+          return seriesOnDisc(detail.id, (detail.networks ?? []).map((n) => n.id));
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    });
+  }
 
   /**
    * One request for the series, then one per season. TMDB's series-level

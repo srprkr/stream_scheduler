@@ -214,4 +214,13 @@ describe("GraphQL layer", () => {
     });
   });
 
+
+  it("says whether a title can be owned on disc", async () => {
+    const { data, errors } = await run(`{
+      exclusive: mediaItem(id: "media:1") { onDisc }
+      onShelves: mediaItem(id: "media:2") { onDisc }
+    }`);
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({ exclusive: { onDisc: false }, onShelves: { onDisc: true } });
+  });
 });

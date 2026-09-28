@@ -19,6 +19,7 @@ const CATALOG = graphql(`
         id
         title
         posterUrl(size: MEDIUM)
+        onDisc
         availableOn {
           id
           slug
@@ -48,6 +49,7 @@ const SEARCH_MINE = graphql(`
       id
       title
       posterUrl(size: MEDIUM)
+      onDisc
       availableOn {
         id
         slug
