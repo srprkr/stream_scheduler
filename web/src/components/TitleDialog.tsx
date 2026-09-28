@@ -111,7 +111,7 @@ export function TitleDialog({
             )}
           </div>
         </dl>
-      )}ProviderLogos, 
+      )}
 
     </Sheet>
   );
