@@ -15,6 +15,11 @@ import { library, useLibrary } from "../hooks/useLibrary";
  * picking one clears the others. The store enforces that by keeping a single
  * entry per title.
  *
+ * On the library's own shelves (`inLibrary`) the planning options drop away:
+ * that page is about what's on the shelf, not what to watch next. Only Own
+ * stays, plus the ★ on a wishlisted title - it's the way to take it back off
+ * the wishlist without buying it.
+ *
  * Every control's accessible name includes the title. In a list of results, a
  * screen reader hearing "Own, checkbox" twenty times cannot tell which is
  * which.
@@ -22,10 +27,13 @@ import { library, useLibrary } from "../hooks/useLibrary";
 export function ShelfToggle({
   item,
   ownable = true,
+  inLibrary = false,
 }: {
   item: LibraryItem;
   /** False for streaming-only titles. Defaults to true where it's unknown. */
   ownable?: boolean;
+  /** On a library shelf: Own only, and ★ while the title is wanted. */
+  inLibrary?: boolean;
 }) {
   const shelf = useLibrary().find((e) => e.id === item.id)?.shelf ?? null;
   // Tapping the shelf a title is already on takes it off again.
@@ -62,15 +70,17 @@ export function ShelfToggle({
         Own
       </label>
       <div className="shelf-toggle__icons">
-        <IconToggle
-          className="shelf-toggle__want"
-          pressed={shelf === "wanted"}
-          icon={shelf === "wanted" ? "★" : "☆"}
-          text={shelf === "wanted" ? "Wanted" : "Want"}
-          label={`Want ${item.title}`}
-          onClick={() => toggle("wanted")}
-        />
-        {watchlist}
+        {(!inLibrary || shelf === "wanted") && (
+          <IconToggle
+            className="shelf-toggle__want"
+            pressed={shelf === "wanted"}
+            icon={shelf === "wanted" ? "★" : "☆"}
+            text={shelf === "wanted" ? "Wanted" : "Want"}
+            label={`Want ${item.title}`}
+            onClick={() => toggle("wanted")}
+          />
+        )}
+        {!inLibrary && watchlist}
       </div>
     </div>
   );

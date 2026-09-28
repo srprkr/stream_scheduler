@@ -42,7 +42,7 @@ export function Shelf({
                 </div>
               )}
             </button>
-            <ShelfToggle item={entry} />
+            <ShelfToggle item={entry} inLibrary />
             {/* A second way in for the mouse: clicking the title opens the same
                 dialog as the poster. Not a button, so keyboard and screen-reader
                 users don't meet the same action twice; the poster is theirs. */}

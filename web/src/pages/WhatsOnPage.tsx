@@ -134,7 +134,8 @@ export function WhatsOnPage() {
           <h1>What's On</h1>
           <p>Tick the services you pay for, and everything on them shows up here.</p>
         </header>
-        <MyServices />
+        {/* The whole page until they answer, so it can't fold away. */}
+        <MyServices collapsible={false} />
       </>
     );
   }
@@ -158,10 +159,9 @@ export function WhatsOnPage() {
         </p>
       </header>
 
-      <details className="catalog__services">
-        <summary>Your services and plans</summary>
+      <div className="catalog__services">
         <MyServices />
-      </details>
+      </div>
 
       <div className="catalog__controls">
         <FilterInput value={text} onChange={setText} label="Search your services" />

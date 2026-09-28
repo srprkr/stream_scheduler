@@ -745,6 +745,53 @@ body {
   }
 }
 
+// A card whose heading folds it away (Panel). The heading is the button, so
+// the whole title row is the target, with a chevron that turns when shut.
+.panel {
+  &__toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 4px;
+      border-radius: 4px;
+    }
+  }
+
+  &__chevron {
+    width: 18px;
+    height: 18px;
+    margin-left: auto;
+    fill: none;
+    stroke: var(--muted);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 140ms ease;
+  }
+  &__toggle:hover &__chevron {
+    stroke: var(--text);
+  }
+  &__toggle[aria-expanded="false"] &__chevron {
+    transform: rotate(-90deg);
+  }
+
+  // Shut, the card is just its heading: no gap left under it.
+  &:has(&__body[hidden]) &__title {
+    margin-bottom: 0;
+  }
+}
+
 .replaces {
   padding: 16px 20px;
   background: var(--surface);
@@ -1118,28 +1165,6 @@ body {
 .catalog {
   &__services {
     margin-bottom: 20px;
-
-    summary {
-      width: fit-content;
-      padding: 6px 0;
-      font-weight: 600;
-      color: var(--muted);
-      cursor: pointer;
-
-      &:hover {
-        color: var(--text);
-      }
-      &:focus-visible {
-        outline: 2px solid var(--soon);
-        outline-offset: 2px;
-        border-radius: 4px;
-      }
-    }
-
-    &[open] summary {
-      margin-bottom: 12px;
-      color: var(--text);
-    }
   }
 
   &__controls {

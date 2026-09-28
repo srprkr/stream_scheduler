@@ -8,6 +8,7 @@ import { formatDate } from "../lib/format";
 import { formatDollars, parseDollars } from "../lib/money";
 import { monthlySpend, type PlanChoice, type Subscription } from "../lib/subscriptions";
 import { Modal } from "./Modal";
+import { Panel } from "./Panel";
 
 const SERVICES = graphql(`
   query MyServices {
@@ -41,7 +42,7 @@ const CUSTOM = "custom";
  * total means something straight away; the ⋯ on a subscribed logo reopens
  * them. Custom covers bundles, discounts and plans the app doesn't list.
  */
-export function MyServices() {
+export function MyServices({ collapsible = true }: { collapsible?: boolean }) {
   const { data } = useQuery(SERVICES);
   const services = data?.providers ?? [];
   const mine = useSubscriptions();
@@ -67,10 +68,7 @@ export function MyServices() {
   };
 
   return (
-    <section className="services" aria-labelledby="services-title">
-      <h2 id="services-title" className="services__title">
-        Your services
-      </h2>
+    <Panel id="services" className="services" title="Your services" collapsible={collapsible}>
       <p className="services__lede">Tap the services you pay for now. Use ⋯ to change a plan.</p>
 
       {/* One toggle per service: colour when it's yours, grey when not. The
@@ -190,7 +188,7 @@ export function MyServices() {
           </>
         )}
       </Modal>
-    </section>
+    </Panel>
   );
 }
 

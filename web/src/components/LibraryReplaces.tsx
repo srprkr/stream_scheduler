@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { graphql } from "../generated";
 import { useSubscriptions } from "../hooks/useSubscriptions";
+import { Panel } from "./Panel";
 import { listTitles, replacementSummary, type OwnedTitle } from "../lib/replaces";
 
 const TRACKED_SERVICES = graphql(`
@@ -37,10 +38,7 @@ export function LibraryReplaces({ owned }: { owned: readonly OwnedTitle[] }) {
   const shownTitles = shown ? (bySlug.get(shown.slug) ?? []) : [];
 
   return (
-    <section className="replaces" aria-labelledby="replaces-title">
-      <h2 id="replaces-title" className="replaces__title">
-        What your library replaces
-      </h2>
+    <Panel id="replaces" className="replaces" title="What your library replaces">
       <p className="replaces__lede">
         How many titles you own each service streams today. Greyed services are ones you don't pay
         for.
@@ -100,6 +98,6 @@ export function LibraryReplaces({ owned }: { owned: readonly OwnedTitle[] }) {
           </span>
         </p>
       )}
-    </section>
+    </Panel>
   );
 }
