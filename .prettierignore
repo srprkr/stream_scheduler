@@ -1,0 +1,8 @@
+# Written by codegen; regenerated on every run.
+**/generated/**
+# Build output and the TMDB response cache.
+**/dist/
+**/.cache/
+package-lock.json
+# Prose is written by hand; leave its wrapping alone.
+**/*.md

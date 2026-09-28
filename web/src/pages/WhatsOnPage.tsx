@@ -35,7 +35,6 @@ const CATALOG = graphql(`
             isFullDrop
           }
         }
-
       }
     }
   }
@@ -120,7 +119,9 @@ export function WhatsOnPage() {
   // the catalogue back, with every page already loaded still in the cache.
   const search = useQuery(
     SEARCH_MINE,
-    searching && slugs.length > 0 ? { variables: { query: term, providerSlugs: slugs } } : skipToken,
+    searching && slugs.length > 0
+      ? { variables: { query: term, providerSlugs: slugs } }
+      : skipToken,
   );
   const results = (search.data ?? search.previousData)?.searchMedia;
 
@@ -153,8 +154,7 @@ export function WhatsOnPage() {
       <header className="masthead">
         <h1>What's On</h1>
         <p>
-          Streaming now on your {mySlugs.length}{" "}
-          {mySlugs.length === 1 ? "service" : "services"}.
+          Streaming now on your {mySlugs.length} {mySlugs.length === 1 ? "service" : "services"}.
         </p>
       </header>
 

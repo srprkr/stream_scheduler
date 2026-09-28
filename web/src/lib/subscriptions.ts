@@ -35,7 +35,6 @@ export interface SubscriptionStore {
   /** Keeps a subscribed service out of cost estimates, or brings it back. */
   setLeftOut(slug: string, leftOut: boolean): void;
 
-
   subscribe(listener: () => void): () => void;
 }
 
@@ -88,9 +87,7 @@ export function localSubscriptions(
     setSubscribed(slug, subscribed, defaultPlan = null) {
       const has = snapshot.some((s) => s.slug === slug);
       if (subscribed && !has) {
-        const choice: PlanChoice = defaultPlan
-          ? { planId: defaultPlan.id }
-          : { customCents: null };
+        const choice: PlanChoice = defaultPlan ? { planId: defaultPlan.id } : { customCents: null };
         commit([...snapshot, { slug, choice, leftOut: defaultPlan?.leaveOutByDefault ?? false }]);
       }
       if (!subscribed && has) commit(snapshot.filter((s) => s.slug !== slug));
@@ -160,4 +157,3 @@ export function monthlySpend(
   }
   return { cents, unpriced, leftOutCents };
 }
-

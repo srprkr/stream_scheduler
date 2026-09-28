@@ -5,10 +5,7 @@ import { useState } from "react";
  * plus a write-through, unlike the library: one component owns it, so there
  * is no shared store to keep in step.
  */
-export function useStoredNumber(
-  key: string,
-  fallback: number,
-): [number, (value: number) => void] {
+export function useStoredNumber(key: string, fallback: number): [number, (value: number) => void] {
   const [value, setValue] = useState(() => {
     try {
       const saved = Number(localStorage.getItem(key));

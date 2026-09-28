@@ -57,7 +57,11 @@ export function MyServices() {
   const editingSubscription = editing ? bySlug.get(editing) : undefined;
 
   const toggle = (service: Service, on: boolean) => {
-    subscriptions.setSubscribed(service.slug, !on, service.plans.find((p) => p.isDefault));
+    subscriptions.setSubscribed(
+      service.slug,
+      !on,
+      service.plans.find((p) => p.isDefault),
+    );
     // Turning one on asks for its plan right away; turning one off doesn't.
     setEditing(on ? null : service.slug);
   };
@@ -67,9 +71,7 @@ export function MyServices() {
       <h2 id="services-title" className="services__title">
         Your services
       </h2>
-      <p className="services__lede">
-        Tap the services you pay for now. Use ⋯ to change a plan.
-      </p>
+      <p className="services__lede">Tap the services you pay for now. Use ⋯ to change a plan.</p>
 
       {/* One toggle per service: colour when it's yours, grey when not. The
           ⋯ button is a sibling of the tile, not inside it - a button can't
@@ -118,12 +120,14 @@ export function MyServices() {
         <p className="services__total">
           <span>
             {mine.length} {mine.length === 1 ? "service" : "services"}
-            {spend.cents > 0 && <> · <strong>{formatDollars(spend.cents)}</strong>/month</>}
-            {spend.unpriced > 0 && (
-              <span className="services__unpriced">
+            {spend.cents > 0 && (
+              <>
                 {" "}
-                ({spend.unpriced} without a price)
-              </span>
+                · <strong>{formatDollars(spend.cents)}</strong>/month
+              </>
+            )}
+            {spend.unpriced > 0 && (
+              <span className="services__unpriced"> ({spend.unpriced} without a price)</span>
             )}
             {spend.leftOutCents > 0 && (
               <span className="services__unpriced">
@@ -148,8 +152,8 @@ export function MyServices() {
       <div className="services__notes">
         {checkedOn && (
           <p className="services__checked">
-            Published US prices, checked {formatDate(checkedOn, true)}. Choose
-            Custom for bundles, annual plans or discounts.
+            Published US prices, checked {formatDate(checkedOn, true)}. Choose Custom for bundles,
+            annual plans or discounts.
           </p>
         )}
         {mine.length > 0 && spend.cents > 0 && (

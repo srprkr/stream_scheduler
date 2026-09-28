@@ -9,7 +9,6 @@ export function ReleaseDialog({
   providers,
   onClose,
 }: {
-
   release: Release | null;
   onClose: () => void;
   providers: readonly Release["provider"][];
@@ -28,9 +27,7 @@ export function ReleaseDialog({
       badges={
         <>
           <span className={`badge badge--${kind}`}>{text}</span>
-          {release.isFullDrop === false && (
-            <span className="badge badge--weekly">Weekly</span>
-          )}
+          {release.isFullDrop === false && <span className="badge badge--weekly">Weekly</span>}
         </>
       }
     >
@@ -38,8 +35,7 @@ export function ReleaseDialog({
         <div>
           <dt>Arrives</dt>
           <dd>
-            {formatDate(release.availableFrom, true)} ·{" "}
-            {countdown(release.daysUntilRelease)}
+            {formatDate(release.availableFrom, true)} · {countdown(release.daysUntilRelease)}
           </dd>
         </div>
         {note && (

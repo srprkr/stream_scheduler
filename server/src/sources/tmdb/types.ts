@@ -35,7 +35,6 @@ export type TmdbMultiItem =
   | (TmdbTvListItem & { media_type: "tv" })
   | { media_type: "person"; id: number };
 
-
 export interface TmdbVideo {
   id: string;
   key: string;
@@ -73,7 +72,6 @@ export interface TmdbEpisodeRef {
   air_date: string | null;
 }
 
-
 export interface TmdbTvDetail extends TmdbTvListItem {
   number_of_seasons: number | null;
   seasons?: TmdbSeason[];
@@ -98,7 +96,6 @@ export interface TmdbReleaseDate {
 export interface TmdbReleaseDates {
   results: { iso_3166_1: string; release_dates: TmdbReleaseDate[] }[];
 }
-
 
 export interface TmdbMovieDetail extends TmdbMovieListItem {
   runtime: number | null;

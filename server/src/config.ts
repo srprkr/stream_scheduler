@@ -2,7 +2,7 @@ const TMDB_READ_TOKEN = process.env.TMDB_READ_TOKEN;
 
 if (!TMDB_READ_TOKEN && process.env.CATALOG_SOURCE !== "fixture") {
   throw new Error(
-    "TMDB_READ_TOKEN is not set. Copy server/.env.example to server/.env and fill in the missing token"
+    "TMDB_READ_TOKEN is not set. Copy server/.env.example to server/.env and fill in the missing token",
   );
 }
 

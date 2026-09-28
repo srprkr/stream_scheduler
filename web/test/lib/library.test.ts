@@ -44,7 +44,11 @@ describe("localLibrary", () => {
   it("survives a reload from the same storage", () => {
     const storage = memoryStorage();
     localLibrary(storage).shelve(heat, "owned");
-    expect(localLibrary(storage).entries().map((e) => e.id)).toEqual(["movie:949"]);
+    expect(
+      localLibrary(storage)
+        .entries()
+        .map((e) => e.id),
+    ).toEqual(["movie:949"]);
   });
 
   it("hands React a new snapshot on every change, and the same one otherwise", () => {
@@ -72,7 +76,12 @@ describe("localLibrary", () => {
   });
 
   it("keeps working in memory when storage refuses writes", () => {
-    const full = { getItem: () => null, setItem: () => { throw new Error("QuotaExceededError"); } };
+    const full = {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("QuotaExceededError");
+      },
+    };
     const library = localLibrary(full);
     library.shelve(heat, "owned");
     expect(library.entries()).toHaveLength(1);

@@ -26,7 +26,6 @@ export function HomePage() {
     .map((e) => details.byId.get(e.id))
     .filter((d): d is LibraryDetail => d !== undefined);
 
-
   return (
     <>
       <div className="home-top">
@@ -35,8 +34,8 @@ export function HomePage() {
             <>
               <h1>What do you own on DVD or Blu-ray?</h1>
               <p>
-                Search for the films and series on your shelf and tick them as
-                you go. Anything you'd like to own can go on your wishlist.
+                Search for the films and series on your shelf and tick them as you go. Anything
+                you'd like to own can go on your wishlist.
               </p>
             </>
           ) : (
@@ -47,13 +46,12 @@ export function HomePage() {
               </p>
             </>
           )}
-          </header>
-          <LibraryStats
-            runtimes={ownedDetails.map((d) => d.totalRuntime)}
-            loading={owned.length > 0 && details.loading}
-          />
-
-        </div>
+        </header>
+        <LibraryStats
+          runtimes={ownedDetails.map((d) => d.totalRuntime)}
+          loading={owned.length > 0 && details.loading}
+        />
+      </div>
 
       <LibraryReplaces
         owned={owned.flatMap((entry) => {

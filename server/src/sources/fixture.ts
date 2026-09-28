@@ -157,9 +157,7 @@ export class FixtureSource implements CatalogSource {
     return PROVIDERS;
   }
 
-  async getProviders(
-    slugs: readonly string[],
-  ): Promise<(ProviderRecord | null)[]> {
+  async getProviders(slugs: readonly string[]): Promise<(ProviderRecord | null)[]> {
     return slugs.map((s) => PROVIDERS.find((p) => p.slug === s) ?? null);
   }
 
@@ -230,13 +228,11 @@ export class FixtureSource implements CatalogSource {
     });
   }
 
-
   async searchMedia(query: string, first: number): Promise<MediaRecord[]> {
     const q = query.trim().toLowerCase();
     if (!q) return [];
     return MEDIA.filter((m) => m.title.toLowerCase().includes(q)).slice(0, first);
   }
-
 
   imageUrl(path: string | null, size: ImageSize): string | null {
     if (!path) return null;
@@ -251,5 +247,4 @@ export class FixtureSource implements CatalogSource {
     if (video.site !== "YouTube") return null;
     return `https://www.youtube-nocookie.com/embed/${video.key}`;
   }
-
 }

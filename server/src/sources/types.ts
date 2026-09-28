@@ -49,12 +49,11 @@ export interface MediaRecord {
   runtimeMinutes: number | null;
   /** SERIES only. */
   seasonCount: number | null;
-    /**
+  /**
    * True when built from a search result, which carries no detail-only
    * fields: trailer, runtimeMinutes and seasonCount are unknown, not null.
    */
   summary?: boolean;
-
 }
 
 /** A season being released now, or next. Dates are YYYY-MM-DD. */
@@ -122,7 +121,6 @@ export interface CatalogPageRecord {
   nextPage: number | null;
 }
 
-
 export interface CatalogSource {
   /** Identifies the implementation in logs and errors, e.g. "fixture", "tmdb". */
   readonly name: string;
@@ -173,5 +171,4 @@ export interface CatalogSource {
   videoUrl(video: VideoRecord): string;
   /** Video record -> embeddable player URL, or null if the host has none. */
   videoEmbedUrl(video: VideoRecord): string | null;
-
 }

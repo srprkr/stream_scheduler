@@ -1,7 +1,7 @@
 import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
 
-import { typeDefs } from "./schema.js"
+import { typeDefs } from "./schema.js";
 import { createContext, startFeedRefresher, type Context } from "./context.js";
 import { resolvers } from "./resolvers/index.js";
 

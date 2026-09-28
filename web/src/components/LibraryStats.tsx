@@ -21,8 +21,6 @@ export function LibraryStats({
   if (loading) return <p className="stats stats--loading">Adding up your library…</p>;
   if (runtimes.length === 0) return null;
 
-
-
   const stats = libraryStats(runtimes, hoursPerMonth);
 
   const approx = stats.estimated ? "about " : "";
@@ -50,13 +48,13 @@ export function LibraryStats({
             if (next > 0) setHoursPerMonth(next);
           }}
         />{" "}
-        hours a month, that's <strong>{formatMonths(stats.months)}</strong> of
-        viewing, watching everything once.
+        hours a month, that's <strong>{formatMonths(stats.months)}</strong> of viewing, watching
+        everything once.
       </p>
       {stats.missing > 0 && (
         <p className="stats__note">
-          {stats.missing} {stats.missing === 1 ? "title has" : "titles have"} no
-          runtime data yet and {stats.missing === 1 ? "isn't" : "aren't"} counted.
+          {stats.missing} {stats.missing === 1 ? "title has" : "titles have"} no runtime data yet
+          and {stats.missing === 1 ? "isn't" : "aren't"} counted.
         </p>
       )}
     </section>

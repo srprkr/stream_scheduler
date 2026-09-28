@@ -33,12 +33,20 @@ describe("seasonLine", () => {
   it("gives an estimated finale as a month only", () => {
     expect(
       seasonLine(
-        { seasonNumber: 6, premieresOn: "2026-10-07", expectedFullyOutOn: "2027-04-28", isFullDrop: false },
+        {
+          seasonNumber: 6,
+          premieresOn: "2026-10-07",
+          expectedFullyOutOn: "2027-04-28",
+          isFullDrop: false,
+        },
         TODAY,
       ),
     ).toBe("Season 6 premieres Oct 7 · finale estimated for April 2027");
     expect(
-      seasonLine({ seasonNumber: 5, premieresOn: "2026-09-01", expectedFullyOutOn: "2026-12-09" }, TODAY),
+      seasonLine(
+        { seasonNumber: 5, premieresOn: "2026-09-01", expectedFullyOutOn: "2026-12-09" },
+        TODAY,
+      ),
     ).toBe("Season 5 airing now · finale estimated for December");
   });
 

@@ -98,7 +98,6 @@ describe("analyseSeason", () => {
     });
   });
 
-
   it("refuses to sum partial runtimes", () => {
     const s = season([{ runtime: 50 }, { runtime: null }, { runtime: 50 }]);
     expect(analyseSeason(s).watchTimeMinutes).toBeNull();
@@ -134,7 +133,6 @@ describe("analyseSeason", () => {
       isFullDrop: false,
     });
   });
-
 });
 
 describe("pickTrailer", () => {
@@ -186,23 +184,32 @@ function page(results: TmdbMultiItem[]): TmdbPage<TmdbMultiItem> {
 
 function movieHit(id: number, title: string): TmdbMultiItem {
   return {
-    media_type: "movie", id, title, overview: "",
-    poster_path: null, backdrop_path: null, release_date: "2020-01-01",
+    media_type: "movie",
+    id,
+    title,
+    overview: "",
+    poster_path: null,
+    backdrop_path: null,
+    release_date: "2020-01-01",
   };
 }
 
 function tvHit(id: number, name: string): TmdbMultiItem {
   return {
-    media_type: "tv", id, name, overview: "",
-    poster_path: null, backdrop_path: null, first_air_date: "2020-01-01",
+    media_type: "tv",
+    id,
+    name,
+    overview: "",
+    poster_path: null,
+    backdrop_path: null,
+    first_air_date: "2020-01-01",
   };
 }
 
 const personHit: TmdbMultiItem = { media_type: "person", id: 99 };
 
 /** Takes the query already encoded, so each test states the exact URL. */
-const searchPath = (encoded: string) =>
-  `/search/multi?query=${encoded}&include_adult=false`;
+const searchPath = (encoded: string) => `/search/multi?query=${encoded}&include_adult=false`;
 
 describe("TmdbSource.searchMedia", () => {
   it("keeps films and series, drops people, and returns thin records", async () => {
@@ -225,7 +232,11 @@ describe("TmdbSource.searchMedia", () => {
   it("applies `first` after dropping people, not before", async () => {
     const client = fakeClient({
       [searchPath("x")]: page([
-        personHit, movieHit(1, "A"), personHit, tvHit(2, "B"), movieHit(3, "C"),
+        personHit,
+        movieHit(1, "A"),
+        personHit,
+        tvHit(2, "B"),
+        movieHit(3, "C"),
       ]),
     });
     const results = await new TmdbSource(client).searchMedia("x", 2);
@@ -234,9 +245,7 @@ describe("TmdbSource.searchMedia", () => {
 
   it("encodes the query", async () => {
     const client = fakeClient({ [searchPath("Law%20%26%20Order")]: page([]) });
-    await expect(
-      new TmdbSource(client).searchMedia("Law & Order", 10),
-    ).resolves.toEqual([]);
+    await expect(new TmdbSource(client).searchMedia("Law & Order", 10)).resolves.toEqual([]);
   });
 
   it("makes no request for a blank query", async () => {
@@ -298,7 +307,6 @@ describe("streamingPremieres", () => {
     const note = "Apple TV, Prime Video, Google VOD";
     expect(streamingPremieres(dates("US", { note }), store)).toEqual([]);
   });
-
 });
 
 describe("seriesRuntime", () => {
@@ -320,7 +328,11 @@ describe("seriesRuntime", () => {
     const total = seriesRuntime(
       [
         numbered(0, [{ runtime: 90 }]),
-        numbered(1, [{ runtime: 30 }, { runtime: 30, air_date: "2026-12-01" }, { runtime: 30, air_date: null }]),
+        numbered(1, [
+          { runtime: 30 },
+          { runtime: 30, air_date: "2026-12-01" },
+          { runtime: 30, air_date: null },
+        ]),
       ],
       TODAY,
     );
@@ -328,7 +340,10 @@ describe("seriesRuntime", () => {
   });
 
   it("fills a missing runtime with its season's median, and says so", () => {
-    const total = seriesRuntime([numbered(1, [{ runtime: 20 }, { runtime: 24 }, { runtime: 40 }, {}])], TODAY);
+    const total = seriesRuntime(
+      [numbered(1, [{ runtime: 20 }, { runtime: 24 }, { runtime: 40 }, {}])],
+      TODAY,
+    );
     expect(total).toEqual({ minutes: 20 + 24 + 40 + 24, estimated: true });
   });
 
@@ -370,7 +385,12 @@ describe("subscriptionServices", () => {
 
   it("ignores rent, free-with-ads and other countries", () => {
     const found = subscriptionServices(
-      { results: { US: { rent: [offer(1899)], ads: [offer(386)] }, GB: { flatrate: [offer(1899)] } } },
+      {
+        results: {
+          US: { rent: [offer(1899)], ads: [offer(386)] },
+          GB: { flatrate: [offer(1899)] },
+        },
+      },
       services,
     );
     expect(found).toEqual([]);
@@ -380,8 +400,13 @@ describe("subscriptionServices", () => {
 describe("nextSeasonNumber", () => {
   function series(overrides: Partial<TmdbTvDetail>): TmdbTvDetail {
     return {
-      id: 1, name: "Show", overview: "", poster_path: null, backdrop_path: null,
-      first_air_date: "2020-01-01", number_of_seasons: 2,
+      id: 1,
+      name: "Show",
+      overview: "",
+      poster_path: null,
+      backdrop_path: null,
+      first_air_date: "2020-01-01",
+      number_of_seasons: 2,
       ...overrides,
     };
   }
@@ -445,7 +470,9 @@ describe("expectedFinale", () => {
 
 describe("filmOnDisc", () => {
   const dates = (country: string, type: number) => ({
-    results: [{ iso_3166_1: country, release_dates: [{ type, release_date: "2024-05-14", note: "" }] }],
+    results: [
+      { iso_3166_1: country, release_dates: [{ type, release_date: "2024-05-14", note: "" }] },
+    ],
   });
 
   it("counts a disc release in any country", () => {

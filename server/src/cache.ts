@@ -21,7 +21,7 @@ export class FileCache {
 
   private path(key: string): string {
     const hash = createHash("sha1").update(key).digest("hex");
-    return `${this.dir}/${hash}.json`
+    return `${this.dir}/${hash}.json`;
   }
 
   async read<T>(key: string): Promise<T | null> {

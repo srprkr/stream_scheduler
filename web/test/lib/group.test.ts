@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { groupByArrival } from "../../src/lib/group";
 
-function arrival(mediaId: string, date: string, provider: string, seasonNumber: number | null = null) {
+function arrival(
+  mediaId: string,
+  date: string,
+  provider: string,
+  seasonNumber: number | null = null,
+) {
   return { media: { id: mediaId }, availableFrom: date, seasonNumber, provider };
 }
 

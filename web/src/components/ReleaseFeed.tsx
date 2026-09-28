@@ -73,13 +73,10 @@ export function ReleaseFeed() {
   });
 
   const releases = data?.releases ?? [];
-  const groups = groupByArrival(releases).filter((g) =>
-    matchesTitle(g.release.media.title, text),
-  );
+  const groups = groupByArrival(releases).filter((g) => matchesTitle(g.release.media.title, text));
   const filtering = text.trim() !== "";
 
   const open = groups.find((g) => g.release.id === openId) ?? null;
-
 
   return (
     <>
@@ -92,7 +89,6 @@ export function ReleaseFeed() {
           {groups.length} {groups.length === 1 ? "match" : "matches"} for “{text.trim()}”
         </p>
       )}
-
 
       {loading && <p className="state">Loading the schedule…</p>}
       {error && <p className="state state--error">{error.message}</p>}
@@ -117,7 +113,6 @@ export function ReleaseFeed() {
         providers={open?.providers ?? []}
         onClose={() => setOpenId(null)}
       />
-
     </>
   );
 }

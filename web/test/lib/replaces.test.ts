@@ -16,8 +16,13 @@ describe("replacementSummary", () => {
   });
 
   it("lists a title on two services under both", () => {
-    const { bySlug } = replacementSummary([{ title: "Demon Slayer", availableOn: on("hulu", "netflix") }]);
-    expect([bySlug.get("hulu"), bySlug.get("netflix")]).toEqual([["Demon Slayer"], ["Demon Slayer"]]);
+    const { bySlug } = replacementSummary([
+      { title: "Demon Slayer", availableOn: on("hulu", "netflix") },
+    ]);
+    expect([bySlug.get("hulu"), bySlug.get("netflix")]).toEqual([
+      ["Demon Slayer"],
+      ["Demon Slayer"],
+    ]);
   });
 
   it("keeps titles streaming nowhere apart", () => {

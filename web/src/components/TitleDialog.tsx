@@ -51,18 +51,11 @@ const TITLE_DETAIL = graphql(`
  * A title's detail, independent of any release. What a search hit opens:
  * most titles are not coming soon, so there is no date or service to show.
  */
-export function TitleDialog({
-  id,
-  onClose,
-}: {
-  id: string | null;
-  onClose: () => void;
-}) {
+export function TitleDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
   const { data } = useQuery(TITLE_DETAIL, id ? { variables: { id } } : skipToken);
   const media = id ? (data?.mediaItem ?? null) : null;
 
-  const runtime =
-    media?.__typename === "Movie" ? watchTime(media.runtimeMinutes) : null;
+  const runtime = media?.__typename === "Movie" ? watchTime(media.runtimeMinutes) : null;
   const seasons = media?.__typename === "Series" ? media.seasonCount : null;
   const nextSeason = media?.__typename === "Series" ? media.nextSeason : null;
 
@@ -112,7 +105,6 @@ export function TitleDialog({
           </div>
         </dl>
       )}
-
     </Sheet>
   );
 }

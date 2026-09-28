@@ -17,7 +17,6 @@
 # ./schema_roadmap.graphql is an older design sketch, not a build target.
 # =============================================================================
 
-
 # -----------------------------------------------------------------------------
 # Scalars
 # -----------------------------------------------------------------------------
@@ -27,7 +26,6 @@ scalar Date
 
 "An absolute http(s) URL. Validated on serialize so clients can trust it."
 scalar URL
-
 
 # -----------------------------------------------------------------------------
 # Enums
@@ -48,7 +46,6 @@ enum CatalogSort {
   "Most recently released first."
   NEWEST
 }
-
 
 """
 Requested image dimension. The source maps this onto whatever size buckets
@@ -104,7 +101,7 @@ type Plan {
 
   "The plan assumed when a user ticks the service without choosing one."
   isDefault: Boolean!
-  
+
   """
   True when the plan pays for more than streaming (Amazon Prime's shipping,
   say), so it starts outside cost estimates until the user brings it in.
@@ -114,7 +111,6 @@ type Plan {
   "What sets this plan apart beyond price and ads, when anything does."
   note: String
 }
-
 
 # -----------------------------------------------------------------------------
 # Media
@@ -184,7 +180,6 @@ type Series implements MediaItem {
   nextSeason: SeasonSchedule
 }
 
-
 """
 When a season starts and when it can be watched in one sitting - the date a
 paused subscription should wait for. Built from the same episode dates as a
@@ -212,7 +207,6 @@ type SeasonSchedule {
   episodeCount: Int
 }
 
-
 type Runtime {
   minutes: Int!
 
@@ -222,7 +216,6 @@ type Runtime {
   """
   estimated: Boolean!
 }
-
 
 type Video {
   id: ID!
@@ -240,7 +233,6 @@ type Video {
   "\"Trailer\", \"Teaser\", \"Clip\"."
   type: String!
 }
-
 
 # -----------------------------------------------------------------------------
 # Release
@@ -290,7 +282,6 @@ type Release {
   """
   daysUntilRelease(timezone: String = "UTC"): Int!
 
-
   "How many episodes this season holds. Null for a film."
   episodeCount: Int
 
@@ -300,7 +291,6 @@ type Release {
   """
   isFullDrop: Boolean
 
-
   """
   Which season is arriving, when the release is a series. Null for movies.
   A value of 1 is a series premiere; anything higher is a returning season,
@@ -309,14 +299,12 @@ type Release {
   seasonNumber: Int
 
   """
-    Total viewing time for this release, in minutes: the sum of the season's
-    episode runtimes, or the film's runtime. Null when upstream has no runtimes,
-    which is common for unreleased titles.
+  Total viewing time for this release, in minutes: the sum of the season's
+  episode runtimes, or the film's runtime. Null when upstream has no runtimes,
+  which is common for unreleased titles.
   """
   watchTimeMinutes: Int
-
 }
-
 
 """
 One page of a catalogue. `nextCursor` is opaque: pass it back as `after` to
@@ -326,7 +314,6 @@ type CatalogPage {
   items: [MediaItem!]!
   nextCursor: String
 }
-
 
 # -----------------------------------------------------------------------------
 # Root
@@ -362,7 +349,7 @@ type Query {
   "Fetch one title. Returns the interface; the client narrows with a fragment."
   mediaItem(id: ID!): MediaItem
   mediaItems(ids: [ID!]!): [MediaItem]!
-  
+
   """
   Find titles by name, films and series together, best match first.
   An empty or whitespace-only query returns an empty list rather than an error.
@@ -378,7 +365,6 @@ type Query {
     providerSlugs: [String!]
   ): [MediaItem!]!
 
-
   """
   Everything streaming on subscription today on any of the given services,
   one kind at a time, a page at a time. Films and series are separate lists
@@ -391,7 +377,6 @@ type Query {
     "A cursor from a previous page's nextCursor. Omitted means the first page."
     after: String
   ): CatalogPage!
-
 
   providers: [Provider!]!
 

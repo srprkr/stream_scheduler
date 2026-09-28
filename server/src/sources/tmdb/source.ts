@@ -25,7 +25,7 @@ import type {
   TmdbTvDetail,
   TmdbTvListItem,
   TmdbVideo,
-  TmdbWatchProviders
+  TmdbWatchProviders,
 } from "./types.js";
 
 const WATCH_REGION = "US";
@@ -44,7 +44,7 @@ const WATCH_REGION = "US";
  */
 interface ProviderConfig extends ProviderRecord {
   networkId: number | null;
-    /** Lower-case names a TMDB release-date note uses for this service. */
+  /** Lower-case names a TMDB release-date note uses for this service. */
   noteAliases: string[];
   watchProviderIds: number[];
 }
@@ -68,7 +68,6 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     networkId: 3353,
     // Premium and Premium Plus.
     watchProviderIds: [386, 387],
-
   },
   {
     id: "provider:hulu",
@@ -128,9 +127,12 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
   },
 ];
 
-const PROVIDERS: ProviderRecord[] = PROVIDER_CONFIGS.map(
-  ({ id, slug, name, logoPath }) => ({ id, slug, name, logoPath }),
-);
+const PROVIDERS: ProviderRecord[] = PROVIDER_CONFIGS.map(({ id, slug, name, logoPath }) => ({
+  id,
+  slug,
+  name,
+  logoPath,
+}));
 
 /** TMDB serves fixed width buckets; ImageSize maps onto the nearest one. */
 const IMAGE_WIDTHS: Record<ImageSize, string> = {
@@ -170,15 +172,12 @@ async function mapLimit<T, R>(
 ): Promise<R[]> {
   const out: R[] = new Array(items.length);
   let next = 0;
-  const workers = Array.from(
-    { length: Math.min(limit, items.length) },
-    async () => {
-      while (next < items.length) {
-        const i = next++;
-        out[i] = await fn(items[i] as T);
-      }
-    },
-  );
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i] as T);
+    }
+  });
   await Promise.all(workers);
   return out;
 }
@@ -246,8 +245,11 @@ export function streamingPremieres(
   const premieres: { slug: string; date: string }[] = [];
   for (const d of local?.release_dates ?? []) {
     if (d.type !== DIGITAL_RELEASE) continue;
-    const parts = d.note.toLowerCase().split(/[\/,]/).map((p) => p.trim());
-      if (parts.some((p) => STOREFRONT.test(p))) continue;
+    const parts = d.note
+      .toLowerCase()
+      .split(/[\/,]/)
+      .map((p) => p.trim());
+    if (parts.some((p) => STOREFRONT.test(p))) continue;
     for (const config of configs) {
       if (parts.some((p) => config.noteAliases.includes(p))) {
         premieres.push({ slug: config.slug, date: d.release_date.slice(0, 10) });
@@ -369,9 +371,7 @@ export function subscriptionServices(
   const offered = new Set(
     (availability.results[WATCH_REGION]?.flatrate ?? []).map((p) => p.provider_id),
   );
-  return configs
-    .filter((c) => c.watchProviderIds.some((id) => offered.has(id)))
-    .map((c) => c.slug);
+  return configs.filter((c) => c.watchProviderIds.some((id) => offered.has(id))).map((c) => c.slug);
 }
 
 /** TMDB's TV genre ids for talk shows and news. */
@@ -381,11 +381,7 @@ const NEWS_GENRE = 10763;
 /** TMDB serves at most 500 pages of any discover query. */
 const MAX_DISCOVER_PAGE = 500;
 
-function catalogPage(
-  items: MediaRecord[],
-  totalPages: number,
-  page: number,
-): CatalogPageRecord {
+function catalogPage(items: MediaRecord[], totalPages: number, page: number): CatalogPageRecord {
   return {
     items: items.map((item) => ({ ...item, summary: true })),
     nextPage: page < Math.min(totalPages, MAX_DISCOVER_PAGE) ? page + 1 : null,
@@ -434,9 +430,7 @@ export function seriesRuntime(
     .filter((s) => s.season_number > 0)
     .map((s) => s.episodes.filter((e) => e.air_date !== null && e.air_date <= today));
   const known = (episodes: readonly TmdbEpisode[]) =>
-    episodes
-      .map((e) => e.runtime)
-      .filter((r): r is number => typeof r === "number" && r > 0);
+    episodes.map((e) => e.runtime).filter((r): r is number => typeof r === "number" && r > 0);
 
   const seriesMedian = median(aired.flatMap(known));
   if (seriesMedian === null) return null;
@@ -544,9 +538,7 @@ export class TmdbSource implements CatalogSource {
     return PROVIDERS;
   }
 
-  async getProviders(
-    slugs: readonly string[],
-  ): Promise<(ProviderRecord | null)[]> {
+  async getProviders(slugs: readonly string[]): Promise<(ProviderRecord | null)[]> {
     return slugs.map((s) => PROVIDERS.find((p) => p.slug === s) ?? null);
   }
 
@@ -561,9 +553,7 @@ export class TmdbSource implements CatalogSource {
    * air_date falls in the window. That second step drops shows that are
    * merely mid-season, which would otherwise flood the feed.
    */
-  private async upcomingSeasons(
-    configs: ProviderConfig[],
-  ): Promise<ReleaseRecord[]> {
+  private async upcomingSeasons(configs: ProviderConfig[]): Promise<ReleaseRecord[]> {
     const today = isoDate(this.now());
     const end = isoDate(addDays(this.now(), WINDOW_DAYS));
 
@@ -650,16 +640,13 @@ export class TmdbSource implements CatalogSource {
       // date when the season endpoint gave us nothing.
       const listed = details
         .find((d) => d?.detail.id === w.seriesId)
-        ?.detail.seasons?.find((x) => x.season_number === w.seasonNumber)
-        ?.air_date;
+        ?.detail.seasons?.find((x) => x.season_number === w.seasonNumber)?.air_date;
 
       const release = seasonRelease(w.slug, w.seriesId, w.seasonNumber, analysis, listed);
       if (release) releases.push(release);
     }
     return releases;
-
   }
-
 
   /**
    * Films arriving on a configured service in the window, originals and
@@ -671,9 +658,7 @@ export class TmdbSource implements CatalogSource {
    * on it, so every candidate costs one request - but a single scan serves
    * every provider, so the cost does not grow as services are added.
    */
-  private async upcomingFilms(
-    configs: ProviderConfig[],
-  ): Promise<ReleaseRecord[]> {
+  private async upcomingFilms(configs: ProviderConfig[]): Promise<ReleaseRecord[]> {
     const today = isoDate(this.now());
     const end = isoDate(addDays(this.now(), WINDOW_DAYS));
     const discover = (page: number) =>
@@ -730,8 +715,6 @@ export class TmdbSource implements CatalogSource {
     return releases;
   }
 
-
-
   async listReleases(query: ReleaseQuery): Promise<ReleaseRecord[]> {
     // Narrowing by provider narrows what is FETCHED, not just what is
     // returned. Filtering after the fact would make a one-service view cost
@@ -752,7 +735,6 @@ export class TmdbSource implements CatalogSource {
       .sort((a, b) => a.availableFrom.localeCompare(b.availableFrom))
       .slice(0, query.first);
   }
-
 
   async getRelease(id: string): Promise<ReleaseRecord | null> {
     // id shape: release:<slug>:movie:<tmdbId> or release:<slug>:tv:<tmdbId>:s<n>
@@ -775,8 +757,6 @@ export class TmdbSource implements CatalogSource {
         return date ? movieRelease(slug, tmdbId, date, d.runtime || null) : null;
       }
 
-
-
       if (kind === "tv") {
         const d = await this.client.get<TmdbTvDetail>(`/tv/${tmdbId}`);
         const wanted = Number(seasonPart?.replace(/^s/, ""));
@@ -793,7 +773,6 @@ export class TmdbSource implements CatalogSource {
         }
         return seasonRelease(slug, tmdbId, wanted, analysis, season.air_date);
       }
-
 
       return null;
     } catch {
@@ -919,7 +898,6 @@ export class TmdbSource implements CatalogSource {
     });
   }
 
-
   /**
    * Films: their release dates, the same URL the Coming Soon film scan
    * fetches. Series: their detail, the same URL the feed and next-season
@@ -937,7 +915,10 @@ export class TmdbSource implements CatalogSource {
         }
         if (kind === "tv") {
           const detail = await this.client.get<TmdbTvDetail>(`/tv/${tmdbId}`);
-          return seriesOnDisc(detail.id, (detail.networks ?? []).map((n) => n.id));
+          return seriesOnDisc(
+            detail.id,
+            (detail.networks ?? []).map((n) => n.id),
+          );
         }
         return false;
       } catch {
@@ -953,9 +934,7 @@ export class TmdbSource implements CatalogSource {
    * Two series at a time, each fetching its seasons in parallel, keeps the
    * burst near CONCURRENCY rather than its square.
    */
-  async getSeriesRuntimes(
-    ids: readonly string[],
-  ): Promise<(RuntimeRecord | null)[]> {
+  async getSeriesRuntimes(ids: readonly string[]): Promise<(RuntimeRecord | null)[]> {
     return mapLimit(ids, 2, (id) => this.getOneSeriesRuntime(id));
   }
 
@@ -964,9 +943,7 @@ export class TmdbSource implements CatalogSource {
     if (kind !== "tv" || !tmdbId) return null;
     try {
       const detail = await this.client.get<TmdbTvDetail>(`/tv/${tmdbId}`);
-      const numbers = (detail.seasons ?? [])
-        .map((s) => s.season_number)
-        .filter((n) => n > 0);
+      const numbers = (detail.seasons ?? []).map((s) => s.season_number).filter((n) => n > 0);
       const seasons = await mapLimit(numbers, CONCURRENCY / 2, (n) =>
         this.client.get<TmdbSeasonDetail>(`/tv/${tmdbId}/season/${n}`),
       );
@@ -982,9 +959,7 @@ export class TmdbSource implements CatalogSource {
    * through analyseSeason, so an unscheduled finale is null here exactly as
    * it is on a Release.
    */
-  async getNextSeasons(
-    ids: readonly string[],
-  ): Promise<(SeasonScheduleRecord | null)[]> {
+  async getNextSeasons(ids: readonly string[]): Promise<(SeasonScheduleRecord | null)[]> {
     return mapLimit(ids, CONCURRENCY, async (id) => {
       const [kind, tmdbId] = id.split(":");
       if (kind !== "tv" || !tmdbId) return null;
@@ -1035,5 +1010,4 @@ export class TmdbSource implements CatalogSource {
     if (video.site !== "YouTube") return null;
     return `https://www.youtube-nocookie.com/embed/${video.key}`;
   }
-
 }

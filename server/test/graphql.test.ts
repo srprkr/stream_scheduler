@@ -62,8 +62,9 @@ describe("GraphQL layer", () => {
     const { data, getMedia } = await run(`{
       releases { media { id } watchTimeMinutes }
     }`);
-    const film = (data?.releases as { media: { id: string }; watchTimeMinutes: number | null }[])
-      .find((r) => r.media.id === "media:2");
+    const film = (
+      data?.releases as { media: { id: string }; watchTimeMinutes: number | null }[]
+    ).find((r) => r.media.id === "media:2");
     expect(film?.watchTimeMinutes).toBe(108);
     expect(getMedia).toHaveBeenCalledTimes(1);
   });
@@ -116,7 +117,10 @@ describe("GraphQL layer", () => {
       mediaItems: [
         { title: "Ledger", totalRuntime: { minutes: 400, estimated: false } },
         null,
-        { title: "Nightshift at the Museum of Failure", totalRuntime: { minutes: 108, estimated: false } },
+        {
+          title: "Nightshift at the Museum of Failure",
+          totalRuntime: { minutes: 108, estimated: false },
+        },
       ],
     });
   });
@@ -193,7 +197,7 @@ describe("GraphQL layer", () => {
     expect(getAvailability).toHaveBeenCalledTimes(1);
   });
 
-    it("gives a weekly series its next season, dated like its release", async () => {
+  it("gives a weekly series its next season, dated like its release", async () => {
     const { data, errors } = await run(`{
       mediaItem(id: "media:5") {
         ... on Series {
@@ -213,7 +217,6 @@ describe("GraphQL layer", () => {
       },
     });
   });
-
 
   it("says whether a title can be owned on disc", async () => {
     const { data, errors } = await run(`{

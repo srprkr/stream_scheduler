@@ -16,7 +16,6 @@ describe("addDays", () => {
   });
 });
 
-
 describe("daysUntil", () => {
   it("counts calendar days in UTC", () => {
     expect(daysUntil("2026-09-21", "UTC", NOW)).toBe(3);
@@ -37,8 +36,6 @@ describe("daysUntil", () => {
   });
 
   it("rejects an unknown timezone", () => {
-    expect(() => daysUntil("2026-09-21", "Mars/Olympus_Mons", NOW)).toThrow(
-      RangeError,
-    );
+    expect(() => daysUntil("2026-09-21", "Mars/Olympus_Mons", NOW)).toThrow(RangeError);
   });
 });

@@ -5,7 +5,10 @@ import { formatHours, formatMonths, libraryStats } from "../../src/lib/stats";
 describe("libraryStats", () => {
   it("totals runtimes and converts them to months of viewing", () => {
     const stats = libraryStats(
-      [{ minutes: 4601, estimated: false }, { minutes: 199, estimated: false }],
+      [
+        { minutes: 4601, estimated: false },
+        { minutes: 199, estimated: false },
+      ],
       20,
     );
     expect(stats).toEqual({ minutes: 4800, estimated: false, missing: 0, months: 4 });
@@ -13,7 +16,10 @@ describe("libraryStats", () => {
 
   it("carries an estimate through to the total", () => {
     const stats = libraryStats(
-      [{ minutes: 60, estimated: false }, { minutes: 60, estimated: true }],
+      [
+        { minutes: 60, estimated: false },
+        { minutes: 60, estimated: true },
+      ],
       10,
     );
     expect(stats.estimated).toBe(true);

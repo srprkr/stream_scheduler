@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  localSubscriptions,
-  monthlyCents,
-  monthlySpend,
-} from "../../src/lib/subscriptions";
+import { localSubscriptions, monthlyCents, monthlySpend } from "../../src/lib/subscriptions";
 
 function memoryStorage() {
   const data = new Map<string, string>();
@@ -52,7 +48,11 @@ describe("localSubscriptions", () => {
   it("changes the plan only for services the user has", () => {
     const store = localSubscriptions(memoryStorage());
     store.setSubscribed("netflix", true, standardAds);
-    store.setChoice("netflix", { planId: "standard" }, { id: "standard", leaveOutByDefault: false });
+    store.setChoice(
+      "netflix",
+      { planId: "standard" },
+      { id: "standard", leaveOutByDefault: false },
+    );
     store.setChoice("hulu", { planId: "ads" }, huluAds);
     expect(store.subscriptions()).toEqual([
       { slug: "netflix", choice: { planId: "standard" }, leftOut: false },
@@ -92,18 +92,26 @@ describe("leaving a service out of estimates", () => {
   it("follows the new plan's default when the plan changes", () => {
     const store = localSubscriptions(memoryStorage());
     store.setSubscribed("prime", true, amazonPrime);
-    store.setChoice("prime", { planId: "standalone" }, { id: "standalone", leaveOutByDefault: false });
+    store.setChoice(
+      "prime",
+      { planId: "standalone" },
+      { id: "standalone", leaveOutByDefault: false },
+    );
     expect(store.subscriptions()[0]?.leftOut).toBe(false);
   });
 });
 
 describe("pricing", () => {
   it("prices a plan choice from the published plans", () => {
-    expect(monthlyCents({ slug: "netflix", choice: { planId: "standard" } }, netflixPlans)).toBe(1999);
+    expect(monthlyCents({ slug: "netflix", choice: { planId: "standard" } }, netflixPlans)).toBe(
+      1999,
+    );
   });
 
   it("has no price for a plan the app no longer lists", () => {
-    expect(monthlyCents({ slug: "netflix", choice: { planId: "retired" } }, netflixPlans)).toBeNull();
+    expect(
+      monthlyCents({ slug: "netflix", choice: { planId: "retired" } }, netflixPlans),
+    ).toBeNull();
   });
 
   it("adds known prices and counts the unknown ones", () => {

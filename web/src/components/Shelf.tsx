@@ -8,7 +8,7 @@ export function Shelf({
   title,
   entries,
   details,
-onOpen,
+  onOpen,
 }: {
   title: string;
   /** Loaded details by id; a title missing here just shows no availability. */
@@ -29,7 +29,11 @@ onOpen,
             <Availability services={details.get(entry.id)?.availableOn} />
             {/* Poster, then the toggles, then the title: toggles sit on one
                 line across a row because every poster is the same height. */}
-            <button className="shelf__open" onClick={() => onOpen(entry.id)} aria-label={entry.title}>
+            <button
+              className="shelf__open"
+              onClick={() => onOpen(entry.id)}
+              aria-label={entry.title}
+            >
               {entry.posterUrl ? (
                 <img src={entry.posterUrl} alt="" loading="lazy" />
               ) : (
@@ -60,9 +64,7 @@ onOpen,
 function Availability({ services }: { services: LibraryDetail["availableOn"] | undefined }) {
   return (
     <div className="shelf__services">
-      {services && services.length === 0 && (
-        <span className="shelf__unhosted">Not streaming</span>
-      )}
+      {services && services.length === 0 && <span className="shelf__unhosted">Not streaming</span>}
       {services && services.length > 0 && <ProviderLogos providers={services} />}
     </div>
   );

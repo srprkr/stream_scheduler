@@ -1,10 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-import {
-  localSubscriptions,
-  SUBSCRIPTIONS_KEY,
-  type Subscription,
-} from "../lib/subscriptions";
+import { localSubscriptions, SUBSCRIPTIONS_KEY, type Subscription } from "../lib/subscriptions";
 
 import { browserStorage } from "./browserStorage";
 

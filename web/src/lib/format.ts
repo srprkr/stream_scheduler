@@ -54,4 +54,3 @@ export function bingeNote(release: Release): string | null {
   }
   return `Airs weekly — complete ${formatDate(release.bingeableFrom)}`;
 }
-

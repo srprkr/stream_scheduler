@@ -1,11 +1,7 @@
 import { ProviderLogos, type LogoProvider } from "./ProviderLogos";
 import { ShelfToggle } from "./ShelfToggle";
 
-import {
-  localToday,
-  seasonLine,
-  type SeasonSchedule
-} from "../lib/seasons";
+import { localToday, seasonLine, type SeasonSchedule } from "../lib/seasons";
 
 export interface CatalogItem {
   __typename: "Movie" | "Series";

@@ -42,8 +42,8 @@ export function LibraryReplaces({ owned }: { owned: readonly OwnedTitle[] }) {
         What your library replaces
       </h2>
       <p className="replaces__lede">
-        How many titles you own each service streams today. Greyed services are
-        ones you don't pay for.
+        How many titles you own each service streams today. Greyed services are ones you don't pay
+        for.
       </p>
 
       <ul className="service-grid">
@@ -91,10 +91,12 @@ export function LibraryReplaces({ owned }: { owned: readonly OwnedTitle[] }) {
 
       {unhosted.length > 0 && (
         <p className="replaces__unhosted">
-          <span className="replaces__mark" aria-hidden="true">◆</span>
+          <span className="replaces__mark" aria-hidden="true">
+            ◆
+          </span>
           <span>
-            <strong>Not on any tracked service:</strong> {listTitles(unhosted)}. Only
-            your copy plays {unhosted.length === 1 ? "it" : "these"}.
+            <strong>Not on any tracked service:</strong> {listTitles(unhosted)}. Only your copy
+            plays {unhosted.length === 1 ? "it" : "these"}.
           </span>
         </p>
       )}

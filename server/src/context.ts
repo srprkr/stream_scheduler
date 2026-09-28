@@ -6,7 +6,6 @@ import { FixtureSource } from "./sources/fixture.js";
 import { TmdbClient } from "./sources/tmdb/client.js";
 import { TmdbSource } from "./sources/tmdb/source.js";
 
-
 export interface Context {
   source: CatalogSource;
   loaders: Loaders;
@@ -17,9 +16,7 @@ export interface Context {
 const cache = new FileCache(config.tmdb.cacheDir, config.tmdb.cacheTtlMs);
 
 function tmdbSource(store: Pick<FileCache, "read" | "write">): TmdbSource {
-  return new TmdbSource(
-    new TmdbClient(config.tmdb.baseUrl, config.tmdb.readToken, store),
-  );
+  return new TmdbSource(new TmdbClient(config.tmdb.baseUrl, config.tmdb.readToken, store));
 }
 
 /**
@@ -59,7 +56,6 @@ export function startFeedRefresher(): void {
   void warm(source, "warmed");
   setInterval(() => void warm(refresher, "refreshed"), REFRESH_EVERY_MS).unref();
 }
-
 
 export async function createContext(): Promise<Context> {
   return { source, loaders: createLoaders(source), now: new Date() };

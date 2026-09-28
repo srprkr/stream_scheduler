@@ -8,7 +8,6 @@
 #      Netflix is wired up. Nothing below names Netflix. Provider is data.
 # =============================================================================
 
-
 # -----------------------------------------------------------------------------
 # Custom scalars
 #
@@ -24,7 +23,6 @@ scalar DateTime
 
 "An absolute http(s) URL. Validated on serialize so clients can trust it."
 scalar URL
-
 
 # -----------------------------------------------------------------------------
 # Enums
@@ -82,7 +80,6 @@ enum SubscriptionAction {
   PAUSE
 }
 
-
 # -----------------------------------------------------------------------------
 # Providers
 #
@@ -113,11 +110,7 @@ type Provider {
   reuse one fragment for both the global feed and a per-service page.
   N+1 hotspot: resolving this for a list of providers must batch.
   """
-  releases(
-    filter: ReleaseFilter
-    first: Int = 20
-    after: String
-  ): ReleaseConnection!
+  releases(filter: ReleaseFilter, first: Int = 20, after: String): ReleaseConnection!
 }
 
 type SubscriptionPlan {
@@ -137,7 +130,6 @@ type SubscriptionPlan {
 
   region: Region!
 }
-
 
 # -----------------------------------------------------------------------------
 # Media
@@ -248,7 +240,6 @@ type Video {
   type: String!
 }
 
-
 # -----------------------------------------------------------------------------
 # Release — the aggregation join
 #
@@ -312,7 +303,6 @@ type Release {
   fetchedAt: DateTime!
 }
 
-
 # -----------------------------------------------------------------------------
 # Pagination (Relay-style cursor connections)
 #
@@ -343,7 +333,6 @@ type PageInfo {
   startCursor: String
   endCursor: String
 }
-
 
 # -----------------------------------------------------------------------------
 # Filtering
@@ -379,7 +368,6 @@ enum MediaType {
   MOVIE
   SERIES
 }
-
 
 # -----------------------------------------------------------------------------
 # Savings — the real computation
@@ -452,7 +440,6 @@ type MonthlySavings {
   drivingReleases: [Release!]!
 }
 
-
 # -----------------------------------------------------------------------------
 # Root
 #
@@ -469,11 +456,7 @@ type Query {
   """
   The main feed: upcoming releases across every provider, newest window first.
   """
-  releases(
-    filter: ReleaseFilter
-    first: Int = 20
-    after: String
-  ): ReleaseConnection!
+  releases(filter: ReleaseFilter, first: Int = 20, after: String): ReleaseConnection!
 
   release(id: ID!): Release
 
@@ -482,7 +465,6 @@ type Query {
 
   savingsEstimate(input: SavingsEstimateInput!): SavingsEstimate!
 }
-
 
 # =============================================================================
 # DEFERRED: tiered release timing
@@ -535,11 +517,7 @@ enum Season {
   WINTER
 }
 
-union ReleaseTiming =
-    ConfirmedDate
-  | MonthWindow
-  | SeasonWindow
-  | YearWindow
+union ReleaseTiming = ConfirmedDate | MonthWindow | SeasonWindow | YearWindow
 
 "An announced, exact date. In practice this means roughly the next 3 months."
 type ConfirmedDate {

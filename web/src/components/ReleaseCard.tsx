@@ -9,7 +9,6 @@ export function ReleaseCard({
   onOpen,
   showProvider,
 }: {
-
   release: Release;
   onOpen: () => void;
   /** Every service this title arrives on that day; usually one. */
@@ -18,15 +17,12 @@ export function ReleaseCard({
   /** Only worth the pixels when the feed is mixing services. */
   showProvider: boolean;
 }) {
-
   const { media } = release;
   const { text, kind } = badge(release);
   const note = bingeNote(release);
   const runtime = watchTime(release.watchTimeMinutes);
   const imminent =
-    release.isFullDrop &&
-    release.daysUntilRelease >= 0 &&
-    release.daysUntilRelease <= 7;
+    release.isFullDrop && release.daysUntilRelease >= 0 && release.daysUntilRelease <= 7;
 
   return (
     <li className="card">
@@ -45,7 +41,9 @@ export function ReleaseCard({
           )}
           <span className={`badge badge--${kind}`}>{text}</span>
           {media.trailer?.embedUrl && (
-            <span className="card__has-trailer" aria-hidden="true">▶</span>
+            <span className="card__has-trailer" aria-hidden="true">
+              ▶
+            </span>
           )}
         </div>
       </button>

@@ -23,13 +23,9 @@ export function todayIn(timezone: string, now: Date): string {
  * which is what keeps DST's 23- and 25-hour days out of the answer.
  */
 
-export function daysUntil(
-  availableFrom: string,
-  timezone: string,
-  now: Date,
-): number {
+export function daysUntil(availableFrom: string, timezone: string, now: Date): number {
   const today = Date.parse(todayIn(timezone, now));
-  return (Date.parse(availableFrom) - today) / MS_PER_DAY
+  return (Date.parse(availableFrom) - today) / MS_PER_DAY;
 }
 
 /**

@@ -13,8 +13,8 @@ export function Footer() {
           <img src={tmdbLogo} alt="TMDB" className="footer__logo" />
         </a>
         <p>
-          This product uses the TMDB API but is not endorsed or certified by
-          TMDB. Streaming availability data provided by{" "}
+          This product uses the TMDB API but is not endorsed or certified by TMDB. Streaming
+          availability data provided by{" "}
           <a href="https://www.justwatch.com/" target="_blank" rel="noreferrer">
             JustWatch
           </a>

@@ -24,9 +24,7 @@ export interface ArrivalGroup<R extends Arrival> {
  * Order is preserved: a Map iterates in insertion order, so a feed sorted by
  * date stays sorted by date.
  */
-export function groupByArrival<R extends Arrival>(
-  releases: readonly R[],
-): ArrivalGroup<R>[] {
+export function groupByArrival<R extends Arrival>(releases: readonly R[]): ArrivalGroup<R>[] {
   const groups = new Map<string, ArrivalGroup<R>>();
   for (const release of releases) {
     const key = [release.media.id, release.seasonNumber ?? "", release.availableFrom].join("|");

@@ -77,10 +77,7 @@ export function Sheet({
                 {media?.trailer?.embedUrl && (
                   // Facade: the iframe is not mounted until this is pressed,
                   // which keeps a megabyte of player off the initial open.
-                  <button
-                    className="sheet__play"
-                    onClick={() => setPlaying(true)}
-                  >
+                  <button className="sheet__play" onClick={() => setPlaying(true)}>
                     <span aria-hidden="true">▶</span> Play trailer
                   </button>
                 )}

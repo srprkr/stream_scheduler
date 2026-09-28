@@ -51,9 +51,7 @@ function load(raw: string | null): LibraryEntry[] {
   if (!raw) return [];
   try {
     const saved = JSON.parse(raw) as Saved;
-    return saved.version === VERSION && Array.isArray(saved.entries)
-      ? saved.entries
-      : [];
+    return saved.version === VERSION && Array.isArray(saved.entries) ? saved.entries : [];
   } catch {
     return [];
   }
@@ -88,10 +86,7 @@ export function localLibrary(
               {
                 ...item,
                 shelf,
-                addedAt:
-                  existing?.shelf === shelf
-                    ? existing.addedAt
-                    : now().toISOString(),
+                addedAt: existing?.shelf === shelf ? existing.addedAt : now().toISOString(),
               },
               ...rest,
             ];
