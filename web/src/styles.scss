@@ -837,6 +837,159 @@ body {
   }
 }
 
+// The watchlist rolled up by service: logo, name and the titles it carries,
+// with the counts on the right. Services the user already pays for keep
+// their colour; the rest are dimmed, as in the service grids.
+.watch-services {
+  margin-bottom: 32px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  &__title {
+    margin: 0 0 4px;
+    font-size: 1.125rem;
+  }
+  &__lede {
+    margin: 0 0 14px;
+    font-size: 0.875rem;
+    color: var(--muted);
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  // Logo, name and figures, and the date on the right; the titles run
+  // underneath, lined up with the name.
+  &__row {
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    align-items: center;
+    column-gap: 12px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border);
+
+    &[data-active="false"] .watch-services__logo {
+      filter: grayscale(1);
+      opacity: 0.4;
+    }
+  }
+
+  &__logo {
+    display: block;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--bg);
+  }
+
+  // The logo with its title count pinned to the corner, as on the service
+  // tiles in "What your library replaces".
+  &__badge {
+    position: relative;
+  }
+
+  &__count {
+    position: absolute;
+    top: -7px;
+    right: -9px;
+    display: grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--bg);
+    background: var(--text);
+  }
+  &__row[data-active="false"] &__count {
+    background: var(--muted);
+  }
+
+  &__head {
+    min-width: 0;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  &__name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+  }
+
+  &__tag {
+    padding: 1px 7px;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--soon);
+    border: 1px solid currentColor;
+    border-radius: 999px;
+  }
+
+  &__figures {
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+
+  // The service's answer to "when?": green once everything is out, muted
+  // while dates are still to come.
+  &__ready {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-align: right;
+
+    &[data-state="now"] {
+      color: var(--soon);
+    }
+    &[data-state="unknown"] {
+      color: var(--muted);
+      font-weight: 500;
+    }
+  }
+
+  &__titles {
+    grid-column: 2 / -1;
+    display: grid;
+    gap: 4px;
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.8125rem;
+
+    li {
+      display: flex;
+      flex-wrap: wrap;
+      column-gap: 8px;
+    }
+  }
+
+  &__when {
+    color: var(--muted);
+  }
+
+  &__unhosted,
+  &__note {
+    margin: 12px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 0.875rem;
+  }
+  &__note {
+    color: var(--muted);
+  }
+}
+
 // --- detail dialog --------------------------------------------------------
 
 .sheet {

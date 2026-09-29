@@ -1,3 +1,8 @@
+/** Where the user's viewing pace is kept; Home and the watchlist share it. */
+export const HOURS_PER_MONTH_KEY = "stream-scheduler:hours-per-month";
+/** A starting point the user is asked to change, not a claim about them. */
+export const DEFAULT_HOURS_PER_MONTH = 20;
+
 export interface Runtime {
   minutes: number;
   estimated: boolean;

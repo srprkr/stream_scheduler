@@ -3,7 +3,9 @@ import type {
   CatalogQuery,
   CatalogSource,
   ImageSize,
+  AvailabilityRecord,
   MediaRecord,
+  OtherServiceRecord,
   ProviderRecord,
   ReleaseQuery,
   ReleaseRecord,
@@ -337,7 +339,6 @@ export function analyseSeason(season: TmdbSeasonDetail): {
   }
   // Two distinct dates prove a weekly season even with gaps; one date proves
   // nothing while other episodes are undated.
-  // Two distinct dates prove a weekly season even with gaps.
   const weekly = new Set(dates).size > 1;
   // TMDB lists a season's episodes as they are announced, so two dated
   // episodes of a twenty-two-episode season look finished. Only a finale
@@ -372,6 +373,84 @@ export function subscriptionServices(
     (availability.results[WATCH_REGION]?.flatrate ?? []).map((p) => p.provider_id),
   );
   return configs.filter((c) => c.watchProviderIds.some((id) => offered.has(id))).map((c) => c.slug);
+}
+
+/**
+ * Entries TMDB lists as subscriptions that aren't a streaming service in the
+ * sense this app means. Network apps need a cable or live-TV login. Live-TV
+ * bundles re-carry whole cable channels, so they'd top every list for
+ * carrying everything, while standing in for cable rather than for a
+ * streaming service.
+ */
+const NOT_STREAMING_SERVICES = new Set([
+  79, // NBC
+  123, // FXNow
+  211, // Freeform
+  318, // Adult Swim
+  322, // USA Network
+  363, // TNT
+  365, // Bravo TV
+  486, // Spectrum On Demand
+  506, // TBS
+  507, // truTV
+  508, // DisneyNOW
+  257, // fuboTV
+  2383, // Philo
+  2528, // YouTube TV
+]);
+
+/** "Starz Amazon Channel" -> "Starz": the service a reseller entry sells. */
+const RESELLER = /\s+(amazon|apple tv|roku premium) channel$/i;
+
+/** Folds spellings together: "AMC Plus" and "AMC+" are one service. */
+function serviceKey(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\s+plus\b/g, "+")
+    .replace(/[^a-z0-9+]/g, "");
+}
+
+/**
+ * The subscription services outside the tracked ones that stream a title,
+ * one entry per service. TMDB lists a service several times over - its own
+ * app, its Amazon, Apple TV and Roku channels, extra tiers - so entries are
+ * folded by name: resellers into the service they sell, and anything named
+ * after a tracked service ("Netflix Standard with Ads", "Paramount+ Amazon
+ * Channel") dropped, since the tracked service already covers it. A service
+ * sold only as a channel keeps the channel's logo under the plain name.
+ *
+ * The id comes from the folded name, not TMDB's id, so a service is the same
+ * service on every title whichever of its entries TMDB listed.
+ */
+export function otherServices(
+  availability: TmdbWatchProviders,
+  configs: readonly {
+    name: string;
+    noteAliases: readonly string[];
+    watchProviderIds: readonly number[];
+  }[],
+): OtherServiceRecord[] {
+  const trackedIds = new Set(configs.flatMap((c) => c.watchProviderIds));
+  const trackedKeys = configs.flatMap((c) => [c.name, ...c.noteAliases]).map(serviceKey);
+
+  const byKey = new Map<string, OtherServiceRecord & { direct: boolean }>();
+  for (const p of availability.results[WATCH_REGION]?.flatrate ?? []) {
+    if (trackedIds.has(p.provider_id) || NOT_STREAMING_SERVICES.has(p.provider_id)) continue;
+    const name = p.provider_name.trim().replace(RESELLER, "");
+    const key = serviceKey(name);
+    if (!key || trackedKeys.some((tracked) => key.startsWith(tracked))) continue;
+
+    const direct = name === p.provider_name.trim();
+    const seen = byKey.get(key);
+    if (seen && (seen.direct || !direct)) continue;
+    byKey.set(key, {
+      id: `other:${key}`,
+      name,
+      logoPath: p.logo_path ?? null,
+      direct,
+    });
+  }
+  return [...byKey.values()].map(({ direct: _direct, ...service }) => service);
 }
 
 /** TMDB's TV genre ids for talk shows and news. */
@@ -454,26 +533,48 @@ export function seriesRuntime(
 const MS_PER_DAY = 86_400_000;
 
 /**
- * When a still-unscheduled weekly season will probably end: its premiere plus
- * how long the previous season ran, premiere to finale. Abbott Elementary's
- * fifth season ran 203 days, so a sixth premiering Oct 7 is estimated for late
- * April.
+ * When a still-unscheduled weekly season will probably end.
+ *
+ * If the new season already lists as many episodes as the last one, every
+ * one of them dated, its last date is the likely finale: the schedule is out
+ * and TMDB just hasn't marked the finale yet. The Rings of Power's third
+ * season lists eight dated episodes - four at once, then two a week - ending
+ * Nov 25, with no finale marker.
+ *
+ * Otherwise, the premiere plus how long the previous season ran, premiere to
+ * finale: Abbott Elementary's fifth season ran 203 days, so a sixth
+ * premiering Oct 7 is estimated for late April. Never earlier than an episode
+ * already dated, though - a season that has changed its cadence can outrun
+ * the last one's span.
  *
  * Only a previous season that is known to be complete (it has a finale) and
- * aired weekly gives a span worth copying; anything else gives no estimate.
+ * aired weekly gives anything worth copying; anything else gives no estimate.
  * Episode orders do change - a strike-shortened season runs half as long -
  * which is why this stays a separate, labelled estimate.
  */
 export function expectedFinale(
   premieresOn: string | null,
   previous: TmdbSeasonDetail | null,
+  current: TmdbSeasonDetail | null = null,
 ): string | null {
   if (!premieresOn || !previous) return null;
   const last = analyseSeason(previous);
   if (!last.firstAirDate || !last.bingeableFrom || last.isFullDrop !== false) return null;
+
+  const episodes = current?.episodes ?? [];
+  const dated = episodes
+    .map((e) => e.air_date)
+    .filter((d): d is string => Boolean(d))
+    .sort();
+  const lastDated = dated.at(-1) ?? null;
+  if (lastDated && dated.length === episodes.length && dated.length >= last.episodeCount) {
+    return lastDated;
+  }
+
   // Both are calendar dates parsed at UTC midnight, so the gap is whole days.
   const span = (Date.parse(last.bingeableFrom) - Date.parse(last.firstAirDate)) / MS_PER_DAY;
-  return isoDate(addDays(new Date(Date.parse(premieresOn)), span));
+  const copied = isoDate(addDays(new Date(Date.parse(premieresOn)), span));
+  return lastDated && lastDated > copied ? lastDated : copied;
 }
 
 /**
@@ -883,17 +984,21 @@ export class TmdbSource implements CatalogSource {
   }
 
   /** One request per title; the id's kind is TMDB's path segment. */
-  async getAvailability(ids: readonly string[]): Promise<string[][]> {
+  async getAvailability(ids: readonly string[]): Promise<AvailabilityRecord[]> {
+    const none: AvailabilityRecord = { slugs: [], others: [] };
     return mapLimit(ids, CONCURRENCY, async (id) => {
       const [kind, tmdbId] = id.split(":");
-      if ((kind !== "movie" && kind !== "tv") || !tmdbId) return [];
+      if ((kind !== "movie" && kind !== "tv") || !tmdbId) return none;
       try {
         const availability = await this.client.get<TmdbWatchProviders>(
           `/${kind}/${tmdbId}/watch/providers`,
         );
-        return subscriptionServices(availability, PROVIDER_CONFIGS);
+        return {
+          slugs: subscriptionServices(availability, PROVIDER_CONFIGS),
+          others: otherServices(availability, PROVIDER_CONFIGS),
+        };
       } catch {
-        return [];
+        return none;
       }
     });
   }
@@ -954,6 +1059,54 @@ export class TmdbSource implements CatalogSource {
   }
 
   /**
+   * Films: the release dates the feed's film scan reads, kept to premieres
+   * after today. Series: the next season, while it hasn't premiered, on the
+   * tracked services whose network made it - where a new show will stream
+   * before any watch provider lists it. All URLs the feed and next-season
+   * lookups already fetch, so usually cached.
+   */
+  async getUpcoming(ids: readonly string[]): Promise<ReleaseRecord[][]> {
+    const today = isoDate(this.now());
+    return mapLimit(ids, CONCURRENCY, async (id): Promise<ReleaseRecord[]> => {
+      const [kind, tmdbId] = id.split(":");
+      if (!tmdbId) return [];
+      try {
+        if (kind === "movie") {
+          const dates = await this.client.get<TmdbReleaseDates>(`/movie/${tmdbId}/release_dates`);
+          return streamingPremieres(dates, PROVIDER_CONFIGS)
+            .filter((p) => p.date > today)
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .map((p) => movieRelease(p.slug, tmdbId, p.date));
+        }
+        if (kind === "tv") {
+          const detail = await this.client.get<TmdbTvDetail>(`/tv/${tmdbId}`);
+          const networks = new Set((detail.networks ?? []).map((n) => n.id));
+          const slugs = PROVIDER_CONFIGS.filter(
+            (c) => c.networkId !== null && networks.has(c.networkId),
+          ).map((c) => c.slug);
+          if (slugs.length === 0) return [];
+          const [next] = await this.getNextSeasons([id]);
+          if (!next?.premieresOn || next.premieresOn <= today) return [];
+          return slugs.map((slug) => ({
+            id: `release:${slug}:tv:${tmdbId}:s${next.seasonNumber}`,
+            mediaId: id,
+            providerSlug: slug,
+            availableFrom: next.premieresOn as string,
+            bingeableFrom: next.fullyOutOn,
+            isFullDrop: next.isFullDrop,
+            episodeCount: next.episodeCount,
+            watchTimeMinutes: null,
+            seasonNumber: next.seasonNumber,
+          }));
+        }
+        return [];
+      } catch {
+        return [];
+      }
+    });
+  }
+
+  /**
    * The series detail (the same URL the Coming Soon feed fetches, so often
    * already cached), then the one season it points to. Its episode dates go
    * through analyseSeason, so an unscheduled finale is null here exactly as
@@ -968,9 +1121,10 @@ export class TmdbSource implements CatalogSource {
         const seasonNumber = nextSeasonNumber(detail);
         if (seasonNumber === null) return null;
         const listed = detail.seasons?.find((x) => x.season_number === seasonNumber);
-        const analysis = analyseSeason(
-          await this.client.get<TmdbSeasonDetail>(`/tv/${tmdbId}/season/${seasonNumber}`),
+        const season = await this.client.get<TmdbSeasonDetail>(
+          `/tv/${tmdbId}/season/${seasonNumber}`,
         );
+        const analysis = analyseSeason(season);
         const premieresOn = analysis.firstAirDate ?? listed?.air_date ?? null;
 
         // Estimate only what is actually unknown: a weekly (or not yet known)
@@ -987,7 +1141,7 @@ export class TmdbSource implements CatalogSource {
           seasonNumber,
           premieresOn,
           fullyOutOn: analysis.bingeableFrom,
-          expectedFullyOutOn: expectedFinale(premieresOn, previous),
+          expectedFullyOutOn: expectedFinale(premieresOn, previous, season),
           isFullDrop: analysis.isFullDrop,
           // Zero listed episodes means "not announced", not "no episodes".
           episodeCount: analysis.episodeCount || null,

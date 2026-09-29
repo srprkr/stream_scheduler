@@ -197,6 +197,39 @@ describe("GraphQL layer", () => {
     expect(getAvailability).toHaveBeenCalledTimes(1);
   });
 
+  it("names untracked services alongside the tracked ones, from one availability batch", async () => {
+    const source = new FixtureSource(() => NOW);
+    const getAvailability = vi.spyOn(source, "getAvailability");
+    const { data, errors } = await run(
+      `{ mediaItems(ids: ["media:4", "media:1"]) {
+          id availableOn { slug } otherServices { id name }
+      } }`,
+      source,
+    );
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({
+      mediaItems: [
+        {
+          id: "media:4",
+          availableOn: [{ slug: "max" }],
+          otherServices: [{ id: "other:crunchyroll", name: "Crunchyroll" }],
+        },
+        { id: "media:1", availableOn: [{ slug: "netflix" }], otherServices: [] },
+      ],
+    });
+    expect(getAvailability).toHaveBeenCalledTimes(1);
+  });
+
+  it("says where a title is going, not just where it is", async () => {
+    const { data, errors } = await run(
+      `{ mediaItem(id: "media:4") { upcoming { provider { slug } availableFrom } } }`,
+    );
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({
+      mediaItem: { upcoming: [{ provider: { slug: "max" }, availableFrom: "2026-11-02" }] },
+    });
+  });
+
   it("gives a weekly series its next season, dated like its release", async () => {
     const { data, errors } = await run(`{
       mediaItem(id: "media:5") {

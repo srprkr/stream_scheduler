@@ -8,6 +8,7 @@ import {
   pickTrailer,
   seriesRuntime,
   streamingPremieres,
+  otherServices,
   subscriptionServices,
   TmdbSource,
 } from "../../../src/sources/tmdb/source.js";
@@ -397,6 +398,61 @@ describe("subscriptionServices", () => {
   });
 });
 
+describe("otherServices", () => {
+  const tracked = [
+    { name: "Paramount+", noteAliases: ["paramount+", "paramount plus"], watchProviderIds: [2303] },
+    { name: "Netflix", noteAliases: ["netflix"], watchProviderIds: [8] },
+  ];
+  const offer = (provider_id: number, provider_name: string) => ({
+    provider_id,
+    provider_name,
+    logo_path: `/${provider_id}.png`,
+  });
+  const found = (...flatrate: ReturnType<typeof offer>[]) =>
+    otherServices({ results: { US: { flatrate } } }, tracked);
+
+  it("names untracked services, keyed by name", () => {
+    expect(found(offer(283, "Crunchyroll"))).toEqual([
+      { id: "other:crunchyroll", name: "Crunchyroll", logoPath: "/283.png" },
+    ]);
+  });
+
+  it("folds a service's reseller channels into the service itself", () => {
+    expect(
+      found(
+        offer(1794, "Starz Amazon Channel"),
+        offer(43, "Starz"),
+        offer(1855, "Starz Apple TV channel"),
+      ),
+    ).toEqual([{ id: "other:starz", name: "Starz", logoPath: "/43.png" }]);
+  });
+
+  it("keeps a service sold only as a channel, under its plain name", () => {
+    expect(found(offer(2668, "Wonder Project Amazon Channel"))).toEqual([
+      { id: "other:wonderproject", name: "Wonder Project", logoPath: "/2668.png" },
+    ]);
+  });
+
+  it("treats 'Plus' and '+' as one service", () => {
+    expect(found(offer(526, "AMC+"), offer(1854, "AMC Plus Apple TV channel"))).toHaveLength(1);
+  });
+
+  it("drops tiers and channels of the tracked services", () => {
+    expect(
+      found(
+        offer(8, "Netflix"),
+        offer(1796, "Netflix Standard with Ads"),
+        offer(582, "Paramount+ Amazon Channel"),
+        offer(1853, "Paramount Plus Apple TV channel"),
+      ),
+    ).toEqual([]);
+  });
+
+  it("leaves out cable-login apps and live-TV bundles", () => {
+    expect(found(offer(79, "NBC"), offer(2528, "YouTube TV"))).toEqual([]);
+  });
+});
+
 describe("nextSeasonNumber", () => {
   function series(overrides: Partial<TmdbTvDetail>): TmdbTvDetail {
     return {
@@ -460,6 +516,40 @@ describe("expectedFinale", () => {
   it("won't copy a full drop's run, which is no run at all", () => {
     const fullDrop = season([{ air_date: "2025-10-01" }, { air_date: "2025-10-01" }]);
     expect(expectedFinale("2026-10-07", fullDrop)).toBeNull();
+  });
+
+  // The Rings of Power: season 2 ran weekly over five weeks, eight episodes.
+  const eightWeekly = season([
+    { air_date: "2024-08-29" },
+    { air_date: "2024-08-29" },
+    { air_date: "2024-08-29" },
+    { air_date: "2024-09-05" },
+    { air_date: "2024-09-12" },
+    { air_date: "2024-09-19" },
+    { air_date: "2024-09-26" },
+    { air_date: "2024-10-03", episode_type: "finale" },
+  ]);
+
+  it("takes the last date when the new season is fully dated but has no finale marker", () => {
+    // Season 3: four at once, then two a week - done in two weeks, not five.
+    const current = season(
+      ["11", "11", "11", "11", "18", "18", "25", "25"].map((d) => ({ air_date: `2026-11-${d}` })),
+    );
+    expect(expectedFinale("2026-11-11", eightWeekly, current)).toBe("2026-11-25");
+  });
+
+  it("copies the old run when the new season has listed fewer episodes", () => {
+    const current = season([{ air_date: "2026-11-11" }, { air_date: "2026-11-18" }]);
+    expect(expectedFinale("2026-11-11", eightWeekly, current)).toBe("2026-12-16");
+  });
+
+  it("never estimates earlier than an episode already dated", () => {
+    const current = season([
+      { air_date: "2026-11-11" },
+      { air_date: "2027-01-06" },
+      { air_date: null },
+    ]);
+    expect(expectedFinale("2026-11-11", eightWeekly, current)).toBe("2027-01-06");
   });
 
   it("needs a premiere and a previous season to work from", () => {

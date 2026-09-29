@@ -26,6 +26,24 @@ export interface ProviderRecord {
   logoPath: string | null;
 }
 
+/**
+ * A subscription service the app doesn't track - Crunchyroll, AMC+ - named
+ * so the user knows where else a title streams. No plans, no filtering.
+ */
+export interface OtherServiceRecord {
+  id: string;
+  name: string;
+  logoPath: string | null;
+}
+
+/** Where a title streams on subscription today. */
+export interface AvailabilityRecord {
+  /** Tracked services, by slug. */
+  slugs: string[];
+  /** Everything else worth naming. */
+  others: OtherServiceRecord[];
+}
+
 export interface VideoRecord {
   id: string;
   name: string;
@@ -136,10 +154,18 @@ export interface CatalogSource {
   getMedia(ids: readonly string[]): Promise<(MediaRecord | null)[]>;
 
   /**
-   * Slugs of the configured services streaming each title on subscription
-   * today. Batched; an empty list for a title on none of them or unknown.
+   * The services streaming each title on subscription today: tracked ones by
+   * slug, and the untracked rest. Batched; empty for unknown titles.
    */
-  getAvailability(ids: readonly string[]): Promise<string[][]>;
+  getAvailability(ids: readonly string[]): Promise<AvailabilityRecord[]>;
+
+  /**
+   * Arrivals still to come on the tracked services, soonest first: a film's
+   * streaming premiere, or a series' next season before it premieres. The
+   * service a title WILL be on, where availability only says where it is.
+   * Batched; empty for titles with nothing coming.
+   */
+  getUpcoming(ids: readonly string[]): Promise<ReleaseRecord[][]>;
 
   /**
    * The season each series is releasing now or will release next. Batched;

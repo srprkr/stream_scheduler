@@ -1,9 +1,12 @@
 import type { Runtime } from "../lib/stats";
-import { formatHours, formatMonths, libraryStats } from "../lib/stats";
+import {
+  DEFAULT_HOURS_PER_MONTH,
+  formatHours,
+  formatMonths,
+  HOURS_PER_MONTH_KEY,
+  libraryStats,
+} from "../lib/stats";
 import { useStoredNumber } from "../hooks/useStoredNumber";
-
-/** A starting point the user is asked to change, not a claim about them. */
-const DEFAULT_HOURS_PER_MONTH = 20;
 
 export function LibraryStats({
   runtimes,
@@ -14,7 +17,7 @@ export function LibraryStats({
   loading: boolean;
 }) {
   const [hoursPerMonth, setHoursPerMonth] = useStoredNumber(
-    "stream-scheduler:hours-per-month",
+    HOURS_PER_MONTH_KEY,
     DEFAULT_HOURS_PER_MONTH,
   );
 

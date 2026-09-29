@@ -106,6 +106,7 @@ export interface TmdbMovieDetail extends TmdbMovieListItem {
 export interface TmdbWatchProvider {
   provider_id: number;
   provider_name: string;
+  logo_path?: string | null;
 }
 
 /** /{movie|tv}/{id}/watch/providers, keyed by country code. */

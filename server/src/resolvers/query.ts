@@ -37,8 +37,12 @@ export const Query: QueryResolvers = {
     const availability = await ctx.loaders.availability.loadMany(hits.map((h) => h.id));
     return hits
       .filter((_, i) => {
-        const slugs = availability[i];
-        return Array.isArray(slugs) && slugs.some((slug) => wanted.has(slug));
+        const found = availability[i];
+        return (
+          found !== undefined &&
+          !(found instanceof Error) &&
+          found.slugs.some((slug) => wanted.has(slug))
+        );
       })
       .slice(0, first);
   },

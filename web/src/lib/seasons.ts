@@ -24,7 +24,7 @@ export function localToday(now: Date = new Date()): string {
 }
 
 /** The year only when it isn't this year: "Oct 7", but "Mar 2, 2027". */
-function when(iso: string, today: string): string {
+export function when(iso: string, today: string): string {
   return formatDate(iso, iso.slice(0, 4) !== today.slice(0, 4));
 }
 
@@ -32,7 +32,7 @@ function when(iso: string, today: string): string {
  * An estimate, said as loosely as it deserves: "April", or "April 2027" when
  * the year changes. Never a day - that would promise precision it hasn't got.
  */
-function roughly(iso: string, today: string): string {
+export function roughly(iso: string, today: string): string {
   const month = new Intl.DateTimeFormat(undefined, { month: "long", timeZone: "UTC" }).format(
     new Date(iso),
   );
@@ -64,4 +64,46 @@ export function seasonLine(season: SeasonSchedule, today: string): string {
   if (!fullyOutOn) return `${n} airing now · ${noFinale}`;
   if (fullyOutOn > today) return `${n} airing weekly · finale ${when(fullyOutOn, today)}`;
   return `${n} fully out since ${when(fullyOutOn, today)}`;
+}
+
+/**
+ * When a title can be watched start to finish - what a paused subscription
+ * waits for. "now" when there is no new season, or it's fully out; a date
+ * when the finale (or a full drop) is dated or estimated; "unknown" while
+ * the season has no date, or airs weekly with no finale in sight.
+ */
+export type Readiness =
+  { state: "now" } | { state: "on"; date: string; estimated: boolean } | { state: "unknown" };
+
+export function readiness(season: SeasonSchedule | null | undefined, today: string): Readiness {
+  if (!season) return { state: "now" };
+  const { premieresOn, fullyOutOn, expectedFullyOutOn, isFullDrop } = season;
+  const done = isFullDrop && !fullyOutOn ? premieresOn : fullyOutOn;
+  if (done) return done <= today ? { state: "now" } : { state: "on", date: done, estimated: false };
+  if (expectedFullyOutOn) return { state: "on", date: expectedFullyOutOn, estimated: true };
+  return { state: "unknown" };
+}
+
+/**
+ * The readiness of several titles together: the latest of them, since the
+ * point is to watch them all in one stretch. Unknown if any one is unknown -
+ * the date after which nothing more is coming can't be named then - and
+ * estimated if the latest date is.
+ */
+export function readyTogether(each: readonly Readiness[]): Readiness {
+  let latest: Readiness = { state: "now" };
+  for (const r of each) {
+    if (r.state === "unknown") return r;
+    if (r.state === "on" && (latest.state !== "on" || r.date > latest.date)) latest = r;
+  }
+  return latest;
+}
+
+/** "Out now", "All out Nov 25", "All out around December", "Dates to come". */
+export function readyLine(ready: Readiness, today: string): string {
+  if (ready.state === "now") return "Out now";
+  if (ready.state === "unknown") return "Dates to come";
+  return ready.estimated
+    ? `All out around ${roughly(ready.date, today)}`
+    : `All out ${when(ready.date, today)}`;
 }

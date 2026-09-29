@@ -1,9 +1,11 @@
 import type {
+  AvailabilityRecord,
   CatalogSource,
   CatalogPageRecord,
   CatalogQuery,
   ImageSize,
   MediaRecord,
+  OtherServiceRecord,
   ProviderRecord,
   ReleaseQuery,
   ReleaseRecord,
@@ -119,6 +121,11 @@ const AVAILABILITY: Record<string, string[]> = {
   "media:5": ["netflix"],
 };
 
+/** Untracked services, so otherServices has something to return. */
+const OTHERS: Record<string, OtherServiceRecord[]> = {
+  "media:4": [{ id: "other:crunchyroll", name: "Crunchyroll", logoPath: null }],
+};
+
 /** media:1 is a streaming exclusive with no disc release. */
 const NOT_ON_DISC = new Set(["media:1"]);
 
@@ -179,8 +186,13 @@ export class FixtureSource implements CatalogSource {
     return ids.map((id) => MEDIA.find((m) => m.id === id) ?? null);
   }
 
-  async getAvailability(ids: readonly string[]): Promise<string[][]> {
-    return ids.map((id) => AVAILABILITY[id] ?? []);
+  async getAvailability(ids: readonly string[]): Promise<AvailabilityRecord[]> {
+    return ids.map((id) => ({ slugs: AVAILABILITY[id] ?? [], others: OTHERS[id] ?? [] }));
+  }
+
+  async getUpcoming(ids: readonly string[]): Promise<ReleaseRecord[][]> {
+    const releases = this.releases();
+    return ids.map((id) => releases.filter((r) => r.mediaId === id));
   }
 
   async getOnDisc(ids: readonly string[]): Promise<boolean[]> {

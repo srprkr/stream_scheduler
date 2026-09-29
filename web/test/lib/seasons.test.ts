@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { localToday, seasonLine } from "../../src/lib/seasons";
+import { localToday, readiness, readyLine, seasonLine } from "../../src/lib/seasons";
 
 const TODAY = "2026-09-27";
 
@@ -63,5 +63,56 @@ describe("seasonLine", () => {
 describe("localToday", () => {
   it("formats a date as YYYY-MM-DD", () => {
     expect(localToday(new Date(2026, 8, 27, 12))).toBe("2026-09-27");
+  });
+});
+
+describe("readiness", () => {
+  const today = "2026-09-28";
+
+  it("is now without a season to come", () => {
+    expect(readiness(null, today)).toEqual({ state: "now" });
+  });
+
+  it("dates a full drop by its premiere", () => {
+    expect(
+      readiness({ seasonNumber: 5, premieresOn: "2026-11-26", isFullDrop: true }, today),
+    ).toEqual({ state: "on", date: "2026-11-26", estimated: false });
+  });
+
+  it("dates a weekly season by its finale, or its estimate", () => {
+    expect(readiness({ seasonNumber: 3, fullyOutOn: "2026-11-25" }, today)).toEqual({
+      state: "on",
+      date: "2026-11-25",
+      estimated: false,
+    });
+    expect(readiness({ seasonNumber: 3, expectedFullyOutOn: "2026-12-16" }, today)).toEqual({
+      state: "on",
+      date: "2026-12-16",
+      estimated: true,
+    });
+  });
+
+  it("is now once the finale has aired", () => {
+    expect(readiness({ seasonNumber: 3, fullyOutOn: "2026-09-01" }, today)).toEqual({
+      state: "now",
+    });
+  });
+
+  it("is unknown without a finale or estimate", () => {
+    expect(readiness({ seasonNumber: 3, premieresOn: "2026-11-11" }, today)).toEqual({
+      state: "unknown",
+    });
+  });
+});
+
+describe("readyLine", () => {
+  const today = "2026-09-28";
+  it("says the date plainly, and an estimate loosely", () => {
+    expect(readyLine({ state: "on", date: "2026-11-25", estimated: false }, today)).toBe(
+      "All out Nov 25",
+    );
+    expect(readyLine({ state: "on", date: "2026-12-16", estimated: true }, today)).toBe(
+      "All out around December",
+    );
   });
 });

@@ -20,7 +20,16 @@ export interface CatalogItem {
  * Own / Want, so shopping is one click from browsing. Used for What's On's
  * catalogue and its search results alike.
  */
-export function CatalogTile({ item, onOpen }: { item: CatalogItem; onOpen: () => void }) {
+export function CatalogTile({
+  item,
+  onOpen,
+  note,
+}: {
+  item: CatalogItem;
+  onOpen: () => void;
+  /** A line under the title in place of the season line, e.g. a film's arrival. */
+  note?: string | null;
+}) {
   return (
     <li className="shelf__item">
       <div className="shelf__services">
@@ -52,8 +61,12 @@ export function CatalogTile({ item, onOpen }: { item: CatalogItem; onOpen: () =>
       <span className="shelf__name opens-dialog" onClick={onOpen}>
         {item.title}
       </span>
-      {item.nextSeason && (
-        <span className="shelf__next">{seasonLine(item.nextSeason, localToday())}</span>
+      {note ? (
+        <span className="shelf__next">{note}</span>
+      ) : (
+        item.nextSeason && (
+          <span className="shelf__next">{seasonLine(item.nextSeason, localToday())}</span>
+        )
       )}
     </li>
   );

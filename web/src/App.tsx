@@ -4,13 +4,15 @@ import { Footer } from "./components/Footer";
 import { Nav } from "./Nav";
 import { ComingSoonPage } from "./pages/ComingSoonPage";
 import { HomePage } from "./pages/HomePage";
+import { WatchlistPage } from "./pages/WatchlistPage";
 import { WhatsOnPage } from "./pages/WhatsOnPage";
 
 export function App() {
-  // "Browse" is a section, not a page: it is current on either of its tabs.
+  // "Browse" is a section, not a page: it is current on any of its tabs.
   const onWhatsOn = useMatch("/whats-on");
   const onComingSoon = useMatch("/coming-soon");
-  const browsing = Boolean(onWhatsOn || onComingSoon);
+  const onWatchlist = useMatch("/watchlist");
+  const browsing = Boolean(onWhatsOn || onComingSoon || onWatchlist);
 
   return (
     <div className="page">
@@ -38,6 +40,7 @@ export function App() {
         <Route element={<Nav />}>
           <Route path="/whats-on" element={<WhatsOnPage />} />
           <Route path="/coming-soon" element={<ComingSoonPage />} />
+          <Route path="/watchlist" element={<WatchlistPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

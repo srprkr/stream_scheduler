@@ -3,6 +3,7 @@ import type { MediaRecord, ProviderRecord } from "../sources/types.js";
 import type {
   MediaItemResolvers,
   MovieResolvers,
+  OtherServiceResolvers,
   SeriesResolvers,
   VideoResolvers,
 } from "../generated/graphql.js";
@@ -32,11 +33,14 @@ const shared = {
   // Two batched hops: slugs for every title in the query, then every
   // provider those slugs name - two loader calls, however long the list.
   availableOn: async (m, _a, ctx) => {
-    const slugs = await ctx.loaders.availability.load(m.id);
+    const { slugs } = await ctx.loaders.availability.load(m.id);
     const providers = await ctx.loaders.provider.loadMany(slugs);
     return providers.filter((p): p is ProviderRecord => p !== null && !(p instanceof Error));
   },
+  // The same loader call as availableOn, so selecting both costs nothing more.
+  otherServices: async (m, _a, ctx) => (await ctx.loaders.availability.load(m.id)).others,
   onDisc: (m, _a, ctx) => ctx.loaders.onDisc.load(m.id),
+  upcoming: (m, _a, ctx) => ctx.loaders.upcoming.load(m.id),
 } satisfies MovieResolvers;
 
 export const Movie: MovieResolvers = {
@@ -53,6 +57,10 @@ export const Series: SeriesResolvers = {
   nextSeason: (m, _a, ctx) => ctx.loaders.nextSeason.load(m.id),
   seasonCount: async (m, _a, ctx) => (await full(m, ctx)).seasonCount,
   totalRuntime: (m, _a, ctx) => ctx.loaders.runtime.load(m.id),
+};
+
+export const OtherService: OtherServiceResolvers = {
+  logoUrl: (service, args, ctx) => ctx.source.imageUrl(service.logoPath, args.size ?? "SMALL"),
 };
 
 export const Video: VideoResolvers = {
