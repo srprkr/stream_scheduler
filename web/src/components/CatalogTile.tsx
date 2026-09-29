@@ -10,30 +10,48 @@ export interface CatalogItem {
   /** Series only, and only when one is coming or airing. */
   nextSeason?: SeasonSchedule | null;
   posterUrl?: string | null;
-  availableOn: readonly LogoProvider[];
+  /** Undefined while it's still loading: the slot keeps its height, empty. */
+  availableOn: readonly LogoProvider[] | undefined;
   /** On DVD or Blu-ray: Own/Want if so, Watchlist if it's streaming only. */
   onDisc: boolean;
 }
 
 /**
- * The same tile as the library shelves: where it streams, the poster, and
- * Own / Want, so shopping is one click from browsing. Used for What's On's
- * catalogue and its search results alike.
+ * The poster tile used everywhere a title is shown in a grid: where it
+ * streams, the poster, the Own / Want / Watchlist toggles, and the title.
+ * The library shelves, What's On's catalogue and search, and the watchlist
+ * all use it, so shopping is one click from browsing.
  */
 export function CatalogTile({
   item,
   onOpen,
   note,
+  inLibrary = false,
+  flagNotStreaming = false,
 }: {
   item: CatalogItem;
   onOpen: () => void;
   /** A line under the title in place of the season line, e.g. a film's arrival. */
   note?: string | null;
+  /** On a library shelf: the toggles drop to Own (and ★ while wanted). */
+  inLibrary?: boolean;
+  /**
+   * Say "Not streaming" when it's on no service. Worth saying on the
+   * library, where it means only the user's copy plays it.
+   */
+  flagNotStreaming?: boolean;
 }) {
   return (
     <li className="shelf__item">
+      {/* Renders even while loading, at a fixed height, so every poster in
+          a row starts on the same line whatever its slot is showing. */}
       <div className="shelf__services">
-        <ProviderLogos providers={item.availableOn} />
+        {item.availableOn && item.availableOn.length > 0 && (
+          <ProviderLogos providers={item.availableOn} />
+        )}
+        {flagNotStreaming && item.availableOn?.length === 0 && (
+          <span className="shelf__unhosted">Not streaming</span>
+        )}
       </div>
       {/* Poster, then the toggles, then the title and season line: toggles
           sit on one line across a row because every poster is the same height. */}
@@ -48,6 +66,7 @@ export function CatalogTile({
       </button>
       <ShelfToggle
         ownable={item.onDisc}
+        inLibrary={inLibrary}
         item={{
           id: item.id,
           kind: item.__typename,

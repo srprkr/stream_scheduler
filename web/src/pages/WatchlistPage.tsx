@@ -2,15 +2,14 @@ import { skipToken, useQuery } from "@apollo/client/react";
 import { useState } from "react";
 
 import { CatalogTile } from "../components/CatalogTile";
-import { Panel } from "../components/Panel";
 import { TitleDialog } from "../components/TitleDialog";
+import { WatchServices, type ServiceInfo } from "../components/WatchServices";
 import { graphql } from "../generated";
 import type { WatchlistDetailsQuery } from "../generated/graphql";
 import { useLibrary } from "../hooks/useLibrary";
 import { useStoredNumber } from "../hooks/useStoredNumber";
 import { useSubscriptions } from "../hooks/useSubscriptions";
-import { listTitles } from "../lib/replaces";
-import { localToday, readyLine, seasonLine, when } from "../lib/seasons";
+import { localToday, when } from "../lib/seasons";
 import {
   DEFAULT_HOURS_PER_MONTH,
   formatHours,
@@ -175,7 +174,7 @@ export function WatchlistPage() {
           // Until details load, the tile keeps its own Watchlist pill
           // rather than flickering through Own/Want.
           onDisc: detail?.onDisc ?? false,
-          availableOn: detail?.availableOn ?? [],
+          availableOn: detail?.availableOn,
           nextSeason: detail?.__typename === "Series" ? detail.nextSeason : null,
         }}
         note={arrival ? `Arrives ${when(arrival, today)}` : null}
@@ -184,18 +183,16 @@ export function WatchlistPage() {
     );
   };
 
-  // Name and logo for a row: tracked services by slug, the rest by id.
-  const serviceFor = (key: string) =>
-    loaded
-      .flatMap((t) => [
-        ...[...t.detail.availableOn, ...t.detail.upcoming.map((u) => u.provider)].map((p) => ({
-          key: p.slug,
-          name: p.name,
-          logoUrl: p.logoUrl,
-        })),
-        ...t.detail.otherServices.map((o) => ({ key: o.id, name: o.name, logoUrl: o.logoUrl })),
-      ])
-      .find((p) => p.key === key);
+  // Name and logo for each row of the box: tracked services by slug, the
+  // rest by id - the keys watchlistByService rolls up under.
+  const serviceInfo = new Map<string, ServiceInfo>();
+  for (const { detail } of loaded) {
+    for (const p of [...detail.availableOn, ...detail.upcoming.map((u) => u.provider)]) {
+      serviceInfo.set(p.slug, { name: p.name, logoUrl: p.logoUrl });
+    }
+    for (const o of detail.otherServices)
+      serviceInfo.set(o.id, { name: o.name, logoUrl: o.logoUrl });
+  }
 
   return (
     <>
@@ -217,87 +214,15 @@ export function WatchlistPage() {
 
       {loading && loaded.length === 0 && <p className="state">Adding up your watchlist…</p>}
 
-      {services.length > 0 && (
-        <Panel id="watch-services" className="watch-services" title="Where to watch it">
-          <p className="watch-services__lede">
-            Each service with your watchlist titles on it or coming to it, and when they're all out
-            - the day a month of that service covers everything. Greyed services are ones you don't
-            pay for.
-          </p>
-          <ul className="watch-services__list">
-            {services.map((s) => {
-              const provider = serviceFor(s.key);
-              const months = s.minutes / 60 / hoursPerMonth;
-              return (
-                <li key={s.key} className="watch-services__row" data-active={s.subscribed}>
-                  <span className="watch-services__badge">
-                    {provider?.logoUrl ? (
-                      <img className="watch-services__logo" src={provider.logoUrl} alt="" />
-                    ) : (
-                      <span className="watch-services__logo" aria-hidden="true" />
-                    )}
-                    <span className="watch-services__count" aria-hidden="true">
-                      {s.titles.length}
-                    </span>
-                  </span>
-                  <div className="watch-services__head">
-                    <p className="watch-services__name">
-                      {provider?.name ?? s.key}
-                      {s.subscribed && <span className="watch-services__tag">Subscribed</span>}
-                    </p>
-                    {/* The badge shows the count; this says it aloud. */}
-                    <p className="watch-services__figures">
-                      <span className="sr-only">
-                        {s.titles.length} {s.titles.length === 1 ? "title" : "titles"}
-                        {s.minutes > 0 ? ", " : ""}
-                      </span>
-                      {s.minutes > 0 && (
-                        <>
-                          {s.estimated ? "about " : ""}
-                          {formatHours(s.minutes)} · {formatMonths(months)}
-                        </>
-                      )}
-                    </p>
-                  </div>
-                  <p className="watch-services__ready" data-state={s.ready.state}>
-                    {readyLine(s.ready, today)}
-                  </p>
-                  {/* Soonest first, so the list reads as a timeline. */}
-                  <ul className="watch-services__titles">
-                    {s.titles.map((t) => (
-                      <li key={t.id}>
-                        {/* Mouse shortcut to the dialog; keyboard users have
-                            the poster below. */}
-                        <span className="opens-dialog" onClick={() => setOpenId(t.id)}>
-                          {t.title}
-                        </span>
-                        <span className="watch-services__when">
-                          {t.arrivesOn
-                            ? `Arrives ${when(t.arrivesOn, today)}`
-                            : t.ready.state === "now" || !t.nextSeason
-                              ? "Out now"
-                              : seasonLine(t.nextSeason, today)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              );
-            })}
-          </ul>
-          {unhosted.length > 0 && (
-            <p className="watch-services__unhosted">
-              <strong>No service announced yet:</strong> {listTitles(unhosted)}.
-            </p>
-          )}
-          {total.missing > 0 && (
-            <p className="watch-services__note">
-              {total.missing} {total.missing === 1 ? "title has" : "titles have"} no runtime data
-              yet and {total.missing === 1 ? "isn't" : "aren't"} counted in the hours.
-            </p>
-          )}
-        </Panel>
-      )}
+      <WatchServices
+        services={services}
+        unhosted={unhosted}
+        missing={total.missing}
+        hoursPerMonth={hoursPerMonth}
+        today={today}
+        serviceInfo={serviceInfo}
+        onOpen={setOpenId}
+      />
 
       {[
         { heading: "Watch now", list: watchNow },

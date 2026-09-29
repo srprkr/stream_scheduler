@@ -4,6 +4,7 @@ import { useState } from "react";
 import { graphql } from "../generated";
 import { useSubscriptions } from "../hooks/useSubscriptions";
 import { Panel } from "./Panel";
+import { ServiceLogo } from "./ServiceLogo";
 import { listTitles, replacementSummary, type OwnedTitle } from "../lib/replaces";
 
 const TRACKED_SERVICES = graphql(`
@@ -39,7 +40,7 @@ export function LibraryReplaces({ owned }: { owned: readonly OwnedTitle[] }) {
 
   return (
     <Panel id="replaces" className="replaces" title="What your library replaces">
-      <p className="replaces__lede">
+      <p className="panel__lede">
         How many titles you own each service streams today. Greyed services are ones you don't pay
         for.
       </p>
@@ -63,12 +64,7 @@ export function LibraryReplaces({ owned }: { owned: readonly OwnedTitle[] }) {
                 onFocus={() => setHovered(p.slug)}
                 onBlur={() => setHovered(null)}
               >
-                {p.logoUrl ? (
-                  <img src={p.logoUrl} alt="" />
-                ) : (
-                  <span className="service-tile__initial">{p.name.slice(0, 1)}</span>
-                )}
-                {count > 0 && <span className="service-tile__count">{count}</span>}
+                <ServiceLogo name={p.name} logoUrl={p.logoUrl} active={mine} count={count} />
                 <span className="sr-only">
                   {p.name}: {count} of your titles{mine ? "" : ", not subscribed"}
                 </span>
@@ -93,8 +89,8 @@ export function LibraryReplaces({ owned }: { owned: readonly OwnedTitle[] }) {
             ◆
           </span>
           <span>
-            <strong>Not on any tracked service:</strong> {listTitles(unhosted)}. Only your copy
-            plays {unhosted.length === 1 ? "it" : "these"}.
+            <strong>Not on any tracked service:</strong> {listTitles(unhosted)}.{" "}
+            {unhosted.length === 1 ? "Only your copy plays it." : "Only your copies play these."}
           </span>
         </p>
       )}

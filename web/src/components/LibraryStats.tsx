@@ -21,7 +21,7 @@ export function LibraryStats({
     DEFAULT_HOURS_PER_MONTH,
   );
 
-  if (loading) return <p className="stats stats--loading">Adding up your library…</p>;
+  if (loading) return <p className="panel stats stats--loading">Adding up your library…</p>;
   if (runtimes.length === 0) return null;
 
   const stats = libraryStats(runtimes, hoursPerMonth);
@@ -29,7 +29,7 @@ export function LibraryStats({
   const approx = stats.estimated ? "about " : "";
 
   return (
-    <section className="stats" aria-label="Library watch time">
+    <section className="panel stats" aria-label="Library watch time">
       <p className="stats__total">
         <span className="stats__figure">
           {approx}

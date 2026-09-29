@@ -9,6 +9,7 @@ import { formatDollars, parseDollars } from "../lib/money";
 import { monthlySpend, type PlanChoice, type Subscription } from "../lib/subscriptions";
 import { Modal } from "./Modal";
 import { Panel } from "./Panel";
+import { ServiceLogo } from "./ServiceLogo";
 
 const SERVICES = graphql(`
   query MyServices {
@@ -69,7 +70,7 @@ export function MyServices({ collapsible = true }: { collapsible?: boolean }) {
 
   return (
     <Panel id="services" className="services" title="Your services" collapsible={collapsible}>
-      <p className="services__lede">Tap the services you pay for now. Use ⋯ to change a plan.</p>
+      <p className="panel__lede">Tap the services you pay for now. Use ⋯ to change a plan.</p>
 
       {/* One toggle per service: colour when it's yours, grey when not. The
           ⋯ button is a sibling of the tile, not inside it - a button can't
@@ -87,11 +88,7 @@ export function MyServices({ collapsible = true }: { collapsible?: boolean }) {
                 title={service.name}
                 onClick={() => toggle(service, on)}
               >
-                {service.logoUrl ? (
-                  <img src={service.logoUrl} alt="" />
-                ) : (
-                  <span className="service-tile__initial">{service.name.slice(0, 1)}</span>
-                )}
+                <ServiceLogo name={service.name} logoUrl={service.logoUrl} active={on} />
                 <span className="sr-only">{service.name}</span>
               </button>
               {on && (
