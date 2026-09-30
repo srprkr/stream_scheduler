@@ -7,6 +7,9 @@ const config: CodegenConfig = {
   generates: {
     "src/generated/": {
       preset: "client",
+      // Results stay plain objects: a spread fragment's fields are read
+      // directly, with no useFragment unwrapping (see src/lib/fragments.ts).
+      presetConfig: { fragmentMasking: false },
       config: {
         scalars: { Date: "string", URL: "string" },
         enumsAsTypes: true,

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { useStoredFlag } from "../hooks/useStoredFlag";
+import { useStoredFlag } from "../hooks/useStored";
 
 /**
  * A card with a heading that folds it away. Open until the user closes it,

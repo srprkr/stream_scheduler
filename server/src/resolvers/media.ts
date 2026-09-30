@@ -1,5 +1,6 @@
 import type { Context } from "../context.js";
-import type { MediaRecord, ProviderRecord } from "../sources/types.js";
+import { isoDate } from "../dates.js";
+import type { MediaRecord, ProviderRecord, ReleaseRecord } from "../sources/types.js";
 import type {
   MediaItemResolvers,
   MovieResolvers,
@@ -23,6 +24,37 @@ async function full(m: MediaRecord, ctx: Context): Promise<MediaRecord> {
 }
 
 /**
+ * Arrivals still to come on the tracked services. A film's are its streaming
+ * premieres after today. A series' is its next season, on the services its
+ * network makes it for, until that season premieres - built from the same
+ * nextSeason loader the nextSeason field uses, so the two always agree and
+ * the season is worked out once per request.
+ */
+async function upcoming(m: MediaRecord, _a: unknown, ctx: Context): Promise<ReleaseRecord[]> {
+  const today = isoDate(ctx.now);
+  if (m.kind === "MOVIE") {
+    return (await ctx.loaders.filmArrivals.load(m.id)).filter((r) => r.availableFrom > today);
+  }
+  const [slugs, next] = await Promise.all([
+    ctx.loaders.seriesServices.load(m.id),
+    ctx.loaders.nextSeason.load(m.id),
+  ]);
+  if (!next?.premieresOn || next.premieresOn <= today) return [];
+  const { premieresOn, seasonNumber } = next;
+  return slugs.map((slug) => ({
+    id: `release:${slug}:${m.id}:s${seasonNumber}`,
+    mediaId: m.id,
+    providerSlug: slug,
+    availableFrom: premieresOn,
+    bingeableFrom: next.fullyOutOn,
+    isFullDrop: next.isFullDrop,
+    episodeCount: next.episodeCount,
+    watchTimeMinutes: null,
+    seasonNumber,
+  }));
+}
+
+/**
  * Movie and Series map to the same MediaRecord and share every field the
  * interface declares, implementations are literally identical.
  */
@@ -40,7 +72,7 @@ const shared = {
   // The same loader call as availableOn, so selecting both costs nothing more.
   otherServices: async (m, _a, ctx) => (await ctx.loaders.availability.load(m.id)).others,
   onDisc: (m, _a, ctx) => ctx.loaders.onDisc.load(m.id),
-  upcoming: (m, _a, ctx) => ctx.loaders.upcoming.load(m.id),
+  upcoming,
 } satisfies MovieResolvers;
 
 export const Movie: MovieResolvers = {

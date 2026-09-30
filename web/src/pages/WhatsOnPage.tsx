@@ -21,18 +21,11 @@ const CATALOG = graphql(`
         posterUrl(size: MEDIUM)
         onDisc
         availableOn {
-          id
-          slug
-          name
-          logoUrl(size: SMALL)
+          ...ServiceLogo
         }
         ... on Series {
           nextSeason {
-            seasonNumber
-            premieresOn
-            fullyOutOn
-            expectedFullyOutOn
-            isFullDrop
+            ...SeasonScheduleFields
           }
         }
       }
@@ -50,18 +43,11 @@ const SEARCH_MINE = graphql(`
       posterUrl(size: MEDIUM)
       onDisc
       availableOn {
-        id
-        slug
-        name
-        logoUrl(size: SMALL)
+        ...ServiceLogo
       }
       ... on Series {
         nextSeason {
-          seasonNumber
-          premieresOn
-          fullyOutOn
-          expectedFullyOutOn
-          isFullDrop
+          ...SeasonScheduleFields
         }
       }
     }

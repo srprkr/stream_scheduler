@@ -1,13 +1,12 @@
-import { skipToken, useQuery } from "@apollo/client/react";
 import { useState } from "react";
 
 import { CatalogTile } from "../components/CatalogTile";
 import { TitleDialog } from "../components/TitleDialog";
 import { WatchServices, type ServiceInfo } from "../components/WatchServices";
 import { graphql } from "../generated";
-import type { WatchlistDetailsQuery } from "../generated/graphql";
 import { useLibrary } from "../hooks/useLibrary";
-import { useStoredNumber } from "../hooks/useStoredNumber";
+import { useDetailsById } from "../hooks/useLibraryDetails";
+import { useStoredNumber } from "../hooks/useStored";
 import { useSubscriptions } from "../hooks/useSubscriptions";
 import { localToday, when } from "../lib/seasons";
 import {
@@ -38,10 +37,7 @@ const WATCHLIST_DETAILS = graphql(`
         estimated
       }
       availableOn {
-        id
-        slug
-        name
-        logoUrl(size: SMALL)
+        ...ServiceLogo
       }
       otherServices {
         id
@@ -53,26 +49,17 @@ const WATCHLIST_DETAILS = graphql(`
         availableFrom
         bingeableFrom
         provider {
-          id
-          slug
-          name
-          logoUrl(size: SMALL)
+          ...ServiceLogo
         }
       }
       ... on Series {
         nextSeason {
-          seasonNumber
-          premieresOn
-          fullyOutOn
-          expectedFullyOutOn
-          isFullDrop
+          ...SeasonScheduleFields
         }
       }
     }
   }
 `);
-
-type Detail = NonNullable<WatchlistDetailsQuery["mediaItems"][number]>;
 
 /**
  * The streaming-only titles the user wants to watch, which services carry
@@ -87,14 +74,10 @@ export function WatchlistPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const today = localToday();
 
-  // Sorted so reordering the shelf doesn't change the variables and refetch.
-  const ids = entries.map((e) => e.id).sort();
-  const { data, previousData, loading } = useQuery(
+  const { byId, loading } = useDetailsById(
     WATCHLIST_DETAILS,
-    ids.length > 0 ? { variables: { ids } } : skipToken,
+    entries.map((e) => e.id),
   );
-  const byId = new Map<string, Detail>();
-  for (const item of (data ?? previousData)?.mediaItems ?? []) if (item) byId.set(item.id, item);
 
   if (entries.length === 0) {
     return (

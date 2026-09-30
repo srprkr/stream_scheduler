@@ -21,10 +21,7 @@ const RELEASE_FEED = graphql(`
       episodeCount
       watchTimeMinutes
       provider {
-        id
-        logoUrl(size: SMALL)
-        slug
-        name
+        ...ServiceLogo
       }
       media {
         __typename

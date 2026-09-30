@@ -26,18 +26,12 @@ const TITLE_DETAIL = graphql(`
         embedUrl
       }
       availableOn {
-        id
-        name
-        logoUrl(size: SMALL)
+        ...ServiceLogo
       }
       ... on Series {
         seasonCount
         nextSeason {
-          seasonNumber
-          premieresOn
-          fullyOutOn
-          expectedFullyOutOn
-          isFullDrop
+          ...SeasonScheduleFields
         }
       }
       ... on Movie {

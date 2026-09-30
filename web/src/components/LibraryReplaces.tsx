@@ -10,10 +10,7 @@ import { listTitles, replacementSummary, type OwnedTitle } from "../lib/replaces
 const TRACKED_SERVICES = graphql(`
   query TrackedServices {
     providers {
-      id
-      slug
-      name
-      logoUrl(size: SMALL)
+      ...ServiceLogo
     }
   }
 `);

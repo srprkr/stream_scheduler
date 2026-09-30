@@ -17,8 +17,10 @@ export interface Loaders {
   nextSeason: DataLoader<string, SeasonScheduleRecord | null>;
   onDisc: DataLoader<string, boolean>;
   provider: DataLoader<string, ProviderRecord | null>;
-  /** Arrivals still to come per media id. */
-  upcoming: DataLoader<string, ReleaseRecord[]>;
+  /** Streaming premieres per film id. */
+  filmArrivals: DataLoader<string, ReleaseRecord[]>;
+  /** Tracked services per series id, by the network that made it. */
+  seriesServices: DataLoader<string, string[]>;
   runtime: DataLoader<string, RuntimeRecord | null>;
 }
 
@@ -44,9 +46,13 @@ export function createLoaders(source: CatalogSource): Loaders {
       console.log(`[batch] getProviders x${slugs.length}: ${slugs.join(", ")}`);
       return source.getProviders(slugs);
     }),
-    upcoming: new DataLoader(async (ids) => {
-      console.log(`[batch] getUpcoming x${ids.length}: ${ids.join(", ")}`);
-      return source.getUpcoming(ids);
+    filmArrivals: new DataLoader(async (ids) => {
+      console.log(`[batch] getFilmArrivals x${ids.length}: ${ids.join(", ")}`);
+      return source.getFilmArrivals(ids);
+    }),
+    seriesServices: new DataLoader(async (ids) => {
+      console.log(`[batch] getSeriesServices x${ids.length}: ${ids.join(", ")}`);
+      return source.getSeriesServices(ids);
     }),
     runtime: new DataLoader(async (ids) => {
       console.log(`[batch] getSeriesRuntimes x${ids.length}: ${ids.join(", ")}`);

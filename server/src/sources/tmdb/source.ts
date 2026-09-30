@@ -5,7 +5,6 @@ import type {
   ImageSize,
   AvailabilityRecord,
   MediaRecord,
-  OtherServiceRecord,
   ProviderRecord,
   ReleaseQuery,
   ReleaseRecord,
@@ -16,8 +15,24 @@ import type {
 import { addDays, isoDate } from "../../dates.js";
 import type { TmdbClient } from "./client.js";
 import { seriesOnDisc } from "./discs.js";
+import {
+  WATCH_REGION,
+  PROVIDER_CONFIGS,
+  PROVIDERS,
+  subscriptionServices,
+  otherServices,
+  type ProviderConfig,
+} from "./services.js";
+import { DIGITAL_RELEASE, streamingPremieres, filmOnDisc } from "./films.js";
+import {
+  analyseSeason,
+  seriesRuntime,
+  expectedFinale,
+  nextSeasonNumber,
+  type SeasonAnalysis,
+} from "./seasons.js";
+import { seasonRelease, movieRelease, movieRecord, seriesRecord } from "./mapping.js";
 import type {
-  TmdbEpisode,
   TmdbMovieDetail,
   TmdbMovieListItem,
   TmdbMultiItem,
@@ -26,115 +41,8 @@ import type {
   TmdbSeasonDetail,
   TmdbTvDetail,
   TmdbTvListItem,
-  TmdbVideo,
   TmdbWatchProviders,
 } from "./types.js";
-
-const WATCH_REGION = "US";
-
-/**
- * A streaming service, plus the two different TMDB handles needed to find its
- * content.
- *
- * `networkId` finds a service's own originals, including ones that have not
- * aired yet and so appear under no watch provider. `watchProviderIds` finds
- * what is actually streamable there now. A service needs both, and the second
- * is a list because TMDB splits one consumer-facing service across tiers -
- * Paramount+ has Essential and Premium. Reseller entries ("Paramount+ Amazon
- * Channel") are deliberately excluded; they are the same catalogue and would
- * double-count.
- */
-interface ProviderConfig extends ProviderRecord {
-  networkId: number | null;
-  /** Lower-case names a TMDB release-date note uses for this service. */
-  noteAliases: string[];
-  watchProviderIds: number[];
-}
-
-const PROVIDER_CONFIGS: ProviderConfig[] = [
-  {
-    id: "provider:netflix",
-    slug: "netflix",
-    name: "Netflix",
-    logoPath: "/rK1KljqmbvO9HQa1PBFLILWah72.png",
-    networkId: 213,
-    noteAliases: ["netflix"],
-    watchProviderIds: [8],
-  },
-  {
-    id: "provider:peacock",
-    slug: "peacock",
-    name: "Peacock",
-    logoPath: "/a1UIdq5BrkcAxnxcUhFsNbXnxeu.png",
-    noteAliases: ["peacock"],
-    networkId: 3353,
-    // Premium and Premium Plus.
-    watchProviderIds: [386, 387],
-  },
-  {
-    id: "provider:hulu",
-    slug: "hulu",
-    name: "Hulu",
-    logoPath: "/44uAnmSqvA4yBOdbPWN8YgQHjWm.png",
-    networkId: 453,
-    noteAliases: ["hulu"],
-    watchProviderIds: [15],
-  },
-  {
-    id: "provider:prime",
-    slug: "prime",
-    name: "Prime Video",
-    logoPath: "/gMZdpavHmxFNnLpMHwVxfqeux2g.png",
-    networkId: 1024,
-    noteAliases: ["prime video", "amazon prime video", "amazon prime"],
-    watchProviderIds: [9],
-  },
-  {
-    id: "provider:appletv",
-    slug: "appletv",
-    name: "Apple TV",
-    logoPath: "/9icYBfYFcwgCbky5VdGUIKJ4C5i.png",
-    networkId: 2552,
-    noteAliases: ["apple tv", "apple tv+"],
-    watchProviderIds: [350],
-  },
-  {
-    id: "provider:disney",
-    slug: "disney",
-    name: "Disney+",
-    logoPath: "/5eZ872CghnHFLB1j8grszbrx0dx.png",
-    networkId: 2739,
-    noteAliases: ["disney+", "disney plus"],
-    watchProviderIds: [337],
-  },
-  {
-    // Network 49 is HBO, the cable network, not the streaming service. It
-    // finds HBO originals but misses Max-only titles. Good enough, not exact.
-    id: "provider:hbomax",
-    slug: "hbomax",
-    name: "HBO Max",
-    logoPath: "/skypuy7SXuugIQeYg0IglmzoKaS.png",
-    networkId: 49,
-    noteAliases: ["hbo max", "max"],
-    watchProviderIds: [1899],
-  },
-  {
-    id: "provider:paramount",
-    slug: "paramount",
-    name: "Paramount+",
-    logoPath: "/4N4BMd0Mm0kHAmF7RZgL5lW3cwc.png",
-    networkId: 4330,
-    noteAliases: ["paramount+", "paramount plus"],
-    watchProviderIds: [2303, 2616],
-  },
-];
-
-const PROVIDERS: ProviderRecord[] = PROVIDER_CONFIGS.map(({ id, slug, name, logoPath }) => ({
-  id,
-  slug,
-  name,
-  logoPath,
-}));
 
 /** TMDB serves fixed width buckets; ImageSize maps onto the nearest one. */
 const IMAGE_WIDTHS: Record<ImageSize, string> = {
@@ -150,19 +58,12 @@ const IMAGE_WIDTHS: Record<ImageSize, string> = {
  * real releases rather than just the long tail.
  */
 const FILM_PAGES = 20;
-/** TMDB release type for a digital release, streaming premieres included. */
-const DIGITAL_RELEASE = 4;
-
-/**
- * Words that mark a digital note as a rent-or-buy release. "Apple TV" and
- * "Prime Video" are also storefronts, so "Apple TV, Prime Video, Google VOD"
- * is a rental listing, not two streaming premieres.
- */
-const STOREFRONT = /\b(vod|tvod|google|vudu|fandango|itunes|rent|buy)\b/;
 
 const WINDOW_DAYS = 90;
+
 /** Candidate series pages scanned for season premieres. 20 per page. */
 const SERIES_PAGES = 1;
+
 /** Ceiling on simultaneous upstream requests, so a cold feed cannot burst. */
 const CONCURRENCY = 8;
 
@@ -184,277 +85,9 @@ async function mapLimit<T, R>(
   return out;
 }
 
-type SeasonAnalysis = ReturnType<typeof analyseSeason>;
-
-/**
- * One season as a release. Shared by the feed and getRelease so the two
- * cannot disagree about what an unscheduled season looks like.
- */
-function seasonRelease(
-  slug: string,
-  seriesId: number | string,
-  seasonNumber: number,
-  analysis: SeasonAnalysis | null,
-  listedDate: string | null | undefined,
-): ReleaseRecord | null {
-  const availableFrom = analysis?.firstAirDate ?? listedDate;
-  if (!availableFrom) return null;
-  return {
-    id: `release:${slug}:tv:${seriesId}:s${seasonNumber}`,
-    mediaId: `tv:${seriesId}`,
-    providerSlug: slug,
-    availableFrom,
-    bingeableFrom: analysis?.bingeableFrom ?? null,
-    isFullDrop: analysis?.isFullDrop ?? null,
-    episodeCount: analysis?.episodeCount ?? null,
-    watchTimeMinutes: analysis?.watchTimeMinutes ?? null,
-    seasonNumber,
-  };
-}
-
-/** A film arriving on one service. A film is always a full drop. */
-function movieRelease(
-  slug: string,
-  movieId: number | string,
-  date: string,
-  runtime: number | null = null,
-): ReleaseRecord {
-  return {
-    id: `release:${slug}:movie:${movieId}`,
-    mediaId: `movie:${movieId}`,
-    providerSlug: slug,
-    availableFrom: date,
-    bingeableFrom: date,
-    isFullDrop: true,
-    episodeCount: null,
-    watchTimeMinutes: runtime,
-    seasonNumber: null,
-  };
-}
-
-/**
- * Streaming premieres hidden in a film's release dates: US Digital entries
- * whose note names a configured service. The note is user-entered free text
- * ("HBO Max", "Max", "Hulu / Netflix"), so it is split on "/" and "," and each
- * part matched exactly against the service's aliases. A blank note is a
- * rent-or-buy release and matches nothing.
- */
-export function streamingPremieres(
-  dates: TmdbReleaseDates,
-  configs: readonly { slug: string; noteAliases: readonly string[] }[],
-): { slug: string; date: string }[] {
-  const local = dates.results.find((c) => c.iso_3166_1 === WATCH_REGION);
-  const premieres: { slug: string; date: string }[] = [];
-  for (const d of local?.release_dates ?? []) {
-    if (d.type !== DIGITAL_RELEASE) continue;
-    const parts = d.note
-      .toLowerCase()
-      .split(/[\/,]/)
-      .map((p) => p.trim());
-    if (parts.some((p) => STOREFRONT.test(p))) continue;
-    for (const config of configs) {
-      if (parts.some((p) => config.noteAliases.includes(p))) {
-        premieres.push({ slug: config.slug, date: d.release_date.slice(0, 10) });
-      }
-    }
-  }
-  return premieres;
-}
-
-/**
- * A film as a MediaRecord. Takes the list shape so search results and full
- * details share one mapping; detail-only fields are optional and come back
- * null when the caller only had a list item.
- */
-function movieRecord(
-  movie: TmdbMovieListItem & Partial<Pick<TmdbMovieDetail, "runtime" | "videos">>,
-): MediaRecord {
-  return {
-    id: `movie:${movie.id}`,
-    kind: "MOVIE",
-    title: movie.title,
-    overview: movie.overview || null,
-    posterPath: movie.poster_path,
-    backdropPath: movie.backdrop_path,
-    trailer: pickTrailer(movie.videos?.results),
-    runtimeMinutes: movie.runtime ?? null,
-    seasonCount: null,
-  };
-}
-
-/** A series as a MediaRecord. Same list-or-detail contract as movieRecord. */
-function seriesRecord(
-  series: TmdbTvListItem & Partial<Pick<TmdbTvDetail, "number_of_seasons" | "videos">>,
-): MediaRecord {
-  return {
-    id: `tv:${series.id}`,
-    kind: "SERIES",
-    title: series.name,
-    overview: series.overview || null,
-    posterPath: series.poster_path,
-    backdropPath: series.backdrop_path,
-    trailer: pickTrailer(series.videos?.results),
-    runtimeMinutes: null,
-    seasonCount: series.number_of_seasons ?? null,
-  };
-}
-
-/**
- * Collapses a season's episode dates into the two facts the product needs:
- * when the season is fully watchable, and whether it lands all at once.
- *
- * Netflix mostly full-drops, but not always - a weekly season can span two
- * months, and treating its premiere as the binge date is what would tell a
- * user to unpause eight weeks early.
- */
-export function analyseSeason(season: TmdbSeasonDetail): {
-  firstAirDate: string | null;
-  bingeableFrom: string | null;
-  isFullDrop: boolean | null;
-  episodeCount: number;
-  watchTimeMinutes: number | null;
-} {
-  const dates = season.episodes
-    .map((e) => e.air_date)
-    .filter((d): d is string => Boolean(d))
-    .sort();
-
-  const runtimes = season.episodes
-    .map((e) => e.runtime)
-    .filter((r): r is number => typeof r === "number" && r > 0);
-  // Partial runtime data would understate the season, so it is all or nothing.
-  const watchTimeMinutes =
-    runtimes.length === season.episodes.length && runtimes.length > 0
-      ? runtimes.reduce((a, b) => a + b, 0)
-      : null;
-
-  if (dates.length === 0) {
-    return {
-      firstAirDate: null,
-      bingeableFrom: null,
-      isFullDrop: null,
-      episodeCount: season.episodes.length,
-      watchTimeMinutes,
-    };
-  }
-  // Two distinct dates prove a weekly season even with gaps; one date proves
-  // nothing while other episodes are undated.
-  const weekly = new Set(dates).size > 1;
-  // TMDB lists a season's episodes as they are announced, so two dated
-  // episodes of a twenty-two-episode season look finished. Only a finale
-  // marker settles it - or one shared date across several episodes, which
-  // is a full drop released whole. Until then the finale date, and the
-  // season's total runtime, are unknown.
-  const hasFinale = season.episodes.some((e) => e.episode_type === "finale");
-  const complete =
-    dates.length === season.episodes.length &&
-    (hasFinale || (!weekly && season.episodes.length > 1));
-  return {
-    firstAirDate: dates[0] as string,
-    bingeableFrom: complete ? (dates[dates.length - 1] as string) : null,
-    isFullDrop: weekly ? false : complete ? true : null,
-    episodeCount: season.episodes.length,
-    watchTimeMinutes: complete ? watchTimeMinutes : null,
-  };
-}
-
-/**
- * Which configured services carry a title on subscription, from TMDB's
- * JustWatch-sourced availability. Only `flatrate` counts - rent, buy and
- * free-with-ads are not a subscription the library could replace - and only
- * the services' own ids, so resellers like "HBO Max Amazon Channel" and a
- * service listed under two tiers each count once.
- */
-export function subscriptionServices(
-  availability: TmdbWatchProviders,
-  configs: readonly { slug: string; watchProviderIds: readonly number[] }[],
-): string[] {
-  const offered = new Set(
-    (availability.results[WATCH_REGION]?.flatrate ?? []).map((p) => p.provider_id),
-  );
-  return configs.filter((c) => c.watchProviderIds.some((id) => offered.has(id))).map((c) => c.slug);
-}
-
-/**
- * Entries TMDB lists as subscriptions that aren't a streaming service in the
- * sense this app means. Network apps need a cable or live-TV login. Live-TV
- * bundles re-carry whole cable channels, so they'd top every list for
- * carrying everything, while standing in for cable rather than for a
- * streaming service.
- */
-const NOT_STREAMING_SERVICES = new Set([
-  79, // NBC
-  123, // FXNow
-  211, // Freeform
-  318, // Adult Swim
-  322, // USA Network
-  363, // TNT
-  365, // Bravo TV
-  486, // Spectrum On Demand
-  506, // TBS
-  507, // truTV
-  508, // DisneyNOW
-  257, // fuboTV
-  2383, // Philo
-  2528, // YouTube TV
-]);
-
-/** "Starz Amazon Channel" -> "Starz": the service a reseller entry sells. */
-const RESELLER = /\s+(amazon|apple tv|roku premium) channel$/i;
-
-/** Folds spellings together: "AMC Plus" and "AMC+" are one service. */
-function serviceKey(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/\s+plus\b/g, "+")
-    .replace(/[^a-z0-9+]/g, "");
-}
-
-/**
- * The subscription services outside the tracked ones that stream a title,
- * one entry per service. TMDB lists a service several times over - its own
- * app, its Amazon, Apple TV and Roku channels, extra tiers - so entries are
- * folded by name: resellers into the service they sell, and anything named
- * after a tracked service ("Netflix Standard with Ads", "Paramount+ Amazon
- * Channel") dropped, since the tracked service already covers it. A service
- * sold only as a channel keeps the channel's logo under the plain name.
- *
- * The id comes from the folded name, not TMDB's id, so a service is the same
- * service on every title whichever of its entries TMDB listed.
- */
-export function otherServices(
-  availability: TmdbWatchProviders,
-  configs: readonly {
-    name: string;
-    noteAliases: readonly string[];
-    watchProviderIds: readonly number[];
-  }[],
-): OtherServiceRecord[] {
-  const trackedIds = new Set(configs.flatMap((c) => c.watchProviderIds));
-  const trackedKeys = configs.flatMap((c) => [c.name, ...c.noteAliases]).map(serviceKey);
-
-  const byKey = new Map<string, OtherServiceRecord & { direct: boolean }>();
-  for (const p of availability.results[WATCH_REGION]?.flatrate ?? []) {
-    if (trackedIds.has(p.provider_id) || NOT_STREAMING_SERVICES.has(p.provider_id)) continue;
-    const name = p.provider_name.trim().replace(RESELLER, "");
-    const key = serviceKey(name);
-    if (!key || trackedKeys.some((tracked) => key.startsWith(tracked))) continue;
-
-    const direct = name === p.provider_name.trim();
-    const seen = byKey.get(key);
-    if (seen && (seen.direct || !direct)) continue;
-    byKey.set(key, {
-      id: `other:${key}`,
-      name,
-      logoPath: p.logo_path ?? null,
-      direct,
-    });
-  }
-  return [...byKey.values()].map(({ direct: _direct, ...service }) => service);
-}
-
 /** TMDB's TV genre ids for talk shows and news. */
 const TALK_GENRE = 10767;
+
 const NEWS_GENRE = 10763;
 
 /** TMDB serves at most 500 pages of any discover query. */
@@ -464,157 +97,6 @@ function catalogPage(items: MediaRecord[], totalPages: number, page: number): Ca
   return {
     items: items.map((item) => ({ ...item, summary: true })),
     nextPage: page < Math.min(totalPages, MAX_DISCOVER_PAGE) ? page + 1 : null,
-  };
-}
-
-/** TMDB's release type for a physical release: DVD, Blu-ray or 4K disc. */
-const PHYSICAL_RELEASE = 5;
-
-/**
- * Whether a film has been released on disc anywhere. Any country, not just
- * the US: TMDB's US entries have gaps - Heat has discs in Canada, the UK,
- * Germany and France on record, but no US row - and a film on disc abroad is
- * on disc here too.
- */
-export function filmOnDisc(dates: TmdbReleaseDates): boolean {
-  return dates.results.some((country) =>
-    country.release_dates.some((d) => d.type === PHYSICAL_RELEASE),
-  );
-}
-
-function median(values: readonly number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2
-    ? (sorted[mid] as number)
-    : ((sorted[mid - 1] as number) + (sorted[mid] as number)) / 2;
-}
-
-/**
- * Minutes to watch every aired episode of a series once.
- *
- * Specials (season 0) and episodes that have not aired are left out: they are
- * not what a box set holds. An aired episode with no runtime is counted at
- * its season's median length - or the whole series' median, if nothing in its
- * season has one - and the total is marked as an estimate. Unlike a season's
- * watchTimeMinutes, which refuses partial data, a library total is more useful
- * as a close estimate than as nothing.
- */
-export function seriesRuntime(
-  seasons: readonly TmdbSeasonDetail[],
-  today: string,
-): RuntimeRecord | null {
-  const aired = seasons
-    .filter((s) => s.season_number > 0)
-    .map((s) => s.episodes.filter((e) => e.air_date !== null && e.air_date <= today));
-  const known = (episodes: readonly TmdbEpisode[]) =>
-    episodes.map((e) => e.runtime).filter((r): r is number => typeof r === "number" && r > 0);
-
-  const seriesMedian = median(aired.flatMap(known));
-  if (seriesMedian === null) return null;
-
-  let minutes = 0;
-  let estimated = false;
-  for (const episodes of aired) {
-    const fill = median(known(episodes)) ?? seriesMedian;
-    for (const e of episodes) {
-      if (e.runtime && e.runtime > 0) {
-        minutes += e.runtime;
-      } else {
-        minutes += fill;
-        estimated = true;
-      }
-    }
-  }
-  return { minutes: Math.round(minutes), estimated };
-}
-
-const MS_PER_DAY = 86_400_000;
-
-/**
- * When a still-unscheduled weekly season will probably end.
- *
- * If the new season already lists as many episodes as the last one, every
- * one of them dated, its last date is the likely finale: the schedule is out
- * and TMDB just hasn't marked the finale yet. The Rings of Power's third
- * season lists eight dated episodes - four at once, then two a week - ending
- * Nov 25, with no finale marker.
- *
- * Otherwise, the premiere plus how long the previous season ran, premiere to
- * finale: Abbott Elementary's fifth season ran 203 days, so a sixth
- * premiering Oct 7 is estimated for late April. Never earlier than an episode
- * already dated, though - a season that has changed its cadence can outrun
- * the last one's span.
- *
- * Only a previous season that is known to be complete (it has a finale) and
- * aired weekly gives anything worth copying; anything else gives no estimate.
- * Episode orders do change - a strike-shortened season runs half as long -
- * which is why this stays a separate, labelled estimate.
- */
-export function expectedFinale(
-  premieresOn: string | null,
-  previous: TmdbSeasonDetail | null,
-  current: TmdbSeasonDetail | null = null,
-): string | null {
-  if (!premieresOn || !previous) return null;
-  const last = analyseSeason(previous);
-  if (!last.firstAirDate || !last.bingeableFrom || last.isFullDrop !== false) return null;
-
-  const episodes = current?.episodes ?? [];
-  const dated = episodes
-    .map((e) => e.air_date)
-    .filter((d): d is string => Boolean(d))
-    .sort();
-  const lastDated = dated.at(-1) ?? null;
-  if (lastDated && dated.length === episodes.length && dated.length >= last.episodeCount) {
-    return lastDated;
-  }
-
-  // Both are calendar dates parsed at UTC midnight, so the gap is whole days.
-  const span = (Date.parse(last.bingeableFrom) - Date.parse(last.firstAirDate)) / MS_PER_DAY;
-  const copied = isoDate(addDays(new Date(Date.parse(premieresOn)), span));
-  return lastDated && lastDated > copied ? lastDated : copied;
-}
-
-/**
- * Which season a series is releasing now or will release next, or null.
- *
- * A dated next episode settles it. Failing that, a returning series may
- * already list a season it hasn't dated yet - Severance's third, say - and
- * that is worth knowing too: it says "stay paused, nothing to watch yet".
- * Finished, cancelled and between-announcement shows have no next season.
- */
-export function nextSeasonNumber(detail: TmdbTvDetail): number | null {
-  if (detail.next_episode_to_air) return detail.next_episode_to_air.season_number;
-  if (detail.status !== "Returning Series") return null;
-  const lastAired = detail.last_episode_to_air?.season_number ?? 0;
-  const announced = (detail.seasons ?? [])
-    .map((s) => s.season_number)
-    .filter((n) => n > lastAired)
-    .sort((a, b) => a - b);
-  return announced[0] ?? null;
-}
-
-/**
- * Picks one preview from TMDB's unordered list: official YouTube trailers
- * first, then teasers. Doing this server-side is why the schema exposes a
- * single `trailer` rather than a list for the client to sort through.
- */
-export function pickTrailer(videos: TmdbVideo[] | undefined): VideoRecord | null {
-  if (!videos?.length) return null;
-  const youtube = videos.filter((v) => v.site === "YouTube");
-  const best =
-    youtube.find((v) => v.type === "Trailer" && v.official) ??
-    youtube.find((v) => v.type === "Trailer") ??
-    youtube.find((v) => v.type === "Teaser");
-  if (!best) return null;
-  return {
-    id: `video:${best.id}`,
-    name: best.name,
-    site: best.site,
-    key: best.key,
-    type: best.type,
   };
 }
 
@@ -1058,48 +540,33 @@ export class TmdbSource implements CatalogSource {
     }
   }
 
-  /**
-   * Films: the release dates the feed's film scan reads, kept to premieres
-   * after today. Series: the next season, while it hasn't premiered, on the
-   * tracked services whose network made it - where a new show will stream
-   * before any watch provider lists it. All URLs the feed and next-season
-   * lookups already fetch, so usually cached.
-   */
-  async getUpcoming(ids: readonly string[]): Promise<ReleaseRecord[][]> {
-    const today = isoDate(this.now());
-    return mapLimit(ids, CONCURRENCY, async (id): Promise<ReleaseRecord[]> => {
+  /** The same release-dates URL the feed's film scan reads, so usually cached. */
+  async getFilmArrivals(ids: readonly string[]): Promise<ReleaseRecord[][]> {
+    return mapLimit(ids, CONCURRENCY, async (id) => {
       const [kind, tmdbId] = id.split(":");
-      if (!tmdbId) return [];
+      if (kind !== "movie" || !tmdbId) return [];
       try {
-        if (kind === "movie") {
-          const dates = await this.client.get<TmdbReleaseDates>(`/movie/${tmdbId}/release_dates`);
-          return streamingPremieres(dates, PROVIDER_CONFIGS)
-            .filter((p) => p.date > today)
-            .sort((a, b) => a.date.localeCompare(b.date))
-            .map((p) => movieRelease(p.slug, tmdbId, p.date));
-        }
-        if (kind === "tv") {
-          const detail = await this.client.get<TmdbTvDetail>(`/tv/${tmdbId}`);
-          const networks = new Set((detail.networks ?? []).map((n) => n.id));
-          const slugs = PROVIDER_CONFIGS.filter(
-            (c) => c.networkId !== null && networks.has(c.networkId),
-          ).map((c) => c.slug);
-          if (slugs.length === 0) return [];
-          const [next] = await this.getNextSeasons([id]);
-          if (!next?.premieresOn || next.premieresOn <= today) return [];
-          return slugs.map((slug) => ({
-            id: `release:${slug}:tv:${tmdbId}:s${next.seasonNumber}`,
-            mediaId: id,
-            providerSlug: slug,
-            availableFrom: next.premieresOn as string,
-            bingeableFrom: next.fullyOutOn,
-            isFullDrop: next.isFullDrop,
-            episodeCount: next.episodeCount,
-            watchTimeMinutes: null,
-            seasonNumber: next.seasonNumber,
-          }));
-        }
+        const dates = await this.client.get<TmdbReleaseDates>(`/movie/${tmdbId}/release_dates`);
+        return streamingPremieres(dates, PROVIDER_CONFIGS)
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .map((p) => movieRelease(p.slug, tmdbId, p.date));
+      } catch {
         return [];
+      }
+    });
+  }
+
+  /** The series detail the feed and next-season lookups fetch, so usually cached. */
+  async getSeriesServices(ids: readonly string[]): Promise<string[][]> {
+    return mapLimit(ids, CONCURRENCY, async (id) => {
+      const [kind, tmdbId] = id.split(":");
+      if (kind !== "tv" || !tmdbId) return [];
+      try {
+        const detail = await this.client.get<TmdbTvDetail>(`/tv/${tmdbId}`);
+        const networks = new Set((detail.networks ?? []).map((n) => n.id));
+        return PROVIDER_CONFIGS.filter(
+          (c) => c.networkId !== null && networks.has(c.networkId),
+        ).map((c) => c.slug);
       } catch {
         return [];
       }

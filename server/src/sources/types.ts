@@ -160,12 +160,18 @@ export interface CatalogSource {
   getAvailability(ids: readonly string[]): Promise<AvailabilityRecord[]>;
 
   /**
-   * Arrivals still to come on the tracked services, soonest first: a film's
-   * streaming premiere, or a series' next season before it premieres. The
-   * service a title WILL be on, where availability only says where it is.
-   * Batched; empty for titles with nothing coming.
+   * Each film's streaming premieres on the tracked services, past and
+   * future, soonest first. Batched; empty for series and unknown ids. The
+   * resolver keeps the ones still to come.
    */
-  getUpcoming(ids: readonly string[]): Promise<ReleaseRecord[][]>;
+  getFilmArrivals(ids: readonly string[]): Promise<ReleaseRecord[][]>;
+
+  /**
+   * The tracked services each series was made for - where a new season
+   * lands, even before any watch provider lists the show. Batched; empty for
+   * films, and for series from networks the app doesn't track.
+   */
+  getSeriesServices(ids: readonly string[]): Promise<string[][]>;
 
   /**
    * The season each series is releasing now or will release next. Batched;

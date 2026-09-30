@@ -6,7 +6,7 @@ import {
   HOURS_PER_MONTH_KEY,
   libraryStats,
 } from "../lib/stats";
-import { useStoredNumber } from "../hooks/useStoredNumber";
+import { useStoredNumber } from "../hooks/useStored";
 
 export function LibraryStats({
   runtimes,

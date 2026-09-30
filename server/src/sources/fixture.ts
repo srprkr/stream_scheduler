@@ -190,9 +190,18 @@ export class FixtureSource implements CatalogSource {
     return ids.map((id) => ({ slugs: AVAILABILITY[id] ?? [], others: OTHERS[id] ?? [] }));
   }
 
-  async getUpcoming(ids: readonly string[]): Promise<ReleaseRecord[][]> {
+  async getFilmArrivals(ids: readonly string[]): Promise<ReleaseRecord[][]> {
     const releases = this.releases();
-    return ids.map((id) => releases.filter((r) => r.mediaId === id));
+    return ids.map((id) => releases.filter((r) => r.mediaId === id && r.seasonNumber === null));
+  }
+
+  /** A series' service is whichever its releases are on. */
+  async getSeriesServices(ids: readonly string[]): Promise<string[][]> {
+    return ids.map((id) =>
+      RELEASE_PLAN.filter(([mediaId, , , season]) => mediaId === id && season !== null).map(
+        ([, slug]) => slug,
+      ),
+    );
   }
 
   async getOnDisc(ids: readonly string[]): Promise<boolean[]> {
