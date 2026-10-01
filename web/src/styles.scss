@@ -1059,6 +1059,164 @@ body {
   }
 }
 
+// Each service's next renewal: logo, the date with a keep / pause tag, and
+// the advice underneath. Then the reminder setting and the calendar button.
+.renewals {
+  p {
+    margin: 0;
+  }
+
+  &__list {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    align-items: start;
+    column-gap: 12px;
+  }
+
+  &__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  // Green to keep, amber to pause, plain for a yearly decision.
+  &__action {
+    padding: 1px 8px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    color: var(--muted);
+
+    &[data-action="keep"] {
+      color: var(--soon);
+    }
+    &[data-action="pause"] {
+      color: #fbbf24;
+    }
+  }
+
+  &__advice,
+  &__note {
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+  &__note {
+    margin-top: 12px;
+  }
+
+  &__calendar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+    input {
+      width: 4em;
+      padding: 4px 8px;
+      font: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .renewals__note {
+      flex-basis: 100%;
+      margin-top: 0;
+    }
+  }
+}
+
+// The watchlist in brief: logos, title and status, and a remove button.
+// The heading stays put; the list scrolls within whatever height the card
+// is given.
+.watchlist-mini {
+  display: flex;
+  flex-direction: column;
+
+  > .panel__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  &__list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 10px;
+  }
+
+  &__text {
+    display: grid;
+    min-width: 0;
+    font-size: 0.875rem;
+  }
+  &__status {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  &__remove {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    font: inherit;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--text);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 2px;
+    }
+  }
+
+  &__more {
+    display: inline-block;
+    margin-top: 14px;
+    font-size: 0.8125rem;
+    color: var(--muted);
+
+    &:hover {
+      color: var(--text);
+    }
+  }
+}
+
 // --- detail dialog --------------------------------------------------------
 
 .sheet {
@@ -1248,49 +1406,69 @@ body {
 }
 
 .services {
-  // The monthly figures on the left, the yearly total pushed to the right.
-  // Wraps under on a narrow screen rather than squeezing.
-  &__total {
+  // Lets the footer respond to the box's own width (@container below).
+  container: services / inline-size;
+
+  // Two blocks: the monthly figures and the price source on the left, the
+  // yearly total and its footnote on the right. In a narrow box - a phone,
+  // or squeezed beside the watchlist - the right block stacks under the
+  // left, whole, instead of the four lines wrapping into each other.
+  &__footer {
     display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
     justify-content: space-between;
-    gap: 4px 16px;
-    margin: 14px 0 0;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
+    align-items: flex-start;
+    gap: 8px 24px;
+    margin-top: 14px;
+
+    p {
+      margin: 0;
+    }
+
+    // With totals to show, a rule sets them off from the logos.
+    &--totals {
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+  }
+
+  &__monthly,
+  &__yearly {
+    display: grid;
+    gap: 6px;
+  }
+
+  &__yearly {
+    flex: none;
+    text-align: right;
+  }
+
+  &__total {
+    font-size: 1rem;
+    color: var(--muted);
   }
 
   &__annual {
-    margin-left: auto;
-    white-space: nowrap;
-  }
-
-  // Under the yearly total it qualifies, at the right-hand end of the notes.
-  &__footnote {
-    margin: 0 0 0 auto;
-    font-size: 0.75rem;
-    white-space: nowrap;
     color: var(--muted);
   }
+
+  &__footnote,
+  &__checked {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
   &__unpriced {
     color: var(--muted);
     font-size: 0.875rem;
   }
-  // Source line on the left, the yearly-total footnote pushed right; on a
-  // narrow screen the footnote wraps onto its own line.
-  &__notes {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 4px 16px;
-    margin-top: 8px;
-  }
 
-  &__checked {
-    margin: 0;
-    font-size: 0.75rem;
-    color: var(--muted);
+  @container services (max-width: 560px) {
+    &__footer {
+      flex-direction: column;
+    }
+    &__yearly {
+      text-align: left;
+    }
   }
 
   // The plan form, as laid out inside the options dialog: one control per
@@ -1324,6 +1502,27 @@ body {
     margin: 0;
     font-size: 0.8125rem;
     color: var(--muted);
+  }
+
+  // "Renews on day [14] of the month", or on a date for a yearly plan.
+  &__renews {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+
+    input {
+      padding: 6px 10px;
+      font: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    input[type="number"] {
+      width: 4.5em;
+    }
   }
 
   &__price {
@@ -1370,8 +1569,43 @@ body {
 // --- what's on ------------------------------------------------------------
 
 .catalog {
+  // Services and renewals stacked in the left three quarters; the watchlist
+  // in the last quarter, spanning both rows. It takes no height of its own
+  // (height: 0, min-height: 100%), so the two boxes set the height and a
+  // long watchlist scrolls inside. One column on a narrow screen, the
+  // watchlist last, at its natural height.
   &__services {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+    gap: 16px;
     margin-bottom: 20px;
+
+    > .watchlist-mini {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      height: 0;
+      min-height: 100%;
+    }
+    // Folded away, it's just its heading, at the top.
+    > .watchlist-mini:has(> .panel__body[hidden]) {
+      align-self: start;
+      height: auto;
+      min-height: 0;
+    }
+
+    @media (max-width: 860px) {
+      grid-template-columns: minmax(0, 1fr);
+
+      // Under the other boxes: capped, so it doesn't push the catalogue
+      // further below the fold.
+      > .watchlist-mini {
+        grid-column: auto;
+        grid-row: auto;
+        height: auto;
+        min-height: 0;
+        max-height: 22rem;
+      }
+    }
   }
 
   &__controls {

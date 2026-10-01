@@ -14,6 +14,10 @@ const standardAds = { id: "standard-ads", leaveOutByDefault: false };
 const huluAds = { id: "ads", leaveOutByDefault: false };
 const amazonPrime = { id: "with-prime", leaveOutByDefault: true };
 
+/** Ticked on Sep 14, so billed on the 14th until the user says otherwise. */
+const TICKED = () => new Date(2026, 8, 14);
+const ON_THE_14TH = { cycle: "monthly", day: 14 } as const;
+
 const netflixPlans = [
   { id: "standard-ads", monthlyCents: 899 },
   { id: "standard", monthlyCents: 1999 },
@@ -21,32 +25,32 @@ const netflixPlans = [
 
 describe("localSubscriptions", () => {
   it("ticks a service onto its default plan, and off again", () => {
-    const store = localSubscriptions(memoryStorage());
+    const store = localSubscriptions(memoryStorage(), TICKED);
     store.setSubscribed("netflix", true, standardAds);
     store.setSubscribed("hulu", true, huluAds);
     store.setSubscribed("netflix", false);
     expect(store.subscriptions()).toEqual([
-      { slug: "hulu", choice: { planId: "ads" }, leftOut: false },
+      { slug: "hulu", choice: { planId: "ads" }, leftOut: false, billing: ON_THE_14TH },
     ]);
   });
 
   it("starts on a blank custom price when a service has no plans", () => {
-    const store = localSubscriptions(memoryStorage());
+    const store = localSubscriptions(memoryStorage(), TICKED);
     store.setSubscribed("mystery", true);
     expect(store.subscriptions()).toEqual([
-      { slug: "mystery", choice: { customCents: null }, leftOut: false },
+      { slug: "mystery", choice: { customCents: null }, leftOut: false, billing: ON_THE_14TH },
     ]);
   });
 
   it("does not duplicate a service ticked twice", () => {
-    const store = localSubscriptions(memoryStorage());
+    const store = localSubscriptions(memoryStorage(), TICKED);
     store.setSubscribed("netflix", true, standardAds);
     store.setSubscribed("netflix", true, standardAds);
     expect(store.subscriptions()).toHaveLength(1);
   });
 
   it("changes the plan only for services the user has", () => {
-    const store = localSubscriptions(memoryStorage());
+    const store = localSubscriptions(memoryStorage(), TICKED);
     store.setSubscribed("netflix", true, standardAds);
     store.setChoice(
       "netflix",
@@ -55,17 +59,17 @@ describe("localSubscriptions", () => {
     );
     store.setChoice("hulu", { planId: "ads" }, huluAds);
     expect(store.subscriptions()).toEqual([
-      { slug: "netflix", choice: { planId: "standard" }, leftOut: false },
+      { slug: "netflix", choice: { planId: "standard" }, leftOut: false, billing: ON_THE_14TH },
     ]);
   });
 
   it("survives a reload from the same storage", () => {
     const storage = memoryStorage();
-    const first = localSubscriptions(storage);
+    const first = localSubscriptions(storage, TICKED);
     first.setSubscribed("peacock", true, { id: "premium", leaveOutByDefault: false });
     first.setChoice("peacock", { customCents: 799 });
-    expect(localSubscriptions(storage).subscriptions()).toEqual([
-      { slug: "peacock", choice: { customCents: 799 }, leftOut: false },
+    expect(localSubscriptions(storage, TICKED).subscriptions()).toEqual([
+      { slug: "peacock", choice: { customCents: 799 }, leftOut: false, billing: ON_THE_14TH },
     ]);
   });
 });
@@ -98,6 +102,45 @@ describe("leaving a service out of estimates", () => {
       { id: "standalone", leaveOutByDefault: false },
     );
     expect(store.subscriptions()[0]?.leftOut).toBe(false);
+  });
+});
+
+describe("billing", () => {
+  it("sets a service's billing, and only for services the user has", () => {
+    const store = localSubscriptions(memoryStorage(), TICKED);
+    store.setSubscribed("hbomax", true);
+    store.setBilling("hbomax", { cycle: "annual", renewsOn: "2027-03-02", cents: 18499 });
+    store.setBilling("hulu", { cycle: "monthly", day: 3 });
+    expect(store.subscriptions().map((s) => [s.slug, s.billing])).toEqual([
+      ["hbomax", { cycle: "annual", renewsOn: "2027-03-02", cents: 18499 }],
+    ]);
+  });
+
+  it("prices an annual plan as a twelfth of its yearly price", () => {
+    const annual = {
+      slug: "hbomax",
+      choice: { planId: "standard-ads" },
+      billing: { cycle: "annual", renewsOn: "2027-03-02", cents: 18499 },
+    } as const;
+    expect(monthlyCents(annual, netflixPlans)).toBe(1542);
+  });
+
+  it("falls back to the plan's monthly price while the yearly price is blank", () => {
+    const annual = {
+      slug: "hbomax",
+      choice: { planId: "standard-ads" },
+      billing: { cycle: "annual", renewsOn: "2027-03-02", cents: null },
+    } as const;
+    expect(monthlyCents(annual, netflixPlans)).toBe(899);
+  });
+
+  it("keeps services saved before billing existed as they were", () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      "stream-scheduler:subscriptions",
+      JSON.stringify({ version: 2, subscriptions: [{ slug: "hulu", choice: { planId: "ads" } }] }),
+    );
+    expect(localSubscriptions(storage).subscriptions()[0]?.billing).toBeUndefined();
   });
 });
 

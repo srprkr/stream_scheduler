@@ -4,6 +4,8 @@ import { useState } from "react";
 import { CatalogTile } from "../components/CatalogTile";
 import { FilterInput } from "../components/FilterInput";
 import { MyServices } from "../components/MyServices";
+import { Renewals } from "../components/Renewals";
+import { WatchlistMini } from "../components/WatchlistMini";
 import { TitleDialog } from "../components/TitleDialog";
 import { graphql } from "../generated";
 import type { CatalogSort, MediaKind } from "../generated/graphql";
@@ -145,8 +147,13 @@ export function WhatsOnPage() {
         </p>
       </header>
 
+      {/* Services above renewals on the left, the watchlist they plan
+          around on the right, a quarter wide and as tall as both: change
+          one and the others follow. */}
       <div className="catalog__services">
         <MyServices />
+        <Renewals />
+        <WatchlistMini onOpen={setOpenId} />
       </div>
 
       <div className="catalog__controls">

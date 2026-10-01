@@ -4,11 +4,25 @@
  */
 export type PlanChoice = { planId: string } | { customCents: number | null };
 
+/**
+ * When a subscription bills. Monthly plans renew on a day of the month -
+ * the 31st falls back to a short month's last day. Annual plans renew on a
+ * date, at a yearly price the user types: published plans are monthly.
+ */
+export type Billing =
+  { cycle: "monthly"; day: number } | { cycle: "annual"; renewsOn: string; cents: number | null };
+
 /** A service the user pays for now. */
 export interface Subscription {
   slug: string;
   choice: PlanChoice;
   leftOut?: boolean;
+  /**
+   * Unset for services saved before renewal dates existed: their real
+   * billing day can't be known, so they get no reminders until it's set.
+   * Optional, so no version bump - older saves stay valid.
+   */
+  billing?: Billing;
 }
 
 /** The fields of a published plan that pricing needs. */
@@ -34,6 +48,8 @@ export interface SubscriptionStore {
   setChoice(slug: string, choice: PlanChoice, plan?: PlanDefaults | null): void;
   /** Keeps a subscribed service out of cost estimates, or brings it back. */
   setLeftOut(slug: string, leftOut: boolean): void;
+  /** Sets when a subscribed service bills; ignored for other services. */
+  setBilling(slug: string, billing: Billing): void;
 
   subscribe(listener: () => void): () => void;
 }
@@ -67,6 +83,7 @@ function load(raw: string | null): Subscription[] {
  */
 export function localSubscriptions(
   storage: Pick<Storage, "getItem" | "setItem">,
+  now: () => Date = () => new Date(),
 ): SubscriptionStore & { reload(): void } {
   let snapshot = load(storage.getItem(SUBSCRIPTIONS_KEY));
   const listeners = new Set<() => void>();
@@ -88,7 +105,17 @@ export function localSubscriptions(
       const has = snapshot.some((s) => s.slug === slug);
       if (subscribed && !has) {
         const choice: PlanChoice = defaultPlan ? { planId: defaultPlan.id } : { customCents: null };
-        commit([...snapshot, { slug, choice, leftOut: defaultPlan?.leaveOutByDefault ?? false }]);
+        commit([
+          ...snapshot,
+          {
+            slug,
+            choice,
+            leftOut: defaultPlan?.leaveOutByDefault ?? false,
+            // A starting guess the user is asked to correct: ticked today,
+            // so billed on today's day of the month.
+            billing: { cycle: "monthly", day: now().getDate() },
+          },
+        ]);
       }
       if (!subscribed && has) commit(snapshot.filter((s) => s.slug !== slug));
     },
@@ -109,6 +136,11 @@ export function localSubscriptions(
       commit(snapshot.map((s) => (s.slug === slug ? { ...s, leftOut } : s)));
     },
 
+    setBilling(slug, billing) {
+      if (!snapshot.some((s) => s.slug === slug)) return;
+      commit(snapshot.map((s) => (s.slug === slug ? { ...s, billing } : s)));
+    },
+
     subscribe(listener) {
       listeners.add(listener);
       return () => {
@@ -124,14 +156,16 @@ export function localSubscriptions(
 }
 
 /**
- * What a subscription costs a month, in cents. Null when the user chose a
- * custom price and hasn't given one, or picked a plan the app no longer lists.
+ * What a subscription costs a month, in cents. An annual plan with a price
+ * counts as a twelfth of it. Null when the user chose a custom price and
+ * hasn't given one, or picked a plan the app no longer lists.
  */
 export function monthlyCents(
   subscription: Subscription,
   plans: readonly PricedPlan[],
 ): number | null {
-  const { choice } = subscription;
+  const { choice, billing } = subscription;
+  if (billing?.cycle === "annual" && billing.cents !== null) return Math.round(billing.cents / 12);
   if ("planId" in choice) {
     return plans.find((p) => p.id === choice.planId)?.monthlyCents ?? null;
   }

@@ -6,7 +6,14 @@ import type { MyServicesQuery } from "../generated/graphql";
 import { subscriptions, useSubscriptions } from "../hooks/useSubscriptions";
 import { formatDate } from "../lib/format";
 import { formatDollars, parseDollars } from "../lib/money";
-import { monthlySpend, type PlanChoice, type Subscription } from "../lib/subscriptions";
+import { addDays, nextRenewal } from "../lib/renewals";
+import { localToday, when } from "../lib/seasons";
+import {
+  monthlySpend,
+  type Billing,
+  type PlanChoice,
+  type Subscription,
+} from "../lib/subscriptions";
 import { Modal } from "./Modal";
 import { Panel } from "./Panel";
 import { ServiceLogo } from "./ServiceLogo";
@@ -111,50 +118,52 @@ export function MyServices({ collapsible = true }: { collapsible?: boolean }) {
         })}
       </ul>
 
-      {mine.length > 0 && (
-        <p className="services__total">
-          <span>
-            {mine.length} {mine.length === 1 ? "service" : "services"}
-            {spend.cents > 0 && (
-              <>
-                {" "}
-                · <strong>{formatDollars(spend.cents)}</strong>/month
-              </>
-            )}
-            {spend.unpriced > 0 && (
-              <span className="services__unpriced"> ({spend.unpriced} without a price)</span>
-            )}
-            {spend.leftOutCents > 0 && (
-              <span className="services__unpriced">
-                {" "}
-                · plus {formatDollars(spend.leftOutCents)} left out of estimates
-              </span>
-            )}
-          </span>
-          {/* Twelve months of the same total: what staying subscribed to all
-              of it costs over a year. Left-out services stay out here too. */}
-          {spend.cents > 0 && (
-            // The asterisk is visual; aria-describedby reads the note itself.
-            <span className="services__annual" aria-describedby="annual-note">
+      {/* Two blocks side by side: the monthly figures with where prices come
+          from on the left, the yearly total with its footnote on the right.
+          In a narrow box the right block stacks under the left. */}
+      <div className={`services__footer${mine.length > 0 ? " services__footer--totals" : ""}`}>
+        <div className="services__monthly">
+          {mine.length > 0 && (
+            <p className="services__total">
+              {mine.length} {mine.length === 1 ? "service" : "services"}
+              {spend.cents > 0 && (
+                <>
+                  {" "}
+                  · <strong>{formatDollars(spend.cents)}</strong>/month
+                </>
+              )}
+              {spend.unpriced > 0 && (
+                <span className="services__unpriced"> ({spend.unpriced} without a price)</span>
+              )}
+              {spend.leftOutCents > 0 && (
+                <span className="services__unpriced">
+                  {" "}
+                  · plus {formatDollars(spend.leftOutCents)} left out of estimates
+                </span>
+              )}
+            </p>
+          )}
+          {checkedOn && (
+            <p className="services__checked">
+              Published US prices, checked {formatDate(checkedOn, true)}. Choose Custom for bundles,
+              annual plans or discounts.
+            </p>
+          )}
+        </div>
+
+        {/* Twelve months of the same total: what staying subscribed to all
+            of it costs over a year. Left-out services stay out here too. */}
+        {mine.length > 0 && spend.cents > 0 && (
+          <div className="services__yearly">
+            {/* The asterisk is visual; aria-describedby reads the note itself. */}
+            <p className="services__annual" aria-describedby="annual-note">
               <strong>{formatDollars(spend.cents * 12)}</strong>/year
               <span aria-hidden="true">*</span>
-            </span>
-          )}
-        </p>
-      )}
-      {/* The small print, on one row: where prices come from on the left,
-          the note on the yearly total under it on the right. */}
-      <div className="services__notes">
-        {checkedOn && (
-          <p className="services__checked">
-            Published US prices, checked {formatDate(checkedOn, true)}. Choose Custom for bundles,
-            annual plans or discounts.
-          </p>
-        )}
-        {mine.length > 0 && spend.cents > 0 && (
-          <p id="annual-note" className="services__footnote">
-            *Prices fluctuate throughout the year.
-          </p>
+            </p>
+            <p id="annual-note" className="services__footnote">
+              *Prices fluctuate throughout the year.
+            </p>
+          </div>
         )}
       </div>
 
@@ -240,7 +249,94 @@ function PlanPicker({ service, subscription }: { service: Service; subscription:
         />
         Leave out of estimates
       </label>
+      <BillingPicker service={service} subscription={subscription} />
     </div>
+  );
+}
+
+/**
+ * When the service bills: a day of the month, or a yearly date and price.
+ * The renewal reminders run off this. A service saved before renewal dates
+ * existed has none, and says so until one is chosen.
+ */
+function BillingPicker({
+  service,
+  subscription,
+}: {
+  service: Service;
+  subscription: Subscription;
+}) {
+  const today = localToday();
+  const { billing } = subscription;
+  const set = (next: Billing) => subscriptions.setBilling(service.slug, next);
+  const id = `billing-${service.slug}`;
+
+  return (
+    <>
+      <label className="services__field" htmlFor={id}>
+        Billed
+      </label>
+      <select
+        id={id}
+        value={billing?.cycle ?? ""}
+        onChange={(e) =>
+          set(
+            e.target.value === "annual"
+              ? // A year from today: a guess to correct, like the monthly day.
+                { cycle: "annual", renewsOn: addDays(today, 365), cents: null }
+              : { cycle: "monthly", day: Number(today.slice(8, 10)) },
+          )
+        }
+      >
+        {!billing && <option value="">Choose…</option>}
+        <option value="monthly">Monthly</option>
+        <option value="annual">Yearly</option>
+      </select>
+
+      {billing?.cycle === "monthly" && (
+        <label className="services__renews">
+          Renews on day
+          <input
+            type="number"
+            min={1}
+            max={31}
+            value={billing.day}
+            aria-label={`Day of the month ${service.name} renews`}
+            onChange={(e) => {
+              const day = Number(e.target.value);
+              if (Number.isInteger(day) && day >= 1 && day <= 31) set({ cycle: "monthly", day });
+            }}
+          />
+          of the month
+        </label>
+      )}
+
+      {billing?.cycle === "annual" && (
+        <>
+          <label className="services__renews">
+            Renews on
+            <input
+              type="date"
+              value={billing.renewsOn}
+              aria-label={`Date ${service.name} renews`}
+              onChange={(e) => e.target.value && set({ ...billing, renewsOn: e.target.value })}
+            />
+          </label>
+          <PriceInput
+            service={service.name}
+            per="year"
+            cents={billing.cents}
+            onChange={(cents) => set({ ...billing, cents })}
+          />
+        </>
+      )}
+
+      <p className="services__note">
+        {billing
+          ? `Next renewal: ${when(nextRenewal(billing, today), today)}.`
+          : "Renewal day not set, so no reminders for this service yet."}
+      </p>
+    </>
   );
 }
 
@@ -253,10 +349,12 @@ function PriceInput({
   service,
   cents,
   onChange,
+  per = "month",
 }: {
   service: string;
   cents: number | null;
   onChange: (cents: number | null) => void;
+  per?: "month" | "year";
 }) {
   const [text, setText] = useState(cents === null ? "" : (cents / 100).toFixed(2));
   const invalid = parseDollars(text) === undefined;
@@ -269,7 +367,7 @@ function PriceInput({
         inputMode="decimal"
         placeholder="0.00"
         value={text}
-        aria-label={`${service} monthly price in dollars`}
+        aria-label={`${service} ${per === "year" ? "yearly" : "monthly"} price in dollars`}
         aria-invalid={invalid}
         onChange={(e) => {
           setText(e.target.value);
@@ -277,7 +375,7 @@ function PriceInput({
           if (parsed !== undefined) onChange(parsed);
         }}
       />
-      <span aria-hidden="true">/mo</span>
+      <span aria-hidden="true">{per === "year" ? "/yr" : "/mo"}</span>
     </label>
   );
 }
