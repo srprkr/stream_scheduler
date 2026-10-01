@@ -4,6 +4,7 @@ import {
   analyseSeason,
   expectedFinale,
   nextSeasonNumber,
+  seasonWatchTime,
   seriesRuntime,
 } from "../../../src/sources/tmdb/seasons.js";
 import type {
@@ -262,5 +263,48 @@ describe("expectedFinale", () => {
   it("needs a premiere and a previous season to work from", () => {
     expect(expectedFinale(null, lastSeason)).toBeNull();
     expect(expectedFinale("2026-10-07", null)).toBeNull();
+  });
+});
+
+describe("seasonWatchTime", () => {
+  const timed = (n: number, runtime: number, finale = true) =>
+    season(
+      Array.from({ length: n }, (_, i) => ({
+        air_date: `2025-01-${String(i + 1).padStart(2, "0")}`,
+        runtime,
+        ...(finale && i === n - 1 ? { episode_type: "finale" } : {}),
+      })),
+    );
+
+  it("adds up a complete season exactly", () => {
+    expect(seasonWatchTime(timed(8, 60), null)).toEqual({ minutes: 480, estimated: false });
+  });
+
+  it("counts untimed episodes at the previous season's median", () => {
+    // The Rings of Power season 3: eight dated episodes, no runtimes yet.
+    const coming = season(Array.from({ length: 8 }, () => ({ air_date: "2026-11-11" })));
+    expect(seasonWatchTime(coming, timed(8, 65))).toEqual({ minutes: 520, estimated: true });
+  });
+
+  it("prefers this season's own runtimes where it has some", () => {
+    const partial = season([{ air_date: "2026-11-11", runtime: 50 }, { air_date: "2026-11-18" }]);
+    expect(seasonWatchTime(partial, timed(2, 70))?.minutes).toBe(100);
+  });
+
+  it("counts an unfinished season at least as long as the last", () => {
+    const announced = season([{ air_date: "2026-11-11" }, { air_date: "2026-11-18" }]);
+    expect(seasonWatchTime(announced, timed(10, 45))).toEqual({ minutes: 450, estimated: true });
+  });
+
+  it("marks a season estimated until it is complete, even when timed", () => {
+    const airing = timed(3, 40, false);
+    airing.episodes.push({ episode_number: 4, air_date: null, runtime: null });
+    expect(seasonWatchTime(airing, null)?.estimated).toBe(true);
+  });
+
+  it("gives up with nothing to go on", () => {
+    const blank = season([{ air_date: "2026-11-11" }]);
+    expect(seasonWatchTime(blank, null)).toBeNull();
+    expect(seasonWatchTime(season([]), null)).toBeNull();
   });
 });

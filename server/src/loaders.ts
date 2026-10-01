@@ -22,6 +22,8 @@ export interface Loaders {
   /** Tracked services per series id, by the network that made it. */
   seriesServices: DataLoader<string, string[]>;
   runtime: DataLoader<string, RuntimeRecord | null>;
+  /** Coming-season watch time, keyed `${mediaId}#${seasonNumber}`. */
+  seasonRuntime: DataLoader<string, RuntimeRecord | null>;
 }
 
 export function createLoaders(source: CatalogSource): Loaders {
@@ -53,6 +55,10 @@ export function createLoaders(source: CatalogSource): Loaders {
     seriesServices: new DataLoader(async (ids) => {
       console.log(`[batch] getSeriesServices x${ids.length}: ${ids.join(", ")}`);
       return source.getSeriesServices(ids);
+    }),
+    seasonRuntime: new DataLoader(async (keys) => {
+      console.log(`[batch] getSeasonRuntimes x${keys.length}: ${keys.join(", ")}`);
+      return source.getSeasonRuntimes(keys);
     }),
     runtime: new DataLoader(async (ids) => {
       console.log(`[batch] getSeriesRuntimes x${ids.length}: ${ids.join(", ")}`);

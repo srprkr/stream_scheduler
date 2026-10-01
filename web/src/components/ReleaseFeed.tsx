@@ -1,5 +1,5 @@
 import { useQuery } from "@apollo/client/react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { groupByArrival } from "../lib/group";
 import { matchesTitle } from "../lib/search";
@@ -55,7 +55,7 @@ const RELEASE_FEED = graphql(`
  */
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-export function ReleaseFeed() {
+export function ReleaseFeed({ lead }: { lead?: ReactNode }) {
   // null means every service. It is also the default, so the feed opens on
   // the full slate and narrows from there.
   const [providerSlug, setProviderSlug] = useState<string | null>(null);
@@ -94,6 +94,9 @@ export function ReleaseFeed() {
       )}
 
       <ul className="grid">
+        {/* Placed top right, two tiles wide, by CSS; the tiles fill in
+            around it. */}
+        {lead && <li className="grid__lead">{lead}</li>}
         {groups.map(({ release, providers }) => (
           <ReleaseCard
             key={release.id}

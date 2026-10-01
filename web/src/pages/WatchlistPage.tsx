@@ -2,12 +2,10 @@ import { useState } from "react";
 
 import { CatalogTile } from "../components/CatalogTile";
 import { TitleDialog } from "../components/TitleDialog";
-import { WatchServices, type ServiceInfo } from "../components/WatchServices";
-import { graphql } from "../generated";
-import { useLibrary } from "../hooks/useLibrary";
-import { useDetailsById } from "../hooks/useLibraryDetails";
+import { WatchServices } from "../components/WatchServices";
 import { useStoredNumber } from "../hooks/useStored";
 import { useSubscriptions } from "../hooks/useSubscriptions";
+import { useWatchlist } from "../hooks/useWatchlist";
 import { localToday, when } from "../lib/seasons";
 import {
   DEFAULT_HOURS_PER_MONTH,
@@ -22,44 +20,7 @@ import {
   titleReadiness,
   watchlistByService,
   watchlistGroup,
-  type WatchlistTitle,
 } from "../lib/watchlist";
-
-/** The tile's fields, plus runtime for the hours. */
-const WATCHLIST_DETAILS = graphql(`
-  query WatchlistDetails($ids: [ID!]!) {
-    mediaItems(ids: $ids) {
-      __typename
-      id
-      onDisc
-      totalRuntime {
-        minutes
-        estimated
-      }
-      availableOn {
-        ...ServiceLogo
-      }
-      otherServices {
-        id
-        name
-        logoUrl(size: SMALL)
-      }
-      upcoming {
-        id
-        availableFrom
-        bingeableFrom
-        provider {
-          ...ServiceLogo
-        }
-      }
-      ... on Series {
-        nextSeason {
-          ...SeasonScheduleFields
-        }
-      }
-    }
-  }
-`);
 
 /**
  * The streaming-only titles the user wants to watch, which services carry
@@ -68,16 +29,11 @@ const WATCHLIST_DETAILS = graphql(`
  * where they stream and for how long fills in when the details arrive.
  */
 export function WatchlistPage() {
-  const entries = useLibrary().filter((e) => e.shelf === "watchlist");
+  const { entries, byId, titles, serviceInfo, loading } = useWatchlist();
   const subscribed = new Set(useSubscriptions().map((s) => s.slug));
   const [hoursPerMonth] = useStoredNumber(HOURS_PER_MONTH_KEY, DEFAULT_HOURS_PER_MONTH);
   const [openId, setOpenId] = useState<string | null>(null);
   const today = localToday();
-
-  const { byId, loading } = useDetailsById(
-    WATCHLIST_DETAILS,
-    entries.map((e) => e.id),
-  );
 
   if (entries.length === 0) {
     return (
@@ -94,33 +50,9 @@ export function WatchlistPage() {
     );
   }
 
-  // Only titles whose details have arrived feed the numbers, so a title
-  // added a moment ago isn't counted as having no runtime.
-  const loaded = entries.flatMap((e) => {
-    const detail = byId.get(e.id);
-    return detail ? [{ id: e.id, title: e.title, detail }] : [];
-  });
   const total = libraryStats(
-    loaded.map((t) => t.detail.totalRuntime),
+    [...titles.values()].map((t) => t.runtime),
     hoursPerMonth,
-  );
-  const titles = new Map<string, WatchlistTitle>(
-    loaded.map(({ id, title, detail }) => [
-      id,
-      {
-        id,
-        title,
-        runtime: detail.totalRuntime ?? null,
-        availableOn: detail.availableOn,
-        otherServices: detail.otherServices,
-        upcoming: detail.upcoming.map((u) => ({
-          slug: u.provider.slug,
-          availableFrom: u.availableFrom,
-          bingeableFrom: u.bingeableFrom,
-        })),
-        nextSeason: detail.__typename === "Series" ? detail.nextSeason : null,
-      },
-    ]),
   );
   const { services, unhosted } = watchlistByService([...titles.values()], subscribed, today);
 
@@ -166,24 +98,13 @@ export function WatchlistPage() {
     );
   };
 
-  // Name and logo for each row of the box: tracked services by slug, the
-  // rest by id - the keys watchlistByService rolls up under.
-  const serviceInfo = new Map<string, ServiceInfo>();
-  for (const { detail } of loaded) {
-    for (const p of [...detail.availableOn, ...detail.upcoming.map((u) => u.provider)]) {
-      serviceInfo.set(p.slug, { name: p.name, logoUrl: p.logoUrl });
-    }
-    for (const o of detail.otherServices)
-      serviceInfo.set(o.id, { name: o.name, logoUrl: o.logoUrl });
-  }
-
   return (
     <>
       <header className="masthead">
         <h1>Watchlist</h1>
         <p>
           {entries.length} {entries.length === 1 ? "title" : "titles"}
-          {loaded.length > 0 && (
+          {titles.size > 0 && (
             <>
               {" "}
               · {total.estimated ? "about " : ""}
@@ -195,7 +116,7 @@ export function WatchlistPage() {
         </p>
       </header>
 
-      {loading && loaded.length === 0 && <p className="state">Adding up your watchlist…</p>}
+      {loading && titles.size === 0 && <p className="state">Adding up your watchlist…</p>}
 
       <WatchServices
         services={services}

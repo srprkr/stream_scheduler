@@ -235,6 +235,14 @@ type SeasonSchedule {
   isFullDrop: Boolean
 
   episodeCount: Int
+
+  """
+  How long the season takes to watch. Usually an estimate before it airs:
+  episodes without a runtime are counted at the median length of this
+  season's or the previous season's, and an unfinished season at least as
+  long as the previous one. Null when there is nothing to go on.
+  """
+  watchTime: Runtime
 }
 
 type Runtime {

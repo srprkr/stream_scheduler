@@ -76,6 +76,8 @@ export interface MediaRecord {
 
 /** A season being released now, or next. Dates are YYYY-MM-DD. */
 export interface SeasonScheduleRecord {
+  /** The series it belongs to, so its watch time can be looked up on demand. */
+  mediaId: string;
   seasonNumber: number;
   /** First episode's date; in the past while a weekly season is airing. */
   premieresOn: string | null;
@@ -184,6 +186,13 @@ export interface CatalogSource {
    * can be owned. Batched; false for unknown ids.
    */
   getOnDisc(ids: readonly string[]): Promise<boolean[]>;
+
+  /**
+   * How long each coming season takes to watch, usually estimated - see
+   * seasonWatchTime. Keys are `${mediaId}#${seasonNumber}`. Batched; null
+   * when there is nothing to go on.
+   */
+  getSeasonRuntimes(keys: readonly string[]): Promise<(RuntimeRecord | null)[]>;
 
   /** Whole-series watch time. Batched; null for films and unknown ids. */
   getSeriesRuntimes(ids: readonly string[]): Promise<(RuntimeRecord | null)[]>;

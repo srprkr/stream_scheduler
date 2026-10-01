@@ -121,7 +121,9 @@ body {
   }
 }
 
-.home-top {
+// A page's heading on the left with its numbers box on the right, as on the
+// Library page. Stacks on a phone.
+.page-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -132,17 +134,12 @@ body {
     margin-bottom: 0;
   }
   .stats {
-    flex: 0 0 17;
     margin-bottom: 0;
   }
 
   @media (max-width: 720px) {
     flex-direction: column;
     align-items: stretch;
-
-    .stats {
-      flex-basis: auto;
-    }
   }
 }
 
@@ -192,6 +189,30 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
   gap: 24px 18px;
+}
+
+// A box leading the grid - Coming Soon's watchlist stats - in the top right,
+// two tiles wide and one row tall. The tiles fill the cells around it.
+// It takes no height of its own beyond a floor (height: 0, min-height:
+// max(100%, 16rem)), so the row stays as tall as its tiles and the box
+// scrolls if it has more to show - and still shows with no tiles beside it.
+// With room for only one or two columns, it sits full width above them.
+.grid__lead {
+  grid-column: -3 / -1;
+  grid-row: 1;
+  height: 0;
+  min-height: max(100%, 16rem);
+
+  > * {
+    height: 100%;
+    overflow-y: auto;
+  }
+
+  @media (max-width: 560px) {
+    grid-column: 1 / -1;
+    height: auto;
+    min-height: 0;
+  }
 }
 
 .card {
@@ -931,6 +952,110 @@ body {
   }
   &__note {
     color: var(--muted);
+  }
+}
+
+// Coming Soon's numbers: tabs, then one row per month or service, each with
+// its figure on the right and the titles behind it underneath.
+.coming-stats {
+  font-size: 0.875rem;
+
+  p {
+    margin: 0;
+  }
+  &--loading,
+  &__empty,
+  &__lede,
+  &__note {
+    color: var(--muted);
+  }
+  &__lede {
+    margin-bottom: 8px;
+  }
+  &__note {
+    margin-top: 10px;
+    font-size: 0.8125rem;
+  }
+
+  &__title {
+    margin: 0 0 10px;
+    font-size: 1rem;
+  }
+
+  &__tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+
+    .tag {
+      padding: 4px 10px;
+    }
+  }
+
+  &__list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__month {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 10px;
+    row-gap: 3px;
+  }
+
+  &__service {
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    align-items: center;
+    column-gap: 12px;
+  }
+
+  &__label {
+    display: grid;
+    font-weight: 600;
+  }
+  &__when {
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--muted);
+  }
+  &__figure {
+    font-weight: 600;
+    text-align: right;
+  }
+
+  &__bar {
+    grid-column: 1 / -1;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--border);
+
+    span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--soon);
+    }
+  }
+
+  &__titles {
+    grid-column: 1 / -1;
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+
+  &__diff {
+    grid-column: 1 / -1;
+    font-size: 0.8125rem;
+    color: var(--soon);
+
+    &--over {
+      color: #fbbf24;
+    }
   }
 }
 

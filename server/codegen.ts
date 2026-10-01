@@ -16,6 +16,7 @@ const config: CodegenConfig = {
           Movie: "../sources/types.js#MediaRecord",
           Series: "../sources/types.js#MediaRecord",
           Video: "../sources/types.js#VideoRecord",
+          SeasonSchedule: "../sources/types.js#SeasonScheduleRecord",
         },
 
         scalars: { Date: "string", URL: "string" },

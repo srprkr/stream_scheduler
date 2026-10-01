@@ -1,3 +1,4 @@
+import { ComingSoonStats } from "../components/ComingSoonStats";
 import { ReleaseFeed } from "../components/ReleaseFeed";
 
 export function ComingSoonPage() {
@@ -10,7 +11,8 @@ export function ComingSoonPage() {
           subscriptions around them.
         </p>
       </header>
-      <ReleaseFeed />
+      {/* The watchlist's numbers open the feed, among the tiles. */}
+      <ReleaseFeed lead={<ComingSoonStats />} />
     </>
   );
 }

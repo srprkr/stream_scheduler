@@ -5,6 +5,7 @@ import type {
   MediaItemResolvers,
   MovieResolvers,
   OtherServiceResolvers,
+  SeasonScheduleResolvers,
   SeriesResolvers,
   VideoResolvers,
 } from "../generated/graphql.js";
@@ -89,6 +90,12 @@ export const Series: SeriesResolvers = {
   nextSeason: (m, _a, ctx) => ctx.loaders.nextSeason.load(m.id),
   seasonCount: async (m, _a, ctx) => (await full(m, ctx)).seasonCount,
   totalRuntime: (m, _a, ctx) => ctx.loaders.runtime.load(m.id),
+};
+
+// Fetched only when a query asks: it can cost a request for the season
+// before, which the catalogue's next-season lines don't need.
+export const SeasonSchedule: SeasonScheduleResolvers = {
+  watchTime: (s, _a, ctx) => ctx.loaders.seasonRuntime.load(`${s.mediaId}#${s.seasonNumber}`),
 };
 
 export const OtherService: OtherServiceResolvers = {

@@ -27,6 +27,7 @@ import { DIGITAL_RELEASE, streamingPremieres, filmOnDisc } from "./films.js";
 import {
   analyseSeason,
   seriesRuntime,
+  seasonWatchTime,
   expectedFinale,
   nextSeasonNumber,
   type SeasonAnalysis,
@@ -605,6 +606,7 @@ export class TmdbSource implements CatalogSource {
           : null;
 
         return {
+          mediaId: id,
           seasonNumber,
           premieresOn,
           fullyOutOn: analysis.bingeableFrom,
@@ -613,6 +615,28 @@ export class TmdbSource implements CatalogSource {
           // Zero listed episodes means "not announced", not "no episodes".
           episodeCount: analysis.episodeCount || null,
         };
+      } catch {
+        return null;
+      }
+    });
+  }
+
+  /** The season and the one before it: URLs the next-season lookup fetches. */
+  async getSeasonRuntimes(keys: readonly string[]): Promise<(RuntimeRecord | null)[]> {
+    return mapLimit(keys, CONCURRENCY, async (key) => {
+      const [mediaId, number] = key.split("#");
+      const [kind, tmdbId] = (mediaId ?? "").split(":");
+      const n = Number(number);
+      if (kind !== "tv" || !tmdbId || !Number.isInteger(n)) return null;
+      try {
+        const season = await this.client.get<TmdbSeasonDetail>(`/tv/${tmdbId}/season/${n}`);
+        const previous =
+          n > 1
+            ? await this.client
+                .get<TmdbSeasonDetail>(`/tv/${tmdbId}/season/${n - 1}`)
+                .catch(() => null)
+            : null;
+        return seasonWatchTime(season, previous);
       } catch {
         return null;
       }

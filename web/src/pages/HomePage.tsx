@@ -28,7 +28,7 @@ export function HomePage() {
 
   return (
     <>
-      <div className="home-top">
+      <div className="page-top">
         <header className="masthead">
           {owned.length + wanted.length === 0 ? (
             <>

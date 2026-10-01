@@ -7,6 +7,11 @@ export interface WatchlistTitle {
   title: string;
   /** Null when upstream has no runtime for it. */
   runtime: Runtime | null;
+  /**
+   * What's still to come, for planning: a series' coming season (usually
+   * estimated), or a film's runtime. Null when unknown.
+   */
+  comingRuntime?: Runtime | null;
   /** Tracked services. */
   availableOn: readonly { slug: string }[];
   /** Services the app doesn't track, which the user can't mark as theirs. */

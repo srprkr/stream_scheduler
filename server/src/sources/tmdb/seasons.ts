@@ -181,3 +181,38 @@ export function nextSeasonNumber(detail: TmdbTvDetail): number | null {
     .sort((a, b) => a - b);
   return announced[0] ?? null;
 }
+
+/**
+ * How long a coming season takes to watch, for planning months ahead.
+ *
+ * TMDB rarely lists runtimes before episodes air, so this is usually an
+ * estimate: the episodes still without one are counted at the median of
+ * those that have one in this season, or failing that, the previous
+ * season's. A season that isn't complete may also list fewer episodes than
+ * it will have, so it's counted as at least as long as the previous one -
+ * and anything short of a complete, fully timed season is marked estimated.
+ * Null when there is nothing to go on.
+ */
+export function seasonWatchTime(
+  current: TmdbSeasonDetail,
+  previous: TmdbSeasonDetail | null,
+): RuntimeRecord | null {
+  const known = (episodes: readonly TmdbEpisode[]) =>
+    episodes.map((e) => e.runtime).filter((r): r is number => typeof r === "number" && r > 0);
+  const own = known(current.episodes);
+  const before = previous ? known(previous.episodes) : [];
+  const complete = analyseSeason(current).bingeableFrom !== null;
+
+  const count = complete
+    ? current.episodes.length
+    : Math.max(current.episodes.length, previous?.episodes.length ?? 0);
+  if (count === 0) return null;
+  if (complete && own.length === count) {
+    return { minutes: own.reduce((a, b) => a + b, 0), estimated: false };
+  }
+
+  const fill = median(own) ?? median(before);
+  if (fill === null) return null;
+  const minutes = own.reduce((a, b) => a + b, 0) + (count - own.length) * fill;
+  return { minutes: Math.round(minutes), estimated: true };
+}

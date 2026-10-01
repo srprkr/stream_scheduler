@@ -229,6 +229,7 @@ export class FixtureSource implements CatalogSource {
       const r = releases.find((x) => x.mediaId === id && x.seasonNumber !== null);
       if (!r || r.seasonNumber === null) return null;
       return {
+        mediaId: id,
         seasonNumber: r.seasonNumber,
         premieresOn: r.availableFrom,
         fullyOutOn: r.bingeableFrom,
@@ -237,6 +238,16 @@ export class FixtureSource implements CatalogSource {
         isFullDrop: r.isFullDrop,
         episodeCount: r.episodeCount,
       };
+    });
+  }
+
+  /** A coming season: its releases' summed episode runtimes, as listed. */
+  async getSeasonRuntimes(keys: readonly string[]): Promise<(RuntimeRecord | null)[]> {
+    const releases = this.releases();
+    return keys.map((key) => {
+      const [mediaId, n] = key.split("#");
+      const r = releases.find((x) => x.mediaId === mediaId && x.seasonNumber === Number(n));
+      return r?.watchTimeMinutes ? { minutes: r.watchTimeMinutes, estimated: false } : null;
     });
   }
 
