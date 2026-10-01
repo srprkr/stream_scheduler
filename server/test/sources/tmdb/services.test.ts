@@ -17,6 +17,13 @@ describe("subscriptionServices", () => {
     expect(found).toEqual(["hbomax"]);
   });
 
+  it("finds a service listed only under its ad tier", () => {
+    const found = subscriptionServices({ results: { US: { flatrate: [offer(2100)] } } }, [
+      { slug: "prime", watchProviderIds: [9, 2100] },
+    ]);
+    expect(found).toEqual(["prime"]);
+  });
+
   it("counts a service once when it is listed under two tiers", () => {
     const found = subscriptionServices(
       { results: { US: { flatrate: [offer(386), offer(387)] } } },

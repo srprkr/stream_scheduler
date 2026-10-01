@@ -35,7 +35,8 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     logoPath: "/rK1KljqmbvO9HQa1PBFLILWah72.png",
     networkId: 213,
     noteAliases: ["netflix"],
-    watchProviderIds: [8],
+    // Netflix, and Standard with Ads.
+    watchProviderIds: [8, 1796],
   },
   {
     id: "provider:peacock",
@@ -63,7 +64,9 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     logoPath: "/gMZdpavHmxFNnLpMHwVxfqeux2g.png",
     networkId: 1024,
     noteAliases: ["prime video", "amazon prime video", "amazon prime"],
-    watchProviderIds: [9],
+    // Prime Video, and Prime Video with Ads. Not 613, "Prime Video Free with
+    // Ads": that's free, listed under ads rather than as a subscription.
+    watchProviderIds: [9, 2100],
   },
   {
     id: "provider:appletv",
