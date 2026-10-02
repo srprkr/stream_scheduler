@@ -191,8 +191,9 @@ body {
   gap: 24px 18px;
 }
 
-// A box leading the grid - Coming Soon's watchlist stats - in the top right,
-// two tiles wide and one row tall. The tiles fill the cells around it.
+// A box leading a tile grid - Coming Soon's watchlist stats, What's On's
+// watchlist - in the top right, two tiles wide and one row tall. The tiles
+// fill the cells around it.
 // It takes no height of its own beyond a floor (height: 0, min-height:
 // max(100%, 16rem)), so the row stays as tall as its tiles and the box
 // scrolls if it has more to show - and still shows with no tiles beside it.
@@ -383,7 +384,9 @@ body {
     border-color 120ms ease,
     background 120ms ease;
 
-  &:hover {
+  // Only an unselected tag brightens: a selected one is white already, and
+  // light text on it would vanish. A disabled one doesn't respond at all.
+  &:hover:not(.tag--on):not(:disabled) {
     color: var(--text);
     border-color: #3a3a46;
   }
@@ -858,7 +861,8 @@ body {
 // with the counts on the right. Services the user already pays for keep
 // their colour; the rest are dimmed, as in the service grids.
 .watch-services {
-  margin-bottom: 32px;
+  // Last on the Watchlist page, after the tile sections: their spacing above.
+  margin-top: 40px;
 
   &__list {
     list-style: none;
@@ -1062,6 +1066,8 @@ body {
 // Each service's next renewal: logo, the date with a keep / pause tag, and
 // the advice underneath. Then the reminder setting and the calendar button.
 .renewals {
+  margin-bottom: 32px;
+
   p {
     margin: 0;
   }
@@ -1569,62 +1575,15 @@ body {
 // --- what's on ------------------------------------------------------------
 
 .catalog {
-  // Services and renewals stacked in the left three quarters; the watchlist
-  // in the last quarter, spanning both rows. It takes no height of its own
-  // (height: 0, min-height: 100%), so the two boxes set the height and a
-  // long watchlist scrolls inside. One column on a narrow screen, the
-  // watchlist last, at its natural height.
-  &__services {
-    display: grid;
-    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
-    gap: 16px;
-    margin-bottom: 20px;
-
-    > .watchlist-mini {
-      grid-column: 2;
-      grid-row: 1 / span 2;
-      height: 0;
-      min-height: 100%;
-    }
-    // Folded away, it's just its heading, at the top.
-    > .watchlist-mini:has(> .panel__body[hidden]) {
-      align-self: start;
-      height: auto;
-      min-height: 0;
-    }
-
-    @media (max-width: 860px) {
-      grid-template-columns: minmax(0, 1fr);
-
-      // Under the other boxes: capped, so it doesn't push the catalogue
-      // further below the fold.
-      > .watchlist-mini {
-        grid-column: auto;
-        grid-row: auto;
-        height: auto;
-        min-height: 0;
-        max-height: 22rem;
-      }
-    }
-  }
-
   &__controls {
     display: grid;
+    justify-items: start;
     gap: 12px;
     margin-bottom: 24px;
 
-    // The shared .tags row carries its own bottom margin for Coming Soon.
-    .tags {
-      margin-bottom: 0;
+    > :first-child {
+      justify-self: stretch;
     }
-  }
-
-  &__options {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
   }
 
   &__sort {
@@ -1692,9 +1651,177 @@ body {
   display: grid;
   gap: 12px;
   margin-bottom: 20px;
+}
 
-  .tags {
-    margin-bottom: 0;
+// What's On and Coming Soon's shared filter row: page, services, type, with
+// a pipe between the groups.
+//
+// At desktop width it's one line, Series / Films at the right edge. Below
+// that, the services and types fold into a "Filters" button whose panel
+// opens underneath - a sideways-scrolling row is out of a mouse wheel's
+// reach. The breakpoint is where the full row stops fitting.
+$filters-fold: 1100px;
+
+.filters {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+
+  &__group {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__pipe {
+    flex: none;
+    padding: 0 4px;
+    color: var(--border);
+    font-size: 1.25rem;
+    line-height: 1;
+    user-select: none;
+  }
+
+  .tag {
+    white-space: nowrap;
+  }
+
+  // The folded form's button: a tag-shaped pill naming the selection.
+  &__toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 7px 14px;
+    font: inherit;
+    font-size: 0.8125rem;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+
+    &:hover {
+      border-color: #3a3a46;
+    }
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 2px;
+    }
+    &[aria-expanded="true"] .filters__chevron {
+      transform: rotate(180deg);
+    }
+  }
+  &__toggle-label {
+    color: var(--muted);
+  }
+  &__chevron {
+    transition: transform 140ms ease;
+  }
+
+  // Folded: a panel under the row, over the content, groups stacked and
+  // free to wrap.
+  &__panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: none;
+    gap: 12px;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+
+    &[data-open="true"] {
+      display: grid;
+    }
+  }
+  &__pipe--end {
+    display: none;
+  }
+
+  // A phone: the button takes its own full-width line under the page links,
+  // its summary cut short rather than overflowing.
+  @media (max-width: 560px) {
+    flex-wrap: wrap;
+
+    > .filters__pipe {
+      display: none;
+    }
+    &__toggle {
+      flex-basis: 100%;
+      justify-content: space-between;
+    }
+    &__toggle-summary {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // Desktop: everything on the one line, the panel part of the row.
+  @media (min-width: $filters-fold) {
+    &__toggle {
+      display: none;
+    }
+    &__panel,
+    &__panel[data-open="true"] {
+      position: static;
+      display: flex;
+      flex: 1;
+      align-items: center;
+      gap: 8px;
+      padding: 0;
+      background: none;
+      border: 0;
+      box-shadow: none;
+    }
+    &__group {
+      flex-wrap: nowrap;
+    }
+    // Pushes itself and the type group to the row's right edge.
+    &__pipe--end {
+      display: block;
+      margin-left: auto;
+    }
+  }
+
+  // A service toggle: its logo, ringed in white when selected - the same
+  // "on" as the text tags beside it.
+  &__service {
+    display: grid;
+    padding: 0;
+    background: none;
+    border: 2px solid transparent;
+    border-radius: 9px;
+    cursor: pointer;
+
+    &[aria-pressed="true"] {
+      border-color: var(--text);
+    }
+    &:hover:not([aria-pressed="true"]) {
+      border-color: #3a3a46;
+    }
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 2px;
+    }
+  }
+
+  // The page links share the pill look with the checkboxes.
+  a.tag {
+    text-decoration: none;
+  }
+  .tag:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
   }
 }
 
@@ -1770,6 +1897,18 @@ body {
     height: 22px;
     padding: 0 6px;
     font-size: 0.75rem;
+  }
+
+  &--chip {
+    width: 28px;
+    height: 28px;
+
+    .service-logo__img {
+      border-radius: 7px;
+    }
+    .service-logo__initial {
+      font-size: 0.875rem;
+    }
   }
 
   &--row {

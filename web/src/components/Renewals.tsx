@@ -1,4 +1,5 @@
 import { useQuery } from "@apollo/client/react";
+import { Link } from "react-router";
 
 import { graphql } from "../generated";
 import { useStored } from "../hooks/useStored";
@@ -165,7 +166,8 @@ export function Renewals() {
 
       {unset.length > 0 && (
         <p className="renewals__note">
-          No renewal day yet for {listTitles(unset)}: set one with ⋯ in Your services.
+          No renewal day yet for {listTitles(unset)}: set one with ⋯ in Your services on{" "}
+          <Link to="/insights">Insights</Link>.
         </p>
       )}
 

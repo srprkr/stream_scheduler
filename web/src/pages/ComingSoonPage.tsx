@@ -1,7 +1,10 @@
+import { BrowseFilters } from "../components/BrowseFilters";
 import { ComingSoonStats } from "../components/ComingSoonStats";
 import { ReleaseFeed } from "../components/ReleaseFeed";
+import { useBrowseFilters } from "../hooks/useBrowseFilters";
 
 export function ComingSoonPage() {
+  const filters = useBrowseFilters();
   return (
     <>
       <header className="masthead">
@@ -12,7 +15,13 @@ export function ComingSoonPage() {
         </p>
       </header>
       {/* The watchlist's numbers open the feed, among the tiles. */}
-      <ReleaseFeed lead={<ComingSoonStats />} />
+      <ReleaseFeed
+        slugs={filters.slugs}
+        ready={filters.ready}
+        kinds={filters.kinds}
+        filters={<BrowseFilters filters={filters} />}
+        lead={<ComingSoonStats />}
+      />
     </>
   );
 }

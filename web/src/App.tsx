@@ -4,6 +4,7 @@ import { Footer } from "./components/Footer";
 import { Nav } from "./Nav";
 import { ComingSoonPage } from "./pages/ComingSoonPage";
 import { HomePage } from "./pages/HomePage";
+import { InsightsPage } from "./pages/InsightsPage";
 import { WatchlistPage } from "./pages/WatchlistPage";
 import { WhatsOnPage } from "./pages/WhatsOnPage";
 
@@ -31,11 +32,15 @@ export function App() {
           >
             Browse
           </Link>
+          <NavLink to="/insights" className="nav__link">
+            Insights
+          </NavLink>
         </nav>
       </header>
 
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/insights" element={<InsightsPage />} />
 
         <Route element={<Nav />}>
           <Route path="/whats-on" element={<WhatsOnPage />} />

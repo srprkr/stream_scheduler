@@ -3,7 +3,8 @@
  * isn't the user's, with an optional count pinned to its corner. Decorative
  * to screen readers: whatever wraps it says the name and the count in words.
  *
- * "tile" fills a .service-tile button; "row" sits at the start of a list line.
+ * "tile" fills a .service-tile button; "row" sits at the start of a list
+ * line; "chip" is a filter toggle, the height of a text tag.
  */
 export function ServiceLogo({
   name,
@@ -17,7 +18,7 @@ export function ServiceLogo({
   active: boolean;
   /** Shown only when above zero. */
   count?: number;
-  size?: "tile" | "row";
+  size?: "tile" | "row" | "chip";
 }) {
   return (
     <span className={`service-logo service-logo--${size}`} data-active={active} aria-hidden="true">

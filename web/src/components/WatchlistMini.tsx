@@ -8,10 +8,10 @@ import { Panel } from "./Panel";
 import { ProviderLogos } from "./ProviderLogos";
 
 /**
- * The watchlist in brief, beside Your services and Renewals on What's On:
- * add titles from the grid below with + Watchlist, take them off here, and
- * the renewal advice next to it follows along - all three read the same
- * store. What's out now first, then what's coming, soonest first.
+ * The watchlist in brief, among What's On's tiles: add titles from the grid
+ * with + Watchlist, take them off here - both read the same store, so it
+ * updates at once. What's out now first, then what's coming, soonest first.
+ * What's On leaves it out while the watchlist is empty.
  */
 export function WatchlistMini({ onOpen }: { onOpen: (id: string) => void }) {
   const today = localToday();
@@ -28,11 +28,16 @@ export function WatchlistMini({ onOpen }: { onOpen: (id: string) => void }) {
     .sort((a, b) => a.order - b.order);
 
   return (
-    <Panel id="watchlist-mini" className="watchlist-mini" title="Your watchlist">
+    <Panel
+      id="watchlist-mini"
+      className="watchlist-mini"
+      title="Your watchlist"
+      // A fixed slot among the tiles: folding it would leave an empty box.
+      collapsible={false}
+    >
       {rows.length === 0 ? (
         <p className="panel__lede">
-          Nothing yet. Use + Watchlist on a streaming-only title below, and Renewals will plan
-          around it.
+          Nothing yet. Use + Watchlist on a streaming-only title, and it shows up here.
         </p>
       ) : (
         <ul className="watchlist-mini__list">

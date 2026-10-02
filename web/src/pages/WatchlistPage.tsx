@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { CatalogTile } from "../components/CatalogTile";
 import { TitleDialog } from "../components/TitleDialog";
+import { Renewals } from "../components/Renewals";
 import { WatchServices } from "../components/WatchServices";
 import { useStoredNumber } from "../hooks/useStored";
 import { useSubscriptions } from "../hooks/useSubscriptions";
@@ -118,15 +119,9 @@ export function WatchlistPage() {
 
       {loading && titles.size === 0 && <p className="state">Adding up your watchlist…</p>}
 
-      <WatchServices
-        services={services}
-        unhosted={unhosted}
-        missing={total.missing}
-        hoursPerMonth={hoursPerMonth}
-        today={today}
-        serviceInfo={serviceInfo}
-        onOpen={setOpenId}
-      />
+      {/* The decision that's due first: what to do about each renewal. The
+          advice reads the watchlist, so it lives with it. */}
+      <Renewals />
 
       {[
         { heading: "Watch now", list: watchNow },
@@ -142,6 +137,17 @@ export function WatchlistPage() {
             </section>
           ),
       )}
+
+      {/* The by-service breakdown last, as the detail behind the advice. */}
+      <WatchServices
+        services={services}
+        unhosted={unhosted}
+        missing={total.missing}
+        hoursPerMonth={hoursPerMonth}
+        today={today}
+        serviceInfo={serviceInfo}
+        onOpen={setOpenId}
+      />
 
       <TitleDialog id={openId} onClose={() => setOpenId(null)} />
     </>
