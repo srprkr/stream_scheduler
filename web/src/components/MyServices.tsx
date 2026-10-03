@@ -47,7 +47,7 @@ const CUSTOM = "custom";
 /**
  * Which services the user pays for, and on which plan. Tapping a grey logo
  * subscribes on the service's default plan and opens its options, so the
- * total means something straight away; the ⋯ on a subscribed logo reopens
+ * total means something straight away; the pencil on a subscribed logo reopens
  * them. Custom covers bundles, discounts and plans the app doesn't list.
  */
 export function MyServices({ collapsible = true }: { collapsible?: boolean }) {
@@ -77,10 +77,12 @@ export function MyServices({ collapsible = true }: { collapsible?: boolean }) {
 
   return (
     <Panel id="services" className="services" title="Your services" collapsible={collapsible}>
-      <p className="panel__lede">Tap the services you pay for now. Use ⋯ to change a plan.</p>
+      <p className="panel__lede">
+        Tap the services you pay for now. Use the pencil to change a plan or renewal date.
+      </p>
 
       {/* One toggle per service: colour when it's yours, grey when not. The
-          ⋯ button is a sibling of the tile, not inside it - a button can't
+          pencil button is a sibling of the tile, not inside it - a button can't
           hold another button. */}
       <ul className="service-grid">
         {services.map((service) => {
@@ -101,15 +103,16 @@ export function MyServices({ collapsible = true }: { collapsible?: boolean }) {
               {on && (
                 <button
                   type="button"
-                  className="service-tile__more"
-                  aria-label={`${service.name} plan and options`}
+                  className="service-tile__edit"
+                  aria-label={`Edit ${service.name}: plan, billing and renewal`}
+                  title={`Edit ${service.name}`}
                   aria-haspopup="dialog"
                   onClick={() => setEditing(service.slug)}
                 >
+                  {/* A pencil: this opens the service's settings to edit. */}
                   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <circle cx="5" cy="12" r="2" />
-                    <circle cx="12" cy="12" r="2" />
-                    <circle cx="19" cy="12" r="2" />
+                    <path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                    <path d="m15 5 4 4" />
                   </svg>
                 </button>
               )}

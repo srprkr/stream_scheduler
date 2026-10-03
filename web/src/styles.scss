@@ -1223,6 +1223,36 @@ body {
   }
 }
 
+// The plan's wait setting: the choice, each option priced, and what the
+// chosen plan costs against keeping everything running.
+.max-wait {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+  color: var(--muted);
+
+  label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  select {
+    padding: 4px 8px;
+    font: inherit;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  &__impact {
+    margin: 0;
+  }
+}
+
 // --- detail dialog --------------------------------------------------------
 
 .sheet {
@@ -1838,7 +1868,7 @@ $filters-fold: 1100px;
   gap: 12px;
 }
 
-// Positions the ⋯ button over its tile's corner.
+// Positions the edit pencil over its tile's corner.
 .service-grid__cell {
   position: relative;
   width: 64px;
@@ -1962,9 +1992,9 @@ $filters-fold: 1100px;
     outline-offset: 3px;
   }
 
-  // Reopens a subscribed service's options. It sits on the tile's corner,
-  // where the library panel puts its count badge.
-  &__more {
+  // A pencil on a subscribed tile's corner, where the library panel puts
+  // its count badge: opens the service's plan, billing and renewal.
+  &__edit {
     position: absolute;
     top: -8px;
     right: -8px;
@@ -1980,9 +2010,13 @@ $filters-fold: 1100px;
     cursor: pointer;
 
     svg {
-      width: 14px;
-      height: 14px;
-      fill: currentColor;
+      width: 12px;
+      height: 12px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
     &:hover {
       border-color: var(--text);

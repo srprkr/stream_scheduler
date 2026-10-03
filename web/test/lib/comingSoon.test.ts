@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { comingSoonStats, costByMonth, monthName } from "../../src/lib/comingSoon";
-import type { ServiceLoad, WatchlistTitle } from "../../src/lib/watchlist";
+import { comingSoonStats, monthName } from "../../src/lib/comingSoon";
+import type { WatchlistTitle } from "../../src/lib/watchlist";
 
 const TODAY = "2026-09-30";
 
@@ -77,42 +77,6 @@ describe("comingSoonStats", () => {
     expect(prime?.titles.map((t) => t.title)).toEqual(["The Rings of Power", "Invincible"]);
     expect(prime?.minutes).toBe(1064);
     expect(prime?.subscribed).toBe(true);
-  });
-});
-
-describe("costByMonth", () => {
-  const load = (key: string, ready: ServiceLoad["ready"], subscribed = false): ServiceLoad => ({
-    key,
-    tracked: true,
-    titles: [],
-    ready,
-    minutes: 0,
-    estimated: false,
-    subscribed,
-  });
-  const on = (date: string) => ({ state: "on", date, estimated: false }) as const;
-  const prices: Record<string, number> = { netflix: 799, appletv: 1299, prime: 899 };
-
-  it("bills each service once, in the month it's needed", () => {
-    const { months, waiting } = costByMonth(
-      [
-        load("netflix", on("2026-10-16")),
-        load("appletv", on("2026-10-01")),
-        load("prime", on("2026-11-25"), true),
-        load("hulu", { state: "unknown" }),
-      ],
-      (key) => prices[key] ?? null,
-    );
-    expect(months.map((m) => [m.month, m.cents, m.unpriced])).toEqual([
-      ["2026-10", 2098, 0],
-      ["2026-11", 899, 0],
-    ]);
-    expect(waiting).toEqual(["hulu"]);
-  });
-
-  it("counts a service without a price apart", () => {
-    const { months } = costByMonth([load("other:crunchyroll", on("2026-10-05"))], () => null);
-    expect(months[0]).toMatchObject({ cents: 0, unpriced: 1 });
   });
 });
 

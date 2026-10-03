@@ -1,7 +1,6 @@
-import { useQuery } from "@apollo/client/react";
 import { Link } from "react-router";
 
-import { graphql } from "../generated";
+import { useRotationPlan } from "../hooks/useRotationPlan";
 import { useStored } from "../hooks/useStored";
 import { useSubscriptions } from "../hooks/useSubscriptions";
 import { useWatchlist } from "../hooks/useWatchlist";
@@ -10,27 +9,9 @@ import { listTitles } from "../lib/replaces";
 import { addDays, renewalAdvice, renewalsBetween, type RenewalAdvice } from "../lib/renewals";
 import { localToday, when } from "../lib/seasons";
 import { monthlyCents } from "../lib/subscriptions";
-import { watchlistByService } from "../lib/watchlist";
+import { MaxWait } from "./MaxWait";
 import { Panel } from "./Panel";
 import { ServiceLogo } from "./ServiceLogo";
-
-// The same plan fields as MyServices: see the note in ComingSoonStats.
-const RENEWAL_SERVICES = graphql(`
-  query RenewalServices {
-    providers {
-      ...ServiceLogo
-      plans {
-        id
-        leaveOutByDefault
-        name
-        monthlyCents
-        hasAds
-        isDefault
-        note
-      }
-    }
-  }
-`);
 
 /** The horizon the release feed covers, and so the one advice can see. */
 const WINDOW_DAYS = 90;
@@ -58,8 +39,9 @@ export function Renewals() {
   const today = localToday();
   const until = addDays(today, WINDOW_DAYS);
   const mine = useSubscriptions();
-  const providers = useQuery(RENEWAL_SERVICES).data?.providers ?? [];
-  const { titles } = useWatchlist();
+  const rotation = useRotationPlan();
+  const { plan, providers } = rotation;
+  const { serviceInfo } = useWatchlist();
   const [lead, setLead] = useStored(
     "stream-scheduler:reminder-lead-days",
     DEFAULT_LEAD_DAYS,
@@ -71,8 +53,8 @@ export function Renewals() {
 
   if (mine.length === 0) return null;
 
-  const subscribed = new Set(mine.map((s) => s.slug));
-  const { services } = watchlistByService([...titles.values()], subscribed, today);
+  const nameOf = (key: string) =>
+    providers.find((p) => p.slug === key)?.name ?? serviceInfo.get(key)?.name ?? key;
 
   // Every renewal in the window, with its advice. The list shows each
   // service's next one; the calendar file gets them all.
@@ -95,7 +77,6 @@ export function Renewals() {
             plans.find((p) => p.isDefault)
           )?.monthlyCents ?? null)
         : monthlyCents(sub, plans);
-    const onService = services.find((s) => s.key === sub.slug)?.titles ?? [];
     for (const renewsOn of renewalsBetween(sub.billing, today, until)) {
       renewals.push({
         slug: sub.slug,
@@ -105,9 +86,11 @@ export function Renewals() {
         yearly: sub.billing.cycle === "annual",
         advice: renewalAdvice({
           service: name,
+          key: sub.slug,
           billing: sub.billing,
           renewsOn,
-          titles: onService,
+          plan,
+          nameOf,
           monthlyCents: monthly,
           today,
         }),
@@ -140,7 +123,9 @@ export function Renewals() {
   return (
     <Panel id="renewals" className="renewals" title="Renewals">
       <p className="panel__lede">
-        When each service renews, and whether your watchlist says to keep it or pause it first.
+        When each service renews, and whether to keep it or pause it first. The advice follows a
+        plan: one service a month, each taking its turn when it has a month of your watchlist ready
+        to binge.
       </p>
 
       <ul className="renewals__list">
@@ -166,10 +151,13 @@ export function Renewals() {
 
       {unset.length > 0 && (
         <p className="renewals__note">
-          No renewal day yet for {listTitles(unset)}: set one with ⋯ in Your services on{" "}
+          No renewal day yet for {listTitles(unset)}: set one with the pencil in Your services on{" "}
           <Link to="/insights">Insights</Link>.
         </p>
       )}
+
+      {/* The plan's one dial: how long a title may wait for a fuller month. */}
+      <MaxWait rotation={rotation} />
 
       {renewals.length > 0 && (
         <div className="renewals__calendar">

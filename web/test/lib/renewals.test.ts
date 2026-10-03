@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { planRotation } from "../../src/lib/planner";
 import { nextRenewal, renewalAdvice, renewalsBetween } from "../../src/lib/renewals";
 
 const TODAY = "2026-09-30";
@@ -43,87 +44,101 @@ describe("renewalsBetween", () => {
 });
 
 describe("renewalAdvice", () => {
+  // Prime has 24 h ready now, Netflix 22 h: Prime's month first, then Netflix's.
+  const plan = planRotation(
+    [
+      {
+        key: "prime",
+        titles: [{ id: "r", title: "Reacher", minutes: 1440, startsOn: null, readyOn: TODAY }],
+      },
+      {
+        key: "netflix",
+        titles: [{ id: "d", title: "Dark", minutes: 1320, startsOn: null, readyOn: TODAY }],
+      },
+      {
+        key: "hulu",
+        titles: [{ id: "s", title: "Shogun", minutes: 60, startsOn: null, readyOn: null }],
+      },
+    ],
+    { today: TODAY, minutesPerMonth: 1200, maxWaitDays: 90 },
+  );
+  const names: Record<string, string> = { prime: "Prime Video", netflix: "Netflix", hulu: "Hulu" };
   const base = {
-    service: "Netflix",
     billing: monthly(14),
-    renewsOn: "2026-10-14",
+    plan,
+    nameOf: (k: string) => names[k] ?? k,
     monthlyCents: 899,
     today: TODAY,
   };
-  const on = (date: string, estimated = false) => ({ state: "on", date, estimated }) as const;
 
-  it("asks about titles already out, and says what comes after", () => {
+  it("keeps a service in its month of the plan", () => {
     const advice = renewalAdvice({
       ...base,
-      titles: [
-        { title: "Wednesday", ready: { state: "now" } },
-        { title: "Norm", ready: on("2026-12-20") },
-      ],
+      service: "Prime Video",
+      key: "prime",
+      renewsOn: "2026-10-14",
     });
     expect(advice).toEqual({
-      action: "decide",
-      text: "Still watching Wednesday? Keep it. Otherwise pause: nothing else on your watchlist is all out until Dec 20 (Norm). Pausing saves $8.99.",
+      action: "keep",
+      text: "Keep it: this is Prime Video's month in your plan, for Reacher.",
     });
   });
 
-  it("judges a later renewal from its own date, not today's", () => {
-    // Norm is out Oct 16: inside October's paid month, but already out by
-    // November's renewal.
-    const norm = [{ title: "Norm", ready: on("2026-10-16") }];
-    expect(renewalAdvice({ ...base, titles: norm }).action).toBe("keep");
-    const november = renewalAdvice({ ...base, renewsOn: "2026-11-14", titles: norm });
-    expect(november.action).toBe("decide");
-    expect(november.text).toContain("Still watching Norm?");
-  });
-
-  it("keeps a service with something out inside the month it pays for", () => {
-    const advice = renewalAdvice({ ...base, titles: [{ title: "Norm", ready: on("2026-10-16") }] });
-    expect(advice.action).toBe("keep");
-    expect(advice.text).toContain("Norm is all out Oct 16");
-  });
-
-  it("pauses until the first thing is out, past the paid month", () => {
+  it("pauses a service until its turn, and says whose month it is", () => {
     const advice = renewalAdvice({
       ...base,
-      titles: [
-        { title: "Stranger Things", ready: on("2026-12-31", true) },
-        { title: "Norm", ready: on("2026-11-20") },
-      ],
+      service: "Netflix",
+      key: "netflix",
+      renewsOn: "2026-10-14",
     });
     expect(advice).toEqual({
       action: "pause",
-      text: "Pause it: nothing on your watchlist is all out until Nov 20 (Norm). Resubscribe then. Pausing saves $8.99.",
+      text: "Pause it: Netflix's next month in your plan starts Oct 30, for Dark. This month is for Prime Video. Pausing saves $8.99.",
     });
   });
 
-  it("says when what it's waiting on has no dates", () => {
+  it("keeps the same service on a later renewal inside its turn", () => {
     const advice = renewalAdvice({
       ...base,
-      titles: [{ title: "Invincible", ready: { state: "unknown" } }],
+      service: "Netflix",
+      key: "netflix",
+      renewsOn: "2026-11-14",
     });
-    expect(advice.text).toBe("Pause it: Invincible has no dates yet. Pausing saves $8.99.");
+    expect(advice.action).toBe("keep");
+  });
+
+  it("pauses a service whose titles aren't enough for a month yet", () => {
+    const advice = renewalAdvice({ ...base, service: "Hulu", key: "hulu", renewsOn: "2026-10-14" });
+    expect(advice.action).toBe("pause");
+    expect(advice.text).toContain("Shogun isn't enough for a month yet, or has no dates.");
   });
 
   it("asks about a service with nothing on the watchlist", () => {
-    expect(renewalAdvice({ ...base, titles: [] }).text).toBe(
-      "Nothing on your watchlist is on Netflix. Pause or cancel it? Pausing saves $8.99.",
+    const advice = renewalAdvice({
+      ...base,
+      service: "Peacock",
+      key: "peacock",
+      renewsOn: "2026-10-14",
+    });
+    expect(advice.text).toBe(
+      "Nothing on your watchlist needs Peacock. Pause or cancel it? Pausing saves $8.99.",
     );
   });
 
-  it("shows the break-even for an annual renewal", () => {
+  it("shows how much of the year the plan needs an annual service, and the break-even", () => {
     const advice = renewalAdvice({
       ...base,
-      service: "HBO Max",
+      service: "Netflix",
+      key: "netflix",
       billing: { cycle: "annual", renewsOn: "2027-03-02", cents: 18499 },
       renewsOn: "2027-03-02",
       monthlyCents: 1849,
-      titles: [],
     });
-    expect(advice.action).toBe("decide");
-    expect(advice.text).toBe(
-      "HBO Max's annual plan renews Mar 2, 2027. At $184.99 a year against $18.49 a month, " +
-        "the annual plan only saves money if you'd keep HBO Max about 10 months or more a year. " +
-        "Nothing on your watchlist is on HBO Max.",
-    );
+    expect(advice).toEqual({
+      action: "decide",
+      text:
+        "Netflix's annual plan renews Mar 2, 2027. The plan needs Netflix for 1 month of the year ahead. " +
+        "At $184.99 a year against $18.49 a month, the annual plan only saves money if you'd keep it about 10 months or more.",
+    });
   });
 });
