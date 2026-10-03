@@ -208,6 +208,13 @@ type Series implements MediaItem {
   onDisc: Boolean!
   seasonCount: Int
   nextSeason: SeasonSchedule
+
+  """
+  The tracked services the series was made for, by its network: where its
+  seasons land, known even before a new show has a date or streams anywhere.
+  Empty for networks the app doesn't track.
+  """
+  madeFor: [Provider!]!
 }
 
 """

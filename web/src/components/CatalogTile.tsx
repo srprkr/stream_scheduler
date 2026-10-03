@@ -12,6 +12,11 @@ export interface CatalogItem {
   posterUrl?: string | null;
   /** Undefined while it's still loading: the slot keeps its height, empty. */
   availableOn: readonly LogoProvider[] | undefined;
+  /**
+   * Services it's still to arrive on, shown after the current ones just the
+   * same - where it sits (a "Coming soon" section) already says when.
+   */
+  comingTo?: readonly LogoProvider[];
   /** On DVD or Blu-ray: Own/Want if so, Watchlist if it's streaming only. */
   onDisc: boolean;
 }
@@ -41,15 +46,18 @@ export function CatalogTile({
    */
   flagNotStreaming?: boolean;
 }) {
+  // Where it streams, then where it's coming - each service once: a new
+  // season of a show on Prime is still just Prime.
+  const logos = [...(item.availableOn ?? []), ...(item.comingTo ?? [])].filter(
+    (p, i, all) => all.findIndex((x) => x.id === p.id) === i,
+  );
   return (
     <li className="shelf__item">
       {/* Renders even while loading, at a fixed height, so every poster in
           a row starts on the same line whatever its slot is showing. */}
       <div className="shelf__services">
-        {item.availableOn && item.availableOn.length > 0 && (
-          <ProviderLogos providers={item.availableOn} />
-        )}
-        {flagNotStreaming && item.availableOn?.length === 0 && (
+        {logos.length > 0 && <ProviderLogos providers={logos} />}
+        {flagNotStreaming && item.availableOn?.length === 0 && logos.length === 0 && (
           <span className="shelf__unhosted">Not streaming</span>
         )}
       </div>

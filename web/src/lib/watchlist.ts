@@ -23,6 +23,11 @@ export interface WatchlistTitle {
    * or a new series before it premieres. Often its only services so far.
    */
   upcoming?: readonly { slug: string; availableFrom: string; bingeableFrom?: string | null }[];
+  /**
+   * Series only: the tracked services its network makes it for - where a
+   * season will land even before it has a date.
+   */
+  madeFor?: readonly { slug: string }[];
 }
 
 /** One title under a service, with when it can be watched through. */
@@ -97,6 +102,9 @@ export function watchlistByService(
       ...upcoming
         .filter((u) => !onNow.has(u.slug))
         .map(({ slug }) => ({ key: slug, tracked: true, entry: arriving(slug) })),
+      // The network's service, for a series nothing else places yet: its
+      // next season's readiness, often undated, under the service it's for.
+      ...(title.madeFor ?? []).map(({ slug }) => ({ key: slug, tracked: true, entry: here })),
       ...otherServices.map(({ id }) => ({ key: id, tracked: false, entry: here })),
     ];
     // Several arrivals on one service count once.
@@ -165,14 +173,31 @@ export function soonestArrival(title: WatchlistTitle): string | null {
 }
 
 /**
- * Which half of the watchlist page a title belongs in. "now" only when it
- * streams somewhere today and nothing more is coming; a series still airing
- * waits on its finale, and a film on its way waits on its arrival.
+ * Which half of the watchlist page a title belongs in. "now" once it has
+ * premiered: a film that has arrived, a season that has started - even one
+ * still airing weekly - or a show with nothing more coming. "coming" until
+ * then, or while there's no date. (When a title is *completely* out is a
+ * separate question - see stillToCome - for the stats and the plan.)
  */
 export function watchlistGroup(title: WatchlistTitle, today: string): "now" | "coming" {
-  return streamsNow(title) && readiness(title.nextSeason, today).state === "now" ? "now" : "coming";
+  if (title.nextSeason) {
+    const premiere = title.nextSeason.premieresOn;
+    return premiere && premiere <= today ? "now" : "coming";
+  }
+  return streamsNow(title) ? "now" : "coming";
+}
+
+/**
+ * Whether a title has something still to finish: a film not yet arrived, a
+ * season not yet premiered or still airing. What the Coming Soon stats count
+ * and the plan waits for - a weekly season is all out at its finale, not
+ * its premiere.
+ */
+export function stillToCome(title: WatchlistTitle, today: string): boolean {
+  return titleReadiness(title, today).state !== "now";
 }
 
 function streamsNow(title: WatchlistTitle): boolean {
+  // madeFor doesn't count: it's where a series will be, not where it is.
   return title.availableOn.length > 0 || (title.otherServices ?? []).length > 0;
 }

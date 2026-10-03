@@ -52,10 +52,21 @@ export function WatchlistMini({ onOpen }: { onOpen: (id: string) => void }) {
                 : group === "now" || !t.nextSeason
                   ? "Out now"
                   : seasonLine(t.nextSeason, today);
+            // Where it streams; for a title still coming, where it's going
+            // too. A title out now shows where it's out - plus, for a season
+            // just premiered, its own service while watch data catches up.
             const services = detail
-              ? [...detail.availableOn, ...detail.upcoming.map((u) => u.provider)].filter(
-                  (p, i, all) => all.findIndex((x) => x.slug === p.slug) === i,
-                )
+              ? [
+                  ...detail.availableOn,
+                  ...(group === "coming"
+                    ? [
+                        ...detail.upcoming.map((u) => u.provider),
+                        ...(detail.__typename === "Series" ? detail.madeFor : []),
+                      ]
+                    : detail.__typename === "Series" && detail.nextSeason
+                      ? detail.madeFor
+                      : []),
+                ].filter((p, i, all) => all.findIndex((x) => x.slug === p.slug) === i)
               : [];
             return (
               <li key={entry.id} className="watchlist-mini__row">

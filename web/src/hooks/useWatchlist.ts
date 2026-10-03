@@ -32,6 +32,9 @@ const WATCHLIST_DETAILS = graphql(`
         }
       }
       ... on Series {
+        madeFor {
+          ...ServiceLogo
+        }
         nextSeason {
           ...SeasonScheduleFields
           watchTime {
@@ -85,8 +88,14 @@ export function useWatchlist() {
         bingeableFrom: u.bingeableFrom,
       })),
       nextSeason,
+      madeFor: detail.__typename === "Series" ? detail.madeFor : [],
     });
-    for (const p of [...detail.availableOn, ...detail.upcoming.map((u) => u.provider)]) {
+    const madeFor = detail.__typename === "Series" ? detail.madeFor : [];
+    for (const p of [
+      ...detail.availableOn,
+      ...detail.upcoming.map((u) => u.provider),
+      ...madeFor,
+    ]) {
       serviceInfo.set(p.slug, { name: p.name, logoUrl: p.logoUrl });
     }
     for (const o of detail.otherServices)

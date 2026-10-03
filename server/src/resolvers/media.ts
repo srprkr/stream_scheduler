@@ -1,5 +1,5 @@
 import type { Context } from "../context.js";
-import { isoDate } from "../dates.js";
+import { addDays, isoDate } from "../dates.js";
 import type { MediaRecord, ProviderRecord, ReleaseRecord } from "../sources/types.js";
 import type {
   MediaItemResolvers,
@@ -22,6 +22,24 @@ export const MediaItem: MediaItemResolvers = {
 async function full(m: MediaRecord, ctx: Context): Promise<MediaRecord> {
   if (!m.summary) return m;
   return (await ctx.loaders.media.load(m.id)) ?? m;
+}
+
+/** How long a premiere vouches for a service, while watch data catches up. */
+export const ARRIVAL_GRACE_DAYS = 60;
+
+/**
+ * Services a film premiered on recently, by its release-date notes. TMDB's
+ * watch-provider data (from JustWatch) lags a premiere by days - Winter K2
+ * reached Apple TV on Oct 1 and was listed nowhere two days later - which
+ * left a just-arrived film neither upcoming nor streaming. The note fills
+ * that gap, for a limited time: an old premiere says nothing about where a
+ * film streams now, since licences move.
+ */
+export function recentlyArrived(arrivals: readonly ReleaseRecord[], today: string): string[] {
+  const since = isoDate(addDays(new Date(Date.parse(today)), -ARRIVAL_GRACE_DAYS));
+  return arrivals
+    .filter((r) => r.availableFrom <= today && r.availableFrom >= since)
+    .map((r) => r.providerSlug);
 }
 
 /**
@@ -67,7 +85,9 @@ const shared = {
   // provider those slugs name - two loader calls, however long the list.
   availableOn: async (m, _a, ctx) => {
     const { slugs } = await ctx.loaders.availability.load(m.id);
-    const providers = await ctx.loaders.provider.loadMany(slugs);
+    const arrivals = m.kind === "MOVIE" ? await ctx.loaders.filmArrivals.load(m.id) : [];
+    const all = [...slugs, ...recentlyArrived(arrivals, isoDate(ctx.now))];
+    const providers = await ctx.loaders.provider.loadMany([...new Set(all)]);
     return providers.filter((p): p is ProviderRecord => p !== null && !(p instanceof Error));
   },
   // The same loader call as availableOn, so selecting both costs nothing more.
@@ -88,6 +108,12 @@ export const Movie: MovieResolvers = {
 export const Series: SeriesResolvers = {
   ...shared,
   nextSeason: (m, _a, ctx) => ctx.loaders.nextSeason.load(m.id),
+  // The same loader upcoming uses for a series, so asking for both costs one.
+  madeFor: async (m, _a, ctx) => {
+    const slugs = await ctx.loaders.seriesServices.load(m.id);
+    const providers = await ctx.loaders.provider.loadMany(slugs);
+    return providers.filter((p): p is ProviderRecord => p !== null && !(p instanceof Error));
+  },
   seasonCount: async (m, _a, ctx) => (await full(m, ctx)).seasonCount,
   totalRuntime: (m, _a, ctx) => ctx.loaders.runtime.load(m.id),
 };

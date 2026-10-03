@@ -74,7 +74,7 @@ export function WatchlistPage() {
     .sort((a, b) => a.order - b.order)
     .map((x) => x.entry);
 
-  const tile = (entry: (typeof entries)[number]) => {
+  const tile = (entry: (typeof entries)[number], coming: boolean) => {
     const detail = byId.get(entry.id);
     const t = titles.get(entry.id);
     // A film on its way says when, where a series says where its season is.
@@ -91,6 +91,21 @@ export function WatchlistPage() {
           // rather than flickering through Own/Want.
           onDisc: detail?.onDisc ?? false,
           availableOn: detail?.availableOn,
+          // The logos say where to watch it. Under Coming soon that's where
+          // it's going too: a film announced for Netflix, or a series' own
+          // service before it has a date. Under Watch now, where it is - and
+          // for a season that has just premiered, its own service, in case
+          // the watch data hasn't caught up. Never a service it's only
+          // coming to later, like a film out on Prime that reaches HBO Max
+          // next year.
+          comingTo: coming
+            ? [
+                ...(detail?.upcoming.map((u) => u.provider) ?? []),
+                ...(detail?.__typename === "Series" ? detail.madeFor : []),
+              ]
+            : detail?.__typename === "Series" && detail.nextSeason
+              ? detail.madeFor
+              : [],
           nextSeason: detail?.__typename === "Series" ? detail.nextSeason : null,
         }}
         note={arrival ? `Arrives ${when(arrival, today)}` : null}
@@ -124,16 +139,16 @@ export function WatchlistPage() {
       <Renewals />
 
       {[
-        { heading: "Watch now", list: watchNow },
-        { heading: "Coming soon", list: comingSoon },
+        { heading: "Available now", list: watchNow, coming: false },
+        { heading: "Coming soon", list: comingSoon, coming: true },
       ].map(
-        ({ heading, list }) =>
+        ({ heading, list, coming }) =>
           list.length > 0 && (
             <section key={heading} className="shelf">
               <h2 className="shelf__title">
                 {heading} <span className="shelf__count">{list.length}</span>
               </h2>
-              <ul className="shelf__grid">{list.map(tile)}</ul>
+              <ul className="shelf__grid">{list.map((e) => tile(e, coming))}</ul>
             </section>
           ),
       )}

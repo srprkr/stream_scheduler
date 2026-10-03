@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { SeasonSchedule } from "../../src/lib/seasons";
 import {
+  stillToCome,
   titleReadiness,
   watchlistByService,
   watchlistGroup,
@@ -134,6 +135,18 @@ describe("watchlistByService", () => {
       expect(prime?.titles[0]?.arrivesOn).toBeNull();
     });
 
+    it("places an undated new series under the service its network makes it for", () => {
+      const newShow = { ...coming(title("New Show", null), {}), madeFor: [{ slug: "netflix" }] };
+      const { services, unhosted } = summarise([newShow]);
+      expect(unhosted).toEqual([]);
+      expect(services.map((s) => [s.key, s.ready])).toEqual([["netflix", { state: "unknown" }]]);
+    });
+
+    it("lists a series once when it already streams on its own service", () => {
+      const both = { ...rings, madeFor: [{ slug: "prime" }] };
+      expect(summarise([both]).services[0]?.titles).toHaveLength(1);
+    });
+
     it("can't be dated while any title is undated", () => {
       const undated = coming(title("Invincible", 400, "prime"), {});
       expect(summarise([rings, undated]).services[0]?.ready).toEqual({ state: "unknown" });
@@ -150,12 +163,26 @@ describe("watchlistGroup", () => {
     expect(watchlistGroup(title("Reacher", 60, "prime"), TODAY)).toBe("now");
   });
 
-  it("keeps a season still airing under Coming soon", () => {
+  it("puts a season that has premiered under Watch now, even while it airs", () => {
     const airing = coming(title("The Boys", 60, "prime"), {
       premieresOn: "2026-09-01",
       fullyOutOn: "2026-10-20",
     });
-    expect(watchlistGroup(airing, TODAY)).toBe("coming");
+    expect(watchlistGroup(airing, TODAY)).toBe("now");
+    // ...but it isn't all out until the finale, which the stats and plan wait for.
+    expect(stillToCome(airing, TODAY)).toBe(true);
+  });
+
+  it("puts a premiered new series under Watch now before watch data lists it", () => {
+    const fresh = coming(title("New Show", 60), { premieresOn: "2026-09-25" });
+    expect(watchlistGroup(fresh, TODAY)).toBe("now");
+  });
+
+  it("keeps a season that hasn't premiered under Coming soon", () => {
+    const next = coming(title("Stranger Things", 60, "netflix"), { premieresOn: "2026-11-26" });
+    expect(watchlistGroup(next, TODAY)).toBe("coming");
+    const undated = coming(title("Severance", 60, "appletv"), {});
+    expect(watchlistGroup(undated, TODAY)).toBe("coming");
   });
 
   it("keeps a film that's only on its way under Coming soon, dated by its arrival", () => {

@@ -230,6 +230,30 @@ describe("GraphQL layer", () => {
     });
   });
 
+  it("counts a film as streaming where it premiered, until watch data catches up", async () => {
+    // The fixture's clock runs 50 days behind, so media:4's Max premiere
+    // (45 days out on its clock) was 5 days ago - and watch data lists
+    // nothing yet, as with Winter K2.
+    const source = new FixtureSource(() => new Date(NOW.getTime() - 50 * 86_400_000));
+    vi.spyOn(source, "getAvailability").mockImplementation(async (ids) =>
+      ids.map(() => ({ slugs: [], others: [] })),
+    );
+    const { data, errors } = await run(
+      `{ mediaItem(id: "media:4") { availableOn { slug } upcoming { availableFrom } } }`,
+      source,
+    );
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({ mediaItem: { availableOn: [{ slug: "max" }], upcoming: [] } });
+  });
+
+  it("says which tracked service a series is made for", async () => {
+    const { data, errors } = await run(
+      `{ mediaItem(id: "media:5") { ... on Series { madeFor { slug } } } }`,
+    );
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({ mediaItem: { madeFor: [{ slug: "netflix" }] } });
+  });
+
   it("gives a weekly series its next season, dated like its release", async () => {
     const { data, errors } = await run(`{
       mediaItem(id: "media:5") {

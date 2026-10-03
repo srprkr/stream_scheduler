@@ -2,7 +2,7 @@ import type { Readiness } from "./seasons";
 import {
   titleReadiness,
   watchlistByService,
-  watchlistGroup,
+  stillToCome,
   type ServiceLoad,
   type WatchlistTitle,
 } from "./watchlist";
@@ -44,7 +44,7 @@ export function comingSoonStats(
   subscribed: ReadonlySet<string>,
   today: string,
 ): ComingSoonStats {
-  const coming = titles.filter((t) => watchlistGroup(t, today) === "coming");
+  const coming = titles.filter((t) => stillToCome(t, today));
   const byMonth = new Map<string, MonthHours>();
   const undated: string[] = [];
 

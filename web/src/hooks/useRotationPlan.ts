@@ -5,7 +5,7 @@ import { planRotation, type PlanService } from "../lib/planner";
 import { localToday } from "../lib/seasons";
 import { DEFAULT_HOURS_PER_MONTH, HOURS_PER_MONTH_KEY } from "../lib/stats";
 import { monthlyCents, monthlySpend } from "../lib/subscriptions";
-import { watchlistByService, watchlistGroup } from "../lib/watchlist";
+import { stillToCome, watchlistByService } from "../lib/watchlist";
 import { useStoredNumber } from "./useStored";
 import { useSubscriptions } from "./useSubscriptions";
 import { useWatchlist } from "./useWatchlist";
@@ -57,8 +57,7 @@ export function useRotationPlan() {
     key: s.key,
     titles: s.titles.map((st) => {
       const t = titles.get(st.id);
-      const runtime =
-        t && watchlistGroup(t, today) === "coming" ? t.comingRuntime : (t?.runtime ?? null);
+      const runtime = t && stillToCome(t, today) ? t.comingRuntime : (t?.runtime ?? null);
       return {
         id: st.id,
         title: st.title,
