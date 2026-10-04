@@ -25,6 +25,7 @@ const PLAN_SERVICES = graphql(`
         hasAds
         isDefault
         note
+        yearlyCents
       }
     }
   }
@@ -69,11 +70,16 @@ export function useRotationPlan() {
   }));
 
   const plansFor = (slug: string) => providers.find((p) => p.slug === slug)?.plans ?? [];
+  // What a plan month on a service adds. Nothing for one the user keeps
+  // whatever happens (left out of estimates, like Prime with shipping): it's
+  // paid for anyway, so a month of it in the plan costs nothing extra.
   const priceOf = (key: string) => {
     const sub = mine.find((s) => s.slug === key);
+    if (sub?.leftOut) return 0;
     if (sub) return monthlyCents(sub, plansFor(key));
     return plansFor(key).find((p) => p.isDefault)?.monthlyCents ?? null;
   };
+  const spend = monthlySpend(mine, plansFor);
   const planFor = (waitMonths: number) =>
     planRotation(planServices, {
       today,
@@ -87,7 +93,10 @@ export function useRotationPlan() {
     priceOf,
     plansFor,
     providers,
-    payingNow: monthlySpend(mine, plansFor).cents,
+    payingNow: spend.cents,
+    /** Monthly cost of the services kept whatever happens, and their slugs. */
+    alwaysOn: spend.leftOutCents,
+    alwaysOnSlugs: mine.filter((s) => s.leftOut).map((s) => s.slug),
     hoursPerMonth,
     maxWaitMonths,
     setMaxWaitMonths,

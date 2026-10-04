@@ -34,6 +34,7 @@ const SERVICES = graphql(`
         hasAds
         isDefault
         note
+        yearlyCents
       }
     }
   }
@@ -273,6 +274,9 @@ function BillingPicker({
   const { billing } = subscription;
   const set = (next: Billing) => subscriptions.setBilling(service.slug, next);
   const id = `billing-${service.slug}`;
+  const { choice } = subscription;
+  const currentPlan =
+    "planId" in choice ? service.plans.find((p) => p.id === choice.planId) : undefined;
 
   return (
     <>
@@ -286,7 +290,13 @@ function BillingPicker({
           set(
             e.target.value === "annual"
               ? // A year from today: a guess to correct, like the monthly day.
-                { cycle: "annual", renewsOn: addDays(today, 365), cents: null }
+                // The price starts at the plan's published yearly one, if
+                // it's sold that way (Amazon Prime: $139).
+                {
+                  cycle: "annual",
+                  renewsOn: addDays(today, 365),
+                  cents: currentPlan?.yearlyCents ?? null,
+                }
               : { cycle: "monthly", day: Number(today.slice(8, 10)) },
           )
         }

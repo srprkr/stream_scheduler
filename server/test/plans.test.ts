@@ -19,6 +19,13 @@ describe("PLANS", () => {
         expect(new Set(plans.map((p) => p.id)).size).toBe(plans.length);
       });
 
+      it("prices a yearly plan in whole cents, below twelve months of the monthly", () => {
+        for (const p of plans.filter((p) => p.yearlyCents !== null)) {
+          expect(Number.isInteger(p.yearlyCents)).toBe(true);
+          expect(p.yearlyCents).toBeLessThan(p.monthlyCents * 12);
+        }
+      });
+
       it("lists plans cheapest first, in whole cents", () => {
         const prices = plans.map((p) => p.monthlyCents);
         expect(prices).toEqual([...prices].sort((a, b) => a - b));

@@ -24,17 +24,32 @@ export interface PlanRecord {
 
   /** What sets the plan apart beyond price and ads, when anything does. */
   note: string | null;
+
+  /**
+   * The published price for a year paid up front, for a plan also sold that
+   * way. Null for monthly-only plans. Checked on its own date (below), since
+   * it was added after the monthly prices.
+   */
+  yearlyCents: number | null;
 }
 
 /** When every price below was last checked. */
 export const PRICES_CHECKED_ON = "2026-09-26";
+// Amazon Prime's yearly $139 was checked on 2026-10-03 (dealnews.com,
+// subscriptionpriceguide.com): $14.99 a month or $139 a year, no regular
+// six-month option.
 
 const plan = (
   id: string,
   name: string,
   monthlyCents: number,
   hasAds: boolean,
-  extra: { isDefault?: boolean; leaveOutByDefault?: boolean; note?: string } = {},
+  extra: {
+    isDefault?: boolean;
+    leaveOutByDefault?: boolean;
+    note?: string;
+    yearlyCents?: number;
+  } = {},
 ): PlanRecord => ({
   id,
   name,
@@ -43,6 +58,7 @@ const plan = (
   isDefault: extra.isDefault ?? false,
   leaveOutByDefault: extra.leaveOutByDefault ?? false,
   note: extra.note ?? null,
+  yearlyCents: extra.yearlyCents ?? null,
 });
 
 export const PLANS: Record<string, PlanRecord[]> = {
@@ -68,11 +84,14 @@ export const PLANS: Record<string, PlanRecord[]> = {
     plan("with-prime", "Amazon Prime", 1499, true, {
       isDefault: true,
       leaveOutByDefault: true,
-      note: "Includes Prime shipping and other Prime benefits",
+      yearlyCents: 13900,
+      note: "Includes Prime shipping and other Prime benefits. Also sold yearly for $139: choose Billed › Yearly below.",
     }),
+    // No single yearly price: Prime can be paid yearly, but the ad-free
+    // add-on is billed monthly on top, so this one takes a custom price.
     plan("with-prime-ad-free", "Amazon Prime + ad-free add-on", 1998, false, {
       leaveOutByDefault: true,
-      note: "Includes Prime shipping and other Prime benefits",
+      note: "Includes Prime shipping and other Prime benefits. With Prime paid yearly, the add-on is still $4.99 a month: use a custom price.",
     }),
   ],
 

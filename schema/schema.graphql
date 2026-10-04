@@ -121,6 +121,9 @@ type Plan {
 
   "What sets this plan apart beyond price and ads, when anything does."
   note: String
+
+  "In cents: the published price for a year paid up front. Null for monthly-only plans."
+  yearlyCents: Int
 }
 
 # -----------------------------------------------------------------------------
