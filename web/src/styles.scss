@@ -1420,6 +1420,115 @@ body {
   }
 }
 
+// Insights at a glance: four headline figures in a row, two by two on a
+// narrow screen. The figure leads; the label says what it counts.
+.glance {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+
+  @media (max-width: 720px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  &__tile {
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+
+    p {
+      margin: 0;
+    }
+  }
+  &__figure {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  &__unit {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  &__label {
+    margin-top: 2px;
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+}
+
+// Traffic-light text for a figure's level (levels.ts): green for healthy,
+// orange to watch, red past the mark. Light tints of each, legible as text
+// on the dark surface.
+.level {
+  &[data-level="good"] {
+    color: var(--soon);
+  }
+  &[data-level="warn"] {
+    color: #fb923c;
+  }
+  &[data-level="bad"] {
+    color: #f87171;
+  }
+}
+
+// Paths forward: numbered steps, each with its evidence underneath and what
+// it saves on the right.
+.paths {
+  margin-bottom: 24px;
+
+  &__list {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: path;
+  }
+
+  &__item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 4px 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+
+    p {
+      margin: 0;
+    }
+  }
+
+  &__title {
+    font-weight: 600;
+
+    &::before {
+      counter-increment: path;
+      content: counter(path) ". ";
+      color: var(--muted);
+    }
+  }
+  &__detail {
+    margin-top: 2px;
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+  &__saves {
+    font-size: 0.8125rem;
+    color: var(--muted);
+    white-space: nowrap;
+
+    strong {
+      font-size: 1rem;
+      color: var(--soon);
+    }
+  }
+}
+
 // --- detail dialog --------------------------------------------------------
 
 .sheet {
