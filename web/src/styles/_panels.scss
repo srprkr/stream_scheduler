@@ -1,0 +1,91 @@
+// A card whose heading folds it away (Panel). The heading is the button, so
+// the whole title row is the target, with a chevron that turns when shut.
+.panel {
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  &__title {
+    margin: 0 0 4px;
+    font-size: 1.125rem;
+  }
+  &__lede {
+    margin: 0 0 14px;
+    font-size: 0.875rem;
+    color: var(--muted);
+  }
+
+  &__toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 4px;
+      border-radius: 4px;
+    }
+  }
+
+  &__chevron {
+    width: 18px;
+    height: 18px;
+    margin-left: auto;
+    fill: none;
+    stroke: var(--muted);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 140ms ease;
+  }
+  &__toggle:hover &__chevron {
+    stroke: var(--text);
+  }
+  &__toggle[aria-expanded="false"] &__chevron {
+    transform: rotate(-90deg);
+  }
+
+  // Shut, the card is just its heading: no gap left under it.
+  &:has(&__body[hidden]) &__title {
+    margin-bottom: 0;
+  }
+}
+
+.replaces {
+  &__detail {
+    min-height: 1.4em;
+    margin: 14px 0 0;
+    font-size: 0.875rem;
+    color: var(--muted);
+  }
+
+  // Its own line, apart from the services: these are the titles only the
+  // user's copy can play.
+  &__unhosted {
+    display: flex;
+    gap: 10px;
+    margin: 12px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 0.875rem;
+  }
+
+  &__mark {
+    color: #fbbf24;
+  }
+
+  // The tile whose titles are showing in the line below: marked in white,
+  // over the green that says "subscribed".
+  .service-tile[aria-pressed="true"] {
+    border-color: var(--text);
+  }
+}

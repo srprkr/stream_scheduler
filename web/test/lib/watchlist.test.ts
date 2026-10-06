@@ -159,11 +159,11 @@ describe("watchlistGroup", () => {
     { slug, availableFrom: date, bingeableFrom: date },
   ];
 
-  it("puts a title that's fully out under Watch now", () => {
+  it("puts a title that's fully out under Available now", () => {
     expect(watchlistGroup(title("Reacher", 60, "prime"), TODAY)).toBe("now");
   });
 
-  it("puts a season that has premiered under Watch now, even while it airs", () => {
+  it("puts a season that has premiered under Available now, even while it airs", () => {
     const airing = coming(title("The Boys", 60, "prime"), {
       premieresOn: "2026-09-01",
       fullyOutOn: "2026-10-20",
@@ -173,7 +173,7 @@ describe("watchlistGroup", () => {
     expect(stillToCome(airing, TODAY)).toBe(true);
   });
 
-  it("puts a premiered new series under Watch now before watch data lists it", () => {
+  it("puts a premiered new series under Available now before watch data lists it", () => {
     const fresh = coming(title("New Show", 60), { premieresOn: "2026-09-25" });
     expect(watchlistGroup(fresh, TODAY)).toBe("now");
   });
@@ -195,7 +195,7 @@ describe("watchlistGroup", () => {
     });
   });
 
-  it("puts a film already streaming under Watch now, wherever else it's going", () => {
+  it("puts a film already streaming under Available now, wherever else it's going", () => {
     const film = { ...title("Heat", 170, "hulu"), upcoming: arriving("netflix", "2026-11-01") };
     expect(watchlistGroup(film, TODAY)).toBe("now");
   });

@@ -1,0 +1,185 @@
+// --- layout ---------------------------------------------------------------
+
+.page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 48px 20px 80px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.brand {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  text-decoration: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--soon);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  // The gear, last in the row and so in the top-right corner.
+  &__settings {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    margin-left: 4px;
+    color: var(--muted);
+    border-radius: 999px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    &:hover,
+    &[aria-current] {
+      color: var(--text);
+    }
+    &[aria-current] {
+      background: var(--surface);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 2px;
+    }
+  }
+
+  &__link {
+    color: var(--muted);
+    text-decoration: none;
+    font-weight: 600;
+
+    &:hover {
+      color: var(--text);
+    }
+    &[aria-current] {
+      color: var(--text);
+      border-bottom: 2px solid var(--accent);
+    }
+  }
+}
+
+// Section tabs under the top nav. NavLink marks the current one with
+// aria-current="page", so the active style follows what screen readers hear.
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--border);
+
+  &__link {
+    margin-bottom: -1px;
+    padding: 8px 14px;
+    color: var(--muted);
+    text-decoration: none;
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+
+    &:hover {
+      color: var(--text);
+    }
+    &[aria-current="page"] {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: -2px;
+      border-radius: 6px;
+    }
+  }
+}
+
+.masthead {
+  margin-bottom: 40px;
+
+  h1 {
+    margin: 0 0 8px;
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    letter-spacing: -0.02em;
+  }
+  p {
+    margin: 0;
+    color: var(--muted);
+  }
+}
+
+// A page's heading on the left with its numbers box on the right, as on the
+// Library page. Stacks on a phone.
+.page-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+
+  .masthead {
+    margin-bottom: 0;
+  }
+  .stats {
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 720px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.state {
+  color: var(--muted);
+  padding: 40px 0;
+
+  &--error {
+    color: #f87171;
+  }
+}
+
+.footer {
+  display: grid;
+  gap: 16px;
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+  color: var(--muted);
+
+  p {
+    margin: 0;
+  }
+  a {
+    color: inherit;
+  }
+
+  &__credits {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  &__logo {
+    height: 14px;
+    display: block;
+    flex: none;
+  }
+}

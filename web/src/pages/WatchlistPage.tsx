@@ -52,8 +52,8 @@ export function WatchlistPage() {
   const { services, unhosted } = watchlistByService([...titles.values()], subscribed, today);
 
   // The two halves of the grid. A title whose details haven't loaded waits
-  // in Watch now rather than jumping sections; Coming soon runs soonest
-  // first, Watch now keeps the shelf's newest-first order.
+  // in Available now rather than jumping sections; Coming soon runs soonest
+  // first, Available now keeps the shelf's newest-first order.
   const groupOf = (id: string) => {
     const t = titles.get(id);
     return t ? watchlistGroup(t, today) : "now";
@@ -87,7 +87,7 @@ export function WatchlistPage() {
           availableOn: detail?.availableOn,
           // The logos say where to watch it. Under Coming soon that's where
           // it's going too: a film announced for Netflix, or a series' own
-          // service before it has a date. Under Watch now, where it is - and
+          // service before it has a date. Under Available now, where it is - and
           // for a season that has just premiered, its own service, in case
           // the watch data hasn't caught up. Never a service it's only
           // coming to later, like a film out on Prime that reaches HBO Max

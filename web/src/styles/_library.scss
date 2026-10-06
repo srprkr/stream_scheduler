@@ -1,0 +1,234 @@
+// --- library --------------------------------------------------------------
+
+.stats {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 32px;
+
+  p {
+    margin: 0;
+  }
+  &--loading {
+    color: var(--muted);
+  }
+
+  &__total {
+    font-size: 1rem;
+    color: var(--muted);
+  }
+  &__figure {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  &__months {
+    font-size: 0.9375rem;
+  }
+  &__note {
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+
+  &__input {
+    width: 4.5em;
+    padding: 2px 6px;
+    font: inherit;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.shelf-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  font-size: 0.8125rem;
+
+  // On a narrow tile, an expanded pill needs the room: the "Own" word gives
+  // way (min-width: 0 lets it shrink) while the checkbox itself never does.
+  &__own {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    color: var(--muted);
+    cursor: pointer;
+
+    input {
+      flex: none;
+      accent-color: var(--soon);
+      cursor: pointer;
+    }
+  }
+
+  &__icons {
+    display: flex;
+    flex: none;
+    gap: 6px;
+  }
+
+  // Pressed colours say which plan it is: amber for "buy a copy" (the same
+  // amber as elsewhere for things worth attention), green for "watch it on a
+  // service".
+  &__want[aria-pressed="true"] {
+    color: #fbbf24;
+    border-color: #fbbf24;
+  }
+  &__watch[aria-pressed="true"] {
+    color: var(--soon);
+    border-color: var(--soon);
+  }
+
+  // A streaming-only title has one option and the width to spell it out.
+  &--solo .icon-toggle__text {
+    display: inline;
+  }
+}
+
+// An icon-only pill that shows its word for a moment after a click, as
+// confirmation. No width animation: the word simply appears and fades, which
+// avoids the jitter of neighbours being pushed along frame by frame.
+.icon-toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  font: inherit;
+  line-height: 1.2;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+
+  &__icon {
+    display: inline-block;
+    min-width: 1ch;
+    text-align: center;
+  }
+
+  &__text {
+    display: none;
+    margin-left: 4px;
+    white-space: nowrap;
+  }
+
+  &[data-flash="true"] &__text {
+    display: inline;
+    animation: icon-toggle-word 160ms ease;
+  }
+
+  // Only unpressed pills brighten: a pressed one keeps its amber or green.
+  &:not([aria-pressed="true"]):hover {
+    color: var(--text);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--soon);
+    outline-offset: 2px;
+  }
+}
+
+.shelf {
+  margin-top: 40px;
+
+  &__title {
+    margin: 0 0 16px;
+    font-size: 1.125rem;
+  }
+  &__count {
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  &__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 20px 14px;
+  }
+
+  // Poster, toggles, then title. Every poster is the same 2:3 shape, so the
+  // toggles land on one line across a row, whatever the titles below say.
+  &__item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .shelf-toggle {
+      justify-content: space-between;
+    }
+  }
+
+  &__open {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    background: none;
+    border: 0;
+    cursor: pointer;
+
+    img,
+    .shelf__poster--empty {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 4px;
+      border-radius: 10px;
+    }
+  }
+
+  &__poster--empty {
+    display: grid;
+    place-items: center;
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--border);
+  }
+
+  &__name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  // Reserved at the logos' height (22px) whether it holds logos, the
+  // "Not streaming" note, or nothing yet - so posters never shift.
+
+  &__next {
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: #fbbf24;
+  }
+
+  &__services {
+    display: flex;
+    align-items: center;
+    height: 22px;
+  }
+
+  &__unhosted {
+    font-size: 0.75rem;
+    color: #fbbf24;
+  }
+}

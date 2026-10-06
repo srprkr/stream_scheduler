@@ -15,6 +15,7 @@ import {
   type Subscription,
 } from "../lib/subscriptions";
 import { Modal } from "./Modal";
+import { NumberInput } from "./NumberInput";
 import { Panel } from "./Panel";
 import { ServiceLogo } from "./ServiceLogo";
 
@@ -309,16 +310,12 @@ function BillingPicker({
       {billing?.cycle === "monthly" && (
         <label className="services__renews">
           Renews on day
-          <input
-            type="number"
+          <NumberInput
             min={1}
             max={31}
             value={billing.day}
             aria-label={`Day of the month ${service.name} renews`}
-            onChange={(e) => {
-              const day = Number(e.target.value);
-              if (Number.isInteger(day) && day >= 1 && day <= 31) set({ cycle: "monthly", day });
-            }}
+            onChange={(day) => set({ cycle: "monthly", day })}
           />
           of the month
         </label>

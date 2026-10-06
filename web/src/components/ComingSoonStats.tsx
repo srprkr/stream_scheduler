@@ -25,7 +25,7 @@ type View = (typeof VIEWS)[number]["id"];
  */
 export function ComingSoonStats() {
   const today = localToday();
-  const { titles, serviceInfo, loading } = useWatchlist();
+  const { titles, loading } = useWatchlist();
   const mine = useSubscriptions();
   const rotation = useRotationPlan();
   const [view, setView] = useStored<View>("stream-scheduler:coming-stats-view", "hours", (saved) =>
@@ -49,7 +49,7 @@ export function ComingSoonStats() {
     );
   }
 
-  const nameOf = (key: string) => serviceInfo.get(key)?.name ?? key;
+  const { nameOf, logoOf } = rotation;
   const maxMinutes = Math.max(1, ...stats.months.map((m) => m.minutes));
 
   return (
@@ -93,7 +93,7 @@ export function ComingSoonStats() {
             <li key={s.key} className="coming-stats__service">
               <ServiceLogo
                 name={nameOf(s.key)}
-                logoUrl={serviceInfo.get(s.key)?.logoUrl}
+                logoUrl={logoOf(s.key)}
                 active={s.subscribed}
                 count={s.titles.length}
                 size="row"

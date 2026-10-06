@@ -1,0 +1,185 @@
+// --- service logos --------------------------------------------------------
+
+// TMDB's provider logos are square app icons, so they sit as small tiles.
+.logos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 6px;
+
+  &__img {
+    display: block;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+  }
+
+  &__name {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+}
+
+.services {
+  // Lets the footer respond to the box's own width (@container below).
+  container: services / inline-size;
+
+  // Two blocks: the monthly figures and the price source on the left, the
+  // yearly total and its footnote on the right. In a narrow box - a phone,
+  // or squeezed beside the watchlist - the right block stacks under the
+  // left, whole, instead of the four lines wrapping into each other.
+  &__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px 24px;
+    margin-top: 14px;
+
+    p {
+      margin: 0;
+    }
+
+    // With totals to show, a rule sets them off from the logos.
+    &--totals {
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+  }
+
+  &__monthly,
+  &__yearly {
+    display: grid;
+    gap: 6px;
+  }
+
+  &__yearly {
+    flex: none;
+    text-align: right;
+  }
+
+  &__total {
+    font-size: 1rem;
+    color: var(--muted);
+  }
+
+  &__annual {
+    color: var(--muted);
+  }
+
+  &__footnote,
+  &__checked {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  &__unpriced {
+    color: var(--muted);
+    font-size: 0.875rem;
+  }
+
+  @container services (max-width: 560px) {
+    &__footer {
+      flex-direction: column;
+    }
+    &__yearly {
+      text-align: left;
+    }
+  }
+
+  // The plan form, as laid out inside the options dialog: one control per
+  // line, full width, label above.
+  &__plan {
+    display: grid;
+    gap: 10px;
+
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      font: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+
+      &:focus-visible {
+        outline: 2px solid var(--soon);
+        outline-offset: 2px;
+      }
+    }
+  }
+
+  &__field {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  &__note {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+
+  // "Renews on day [14] of the month", or on a date for a yearly plan.
+  &__renews {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+
+    input {
+      padding: 6px 10px;
+      font: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    input[type="number"] {
+      width: 4.5em;
+    }
+  }
+
+  &__price {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+
+    input {
+      width: 7em;
+      padding: 6px 10px;
+      font: inherit;
+      color: var(--text);
+      text-align: right;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+
+      &:focus-visible {
+        outline: 2px solid var(--soon);
+        outline-offset: 2px;
+      }
+      &[aria-invalid="true"] {
+        border-color: #f87171;
+      }
+    }
+  }
+
+  &__leave-out {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 0.875rem;
+    cursor: pointer;
+
+    input {
+      accent-color: var(--soon);
+      cursor: pointer;
+    }
+  }
+}

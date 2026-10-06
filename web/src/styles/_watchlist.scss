@@ -1,0 +1,408 @@
+// The watchlist rolled up by service: logo, name and the titles it carries,
+// with the counts on the right. Services the user already pays for keep
+// their colour; the rest are dimmed, as in the service grids.
+.watch-services {
+  // Last on the Watchlist page, after the tile sections: their spacing above.
+  margin-top: 40px;
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  // Logo, name and figures, and the date on the right; the titles run
+  // underneath, lined up with the name.
+  &__row {
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    align-items: center;
+    column-gap: 12px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  &__head {
+    min-width: 0;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  &__name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+  }
+
+  &__tag {
+    padding: 1px 7px;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--soon);
+    border: 1px solid currentColor;
+    border-radius: 999px;
+  }
+
+  &__figures {
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+
+  // The service's answer to "when?": green once everything is out, muted
+  // while dates are still to come.
+  &__ready {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-align: right;
+
+    &[data-state="now"] {
+      color: var(--soon);
+    }
+    &[data-state="unknown"] {
+      color: var(--muted);
+      font-weight: 500;
+    }
+  }
+
+  &__titles {
+    grid-column: 2 / -1;
+    display: grid;
+    gap: 4px;
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.8125rem;
+
+    li {
+      display: flex;
+      flex-wrap: wrap;
+      column-gap: 8px;
+    }
+  }
+
+  &__when {
+    color: var(--muted);
+  }
+
+  &__unhosted,
+  &__note {
+    margin: 12px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 0.875rem;
+  }
+  &__note {
+    color: var(--muted);
+  }
+}
+
+// Coming Soon's numbers: tabs, then one row per month or service, each with
+// its figure on the right and the titles behind it underneath.
+.coming-stats {
+  font-size: 0.875rem;
+
+  p {
+    margin: 0;
+  }
+  &--loading,
+  &__empty,
+  &__lede,
+  &__note {
+    color: var(--muted);
+  }
+  &__lede {
+    margin-bottom: 8px;
+  }
+  &__note {
+    margin-top: 10px;
+    font-size: 0.8125rem;
+  }
+
+  &__title {
+    margin: 0 0 10px;
+    font-size: 1rem;
+  }
+
+  &__tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+
+    .tag {
+      padding: 4px 10px;
+    }
+  }
+
+  &__list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__month {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 10px;
+    row-gap: 3px;
+  }
+
+  &__service {
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    align-items: center;
+    column-gap: 12px;
+  }
+
+  &__label {
+    display: grid;
+    font-weight: 600;
+  }
+  &__when {
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--muted);
+  }
+  &__figure {
+    font-weight: 600;
+    text-align: right;
+  }
+
+  &__bar {
+    grid-column: 1 / -1;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--border);
+
+    span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--soon);
+    }
+  }
+
+  &__titles {
+    grid-column: 1 / -1;
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+
+  &__diff {
+    grid-column: 1 / -1;
+    font-size: 0.8125rem;
+    color: var(--soon);
+
+    &--over {
+      color: #fbbf24;
+    }
+  }
+}
+
+// Each service's next renewal: logo, the date with a keep / pause tag, and
+// the advice underneath. Then the reminder setting and the calendar button.
+.renewals {
+  margin-bottom: 32px;
+
+  p {
+    margin: 0;
+  }
+
+  &__list {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    align-items: start;
+    column-gap: 12px;
+  }
+
+  &__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  // Green to keep, amber to pause, plain for a yearly decision.
+  &__action {
+    padding: 1px 8px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    color: var(--muted);
+
+    &[data-action="keep"] {
+      color: var(--soon);
+    }
+    &[data-action="pause"] {
+      color: #fbbf24;
+    }
+    // Getting off a yearly plan is the priority: a filled tag.
+    &[data-action="switch"] {
+      color: var(--bg);
+      background: #fbbf24;
+      border-color: #fbbf24;
+    }
+  }
+
+  // A yearly plan's row stands out, with a rule down its side.
+  &__row[data-action="switch"] {
+    margin-left: -12px;
+    padding-left: 10px;
+    border-left: 2px solid #fbbf24;
+  }
+
+  &__advice,
+  &__note {
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+  &__note {
+    margin-top: 12px;
+  }
+
+  &__calendar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+    input {
+      width: 4em;
+      padding: 4px 8px;
+      font: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .renewals__note {
+      flex-basis: 100%;
+      margin-top: 0;
+    }
+  }
+}
+
+// The watchlist in brief: logos, title and status, and a remove button.
+// The heading stays put; the list scrolls within whatever height the card
+// is given.
+.watchlist-mini {
+  display: flex;
+  flex-direction: column;
+
+  > .panel__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  &__list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 10px;
+  }
+
+  &__text {
+    display: grid;
+    min-width: 0;
+    font-size: 0.875rem;
+  }
+  &__status {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  &__remove {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    font: inherit;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--text);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 2px;
+    }
+  }
+
+  &__more {
+    display: inline-block;
+    margin-top: 14px;
+    font-size: 0.8125rem;
+    color: var(--muted);
+
+    &:hover {
+      color: var(--text);
+    }
+  }
+}
+
+// The plan's wait setting: the choice, each option priced, and what the
+// chosen plan costs against keeping everything running.
+.max-wait {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+  color: var(--muted);
+
+  label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  select {
+    padding: 4px 8px;
+    font: inherit;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  &__impact {
+    margin: 0;
+  }
+}

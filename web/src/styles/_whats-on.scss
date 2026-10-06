@@ -1,0 +1,252 @@
+// --- what's on ------------------------------------------------------------
+
+.catalog {
+  &__controls {
+    display: grid;
+    justify-items: start;
+    gap: 12px;
+    margin-bottom: 24px;
+
+    > :first-child {
+      justify-self: stretch;
+    }
+  }
+
+  &__sort {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+    color: var(--muted);
+
+    select {
+      padding: 6px 10px;
+      font: inherit;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+
+      &:focus-visible {
+        outline: 2px solid var(--soon);
+        outline-offset: 2px;
+      }
+    }
+  }
+
+  &__more {
+    display: block;
+    margin: 32px auto 0;
+    padding: 10px 24px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      border-color: #3a3a46;
+    }
+    &:disabled {
+      color: var(--muted);
+      cursor: progress;
+    }
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 2px;
+    }
+  }
+}
+
+// A filter box above a grid: the search field's look, at a width that suits
+// a toolbar rather than a page heading.
+.filter {
+  max-width: 360px;
+}
+
+// "12 results for …" - a quiet status line, announced by screen readers
+// through role="status" as the count changes.
+.state--count {
+  padding: 0 0 16px;
+  font-size: 0.875rem;
+}
+
+.feed__controls {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+// What's On and Coming Soon's shared filter row: page, services, type, with
+// a pipe between the groups.
+//
+// At desktop width it's one line, Series / Films at the right edge. Below
+// that, the services and types fold into a "Filters" button whose panel
+// opens underneath - a sideways-scrolling row is out of a mouse wheel's
+// reach. The breakpoint is where the full row stops fitting.
+$filters-fold: 1100px;
+
+.filters {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+
+  &__group {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__pipe {
+    flex: none;
+    padding: 0 4px;
+    color: var(--border);
+    font-size: 1.25rem;
+    line-height: 1;
+    user-select: none;
+  }
+
+  .tag {
+    white-space: nowrap;
+  }
+
+  // The folded form's button: a tag-shaped pill naming the selection.
+  &__toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 7px 14px;
+    font: inherit;
+    font-size: 0.8125rem;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+
+    &:hover {
+      border-color: #3a3a46;
+    }
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 2px;
+    }
+    &[aria-expanded="true"] .filters__chevron {
+      transform: rotate(180deg);
+    }
+  }
+  &__toggle-label {
+    color: var(--muted);
+  }
+  &__chevron {
+    transition: transform 140ms ease;
+  }
+
+  // Folded: a panel under the row, over the content, groups stacked and
+  // free to wrap.
+  &__panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: none;
+    gap: 12px;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+
+    &[data-open="true"] {
+      display: grid;
+    }
+  }
+  &__pipe--end {
+    display: none;
+  }
+
+  // A phone: the button takes its own full-width line under the page links,
+  // its summary cut short rather than overflowing.
+  @media (max-width: 560px) {
+    flex-wrap: wrap;
+
+    > .filters__pipe {
+      display: none;
+    }
+    &__toggle {
+      flex-basis: 100%;
+      justify-content: space-between;
+    }
+    &__toggle-summary {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // Desktop: everything on the one line, the panel part of the row.
+  @media (min-width: $filters-fold) {
+    &__toggle {
+      display: none;
+    }
+    &__panel,
+    &__panel[data-open="true"] {
+      position: static;
+      display: flex;
+      flex: 1;
+      align-items: center;
+      gap: 8px;
+      padding: 0;
+      background: none;
+      border: 0;
+      box-shadow: none;
+    }
+    &__group {
+      flex-wrap: nowrap;
+    }
+    // Pushes itself and the type group to the row's right edge.
+    &__pipe--end {
+      display: block;
+      margin-left: auto;
+    }
+  }
+
+  // A service toggle: its logo, ringed in white when selected - the same
+  // "on" as the text tags beside it.
+  &__service {
+    display: grid;
+    padding: 0;
+    background: none;
+    border: 2px solid transparent;
+    border-radius: 9px;
+    cursor: pointer;
+
+    &[aria-pressed="true"] {
+      border-color: var(--text);
+    }
+    &:hover:not([aria-pressed="true"]) {
+      border-color: #3a3a46;
+    }
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 2px;
+    }
+  }
+
+  // The page links share the pill look with the checkboxes.
+  a.tag {
+    text-decoration: none;
+  }
+  .tag:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}

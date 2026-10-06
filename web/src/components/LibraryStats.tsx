@@ -1,6 +1,7 @@
 import type { Runtime } from "../lib/stats";
 import { formatHours, formatMonths, libraryStats } from "../lib/stats";
-import { useHoursPerMonth } from "../hooks/useSettings";
+import { HOURS_PER_MONTH, useHoursPerMonth } from "../hooks/useSettings";
+import { NumberInput } from "./NumberInput";
 
 export function LibraryStats({
   runtimes,
@@ -30,17 +31,13 @@ export function LibraryStats({
       </p>
       <p className="stats__months">
         At{" "}
-        <input
+        <NumberInput
           className="stats__input"
-          type="number"
-          min={1}
-          max={300}
+          min={HOURS_PER_MONTH.min}
+          max={HOURS_PER_MONTH.max}
           value={hoursPerMonth}
           aria-label="Hours you watch per month"
-          onChange={(e) => {
-            const next = Number(e.target.value);
-            if (next > 0) setHoursPerMonth(next);
-          }}
+          onChange={setHoursPerMonth}
         />{" "}
         hours a month, that's <strong>{formatMonths(stats.months)}</strong> of viewing, watching
         everything once.

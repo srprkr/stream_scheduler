@@ -1,0 +1,323 @@
+// Insights' cost chart: keeping everything (red, dotted) against the plan
+// (blue, solid), as running totals. Thin lines, a hairline grid, text in
+// the page's own ink - never the series colours.
+.cost-chart {
+  margin-bottom: 24px;
+
+  &__headline {
+    margin: 0 0 4px;
+    font-size: 1rem;
+    color: var(--muted);
+
+    strong {
+      font-size: 1.5rem;
+      color: var(--text);
+    }
+  }
+
+  &__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin: 0 0 8px;
+    padding: 0;
+    list-style: none;
+    font-size: 0.8125rem;
+    color: var(--muted);
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  }
+
+  &__plot {
+    position: relative;
+    width: 100%;
+
+    svg {
+      display: block;
+      overflow: visible;
+    }
+    svg:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 4px;
+      border-radius: 4px;
+    }
+  }
+
+  &__keep,
+  &__plan {
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  &__keep {
+    stroke: var(--chart-keep);
+    stroke-dasharray: 1 5;
+  }
+  &__plan {
+    stroke: var(--chart-plan);
+  }
+
+  &__grid {
+    stroke: var(--border);
+    stroke-width: 1;
+  }
+  &__axis {
+    font-size: 0.75rem;
+    fill: var(--muted);
+  }
+  &__end {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    fill: var(--text);
+  }
+
+  &__crosshair {
+    stroke: var(--muted);
+    stroke-width: 1;
+  }
+  // Ringed in the surface colour, so the dots stay legible over the lines.
+  &__dot {
+    stroke: var(--surface);
+    stroke-width: 2;
+
+    &--keep {
+      fill: var(--chart-keep);
+    }
+    &--plan {
+      fill: var(--chart-plan);
+    }
+  }
+
+  &__tooltip {
+    position: absolute;
+    z-index: 5;
+    min-width: 180px;
+    padding: 10px 12px;
+    font-size: 0.8125rem;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    pointer-events: none;
+
+    p {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+    }
+    p + p {
+      margin-top: 4px;
+    }
+    strong {
+      color: var(--text);
+    }
+  }
+  &__tip-date {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  &__toggle {
+    margin-top: 8px;
+    padding: 0;
+    font: inherit;
+    font-size: 0.8125rem;
+    color: var(--muted);
+    background: none;
+    border: 0;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--text);
+    }
+  }
+
+  &__table {
+    width: 100%;
+    margin-top: 10px;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+
+    th,
+    td {
+      padding: 6px 8px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      color: var(--muted);
+    }
+    td:nth-child(n + 3),
+    th:nth-child(n + 3) {
+      text-align: right;
+    }
+  }
+}
+
+// Insights at a glance: four headline figures in a row, two by two on a
+// narrow screen. The figure leads; the label says what it counts.
+.glance {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+
+  @media (max-width: 720px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  &__tile {
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+
+    p {
+      margin: 0;
+    }
+  }
+  &__figure {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  &__unit {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  &__label {
+    margin-top: 2px;
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+}
+
+// Traffic-light text for a figure's level (levels.ts): green for healthy,
+// orange to watch, red past the mark. Light tints of each, legible as text
+// on the dark surface.
+.level {
+  &[data-level="good"] {
+    color: var(--soon);
+  }
+  &[data-level="warn"] {
+    color: #fb923c;
+  }
+  &[data-level="bad"] {
+    color: #f87171;
+  }
+}
+
+// Paths forward as a checklist: a box to tick on each step, its evidence
+// underneath and what it saves on the right. Ticked steps move under Done,
+// struck through and quieter, keeping only their title and saving.
+.paths {
+  margin-bottom: 24px;
+
+  &__progress {
+    margin: 0 0 12px;
+    font-size: 0.875rem;
+    color: var(--muted);
+
+    strong {
+      color: var(--soon);
+    }
+  }
+
+  &__list {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 4px 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+
+    p {
+      margin: 0;
+    }
+
+    &[data-done="true"] {
+      opacity: 0.6;
+
+      .paths__title {
+        text-decoration: line-through;
+      }
+    }
+  }
+
+  &__check {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+
+    input {
+      flex: none;
+      width: 18px;
+      height: 18px;
+      margin: 2px 0 0;
+      accent-color: var(--soon);
+      cursor: pointer;
+    }
+  }
+
+  &__title {
+    font-weight: 600;
+  }
+
+  // The service's logo inline before its name in a step's title, sized to
+  // the text and sitting on its line.
+  &__logo {
+    display: inline-block;
+    width: 1.15em;
+    height: 1.15em;
+    margin-right: 0.3em;
+    border-radius: 4px;
+    vertical-align: -0.2em;
+  }
+
+  &__done-title {
+    margin: 20px 0 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  &__detail {
+    margin-top: 2px;
+    padding-left: 28px;
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+  &__item .howto {
+    padding-left: 28px;
+  }
+  &__saves {
+    font-size: 0.8125rem;
+    color: var(--muted);
+    white-space: nowrap;
+
+    strong {
+      font-size: 1rem;
+      color: var(--soon);
+    }
+  }
+}

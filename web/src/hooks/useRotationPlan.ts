@@ -49,7 +49,7 @@ const PLAN_SERVICES = graphql(`
  */
 export function useRotationPlan() {
   const today = localToday();
-  const { titles } = useWatchlist();
+  const { titles, serviceInfo } = useWatchlist();
   const mine = useSubscriptions();
   const providers = useQuery(PLAN_SERVICES).data?.providers ?? [];
   const [hoursPerMonth] = useHoursPerMonth();
@@ -113,12 +113,37 @@ export function useRotationPlan() {
       maxWaitDays: waitMonths * 30,
     });
 
+  // A service's name and logo: tracked services from the price list, others
+  // (Crunchyroll and the like) from the watchlist's details.
+  const nameOf = (key: string) =>
+    providers.find((p) => p.slug === key)?.name ?? serviceInfo.get(key)?.name ?? key;
+  const logoOf = (key: string) =>
+    providers.find((p) => p.slug === key)?.logoUrl ?? serviceInfo.get(key)?.logoUrl ?? null;
+
+  /**
+   * The published monthly price for a service: the user's chosen plan where
+   * they've picked one, its default otherwise. What a yearly plan's
+   * break-even compares against - not a twelfth of the yearly price.
+   */
+  const publishedMonthly = (slug: string) => {
+    const sub = mine.find((s) => s.slug === slug);
+    const plans = plansFor(slug);
+    const chosen =
+      sub && "planId" in sub.choice
+        ? plans.find((p) => "planId" in sub.choice && p.id === sub.choice.planId)
+        : undefined;
+    return (chosen ?? plans.find((p) => p.isDefault))?.monthlyCents ?? null;
+  };
+
   return {
     plan: planFor(maxWaitMonths),
     planFor,
     priceOf,
     plansFor,
     providers,
+    nameOf,
+    logoOf,
+    publishedMonthly,
     payingNow: spend.cents,
     /** Monthly cost of the services kept whatever happens, and their slugs. */
     alwaysOn: spend.leftOutCents,

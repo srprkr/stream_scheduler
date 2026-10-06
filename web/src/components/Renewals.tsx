@@ -3,8 +3,8 @@ import { Link } from "react-router";
 import { useRotationPlan } from "../hooks/useRotationPlan";
 import { LEAD_DAYS, useLeadDays } from "../hooks/useSettings";
 import { useSubscriptions } from "../hooks/useSubscriptions";
-import { useWatchlist } from "../hooks/useWatchlist";
 import { icsCalendar, type CalendarEvent } from "../lib/calendar";
+import { downloadFile } from "../lib/download";
 import { listTitles } from "../lib/replaces";
 import {
   addDays,
@@ -17,6 +17,7 @@ import { localToday, when } from "../lib/seasons";
 import { monthlyCents } from "../lib/subscriptions";
 import { CancelHowTo, type Cancellation } from "./CancelHowTo";
 import { MaxWait } from "./MaxWait";
+import { NumberInput } from "./NumberInput";
 import { Panel } from "./Panel";
 import { ServiceLogo } from "./ServiceLogo";
 
@@ -46,14 +47,10 @@ export function Renewals() {
   const until = addDays(today, WINDOW_DAYS);
   const mine = useSubscriptions();
   const rotation = useRotationPlan();
-  const { plan, providers } = rotation;
-  const { serviceInfo } = useWatchlist();
+  const { plan, providers, nameOf } = rotation;
   const [lead, setLead] = useLeadDays();
 
   if (mine.length === 0) return null;
-
-  const nameOf = (key: string) =>
-    providers.find((p) => p.slug === key)?.name ?? serviceInfo.get(key)?.name ?? key;
 
   // Every renewal in the window, with its advice. The list shows each
   // service's next one; the calendar file gets them all.
@@ -67,14 +64,11 @@ export function Renewals() {
       continue;
     }
     const plans = provider?.plans ?? [];
-    // Pausing saves what a month costs. For a yearly plan, the break-even
-    // compares against the published monthly price, not a twelfth of the year.
+    // Pausing saves what a month costs; a yearly plan's break-even compares
+    // against the published monthly price.
     const monthly =
       sub.billing.cycle === "annual"
-        ? ((
-            plans.find((p) => "planId" in sub.choice && p.id === sub.choice.planId) ??
-            plans.find((p) => p.isDefault)
-          )?.monthlyCents ?? null)
+        ? rotation.publishedMonthly(sub.slug)
         : monthlyCents(sub, plans);
     // A yearly plan is always listed, however far off its renewal: getting
     // off it is the point, and its reminder can't wait for the window.
@@ -141,15 +135,11 @@ export function Renewals() {
           (r.cancellation ? ` To cancel: ${r.cancellation.url}` : ""),
       };
     });
-    const blob = new Blob([icsCalendar([...events, ...yearlyEvents], new Date())], {
-      type: "text/calendar",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "streamhopper-renewals.ics";
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(
+      "streamhopper-renewals.ics",
+      icsCalendar([...events, ...yearlyEvents], new Date()),
+      "text/calendar",
+    );
   };
 
   return (
@@ -196,16 +186,12 @@ export function Renewals() {
         <div className="renewals__calendar">
           <label>
             Remind me
-            <input
-              type="number"
-              min={0}
-              max={30}
+            <NumberInput
+              min={LEAD_DAYS.min}
+              max={LEAD_DAYS.max}
               value={lead}
               aria-label="Days before a renewal to remind you"
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (Number.isInteger(n) && n >= LEAD_DAYS.min && n <= LEAD_DAYS.max) setLead(n);
-              }}
+              onChange={setLead}
             />
             {lead === 1 ? "day" : "days"} before
           </label>

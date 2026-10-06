@@ -1,0 +1,172 @@
+// --- service tiles ----------------------------------------------------------
+
+// A row of service logos. auto-fill packs as many 64px columns as fit, so a
+// desktop gets one long row and a phone gets a grid, with no media query.
+.service-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 12px;
+}
+
+// Positions the edit pencil over its tile's corner.
+.service-grid__cell {
+  position: relative;
+  width: 64px;
+  margin: 0 auto;
+}
+
+// A service's logo, or its first letter when TMDB has none, with an optional
+// count pinned to the corner. Greyed when it isn't the user's. The tile size
+// fills a .service-tile button; the row size sits in a list line.
+.service-logo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+
+  &__img {
+    display: block;
+    width: 100%;
+    border-radius: 10px;
+    transition:
+      filter 120ms ease,
+      opacity 120ms ease;
+  }
+
+  &__initial {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  // Not the user's: greyed, but still readable. The count stays sharp.
+  &[data-active="false"] &__img,
+  &[data-active="false"] &__initial {
+    filter: grayscale(1);
+    opacity: 0.4;
+  }
+
+  &__count {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    font-weight: 700;
+    color: var(--bg);
+    background: var(--text);
+  }
+  &[data-active="false"] &__count {
+    background: var(--muted);
+  }
+
+  // Inside the 64px tile, past its padding and border to the tile's corner.
+  &--tile &__count {
+    top: -16px;
+    right: -16px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    font-size: 0.75rem;
+  }
+
+  &--chip {
+    width: 28px;
+    height: 28px;
+
+    .service-logo__img {
+      border-radius: 7px;
+    }
+    .service-logo__initial {
+      font-size: 0.875rem;
+    }
+  }
+
+  &--row {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--bg);
+
+    .service-logo__img {
+      border-radius: 8px;
+    }
+    .service-logo__initial {
+      font-size: 1rem;
+    }
+    .service-logo__count {
+      top: -7px;
+      right: -9px;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 5px;
+      font-size: 0.6875rem;
+    }
+  }
+}
+
+.service-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  padding: 6px;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 120ms ease;
+
+  &[data-active="true"] {
+    border-color: var(--soon);
+  }
+  &:hover {
+    border-color: #3a3a46;
+  }
+  &[data-active="true"]:hover {
+    border-color: var(--soon);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--soon);
+    outline-offset: 3px;
+  }
+
+  // A pencil on a subscribed tile's corner, where the library panel puts
+  // its count badge: opens the service's plan, billing and renewal.
+  &__edit {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    &:hover {
+      border-color: var(--text);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 2px;
+    }
+  }
+}

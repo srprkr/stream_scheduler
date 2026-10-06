@@ -4,6 +4,7 @@ import { useState } from "react";
 import { graphql } from "../generated";
 import { useBackupStatus } from "../hooks/useBackup";
 import { library } from "../hooks/useLibrary";
+import { PATHS_DONE_KEY, parseKeyList } from "../hooks/usePathsDone";
 import { writeStoredText } from "../hooks/useStored";
 import { browserStorage } from "../hooks/browserStorage";
 import { subscriptions } from "../hooks/useSubscriptions";
@@ -17,6 +18,7 @@ import {
   serializeBackup,
   type Backup as BackupData,
 } from "../lib/backup";
+import { downloadFile } from "../lib/download";
 import { formatDate } from "../lib/format";
 import { localToday } from "../lib/seasons";
 
@@ -32,7 +34,6 @@ const BACKUP_TITLES = graphql(`
 `);
 
 const PREFIX = "stream-scheduler:";
-const PATHS_DONE_KEY = `${PREFIX}paths-done`;
 
 /** Everything a backup carries, read from this browser now. */
 function currentBackup(): Omit<BackupData, "exportedAt"> {
@@ -42,13 +43,7 @@ function currentBackup(): Omit<BackupData, "exportedAt"> {
     const saved = storage.getItem(PREFIX + key);
     if (saved !== null) settings[key] = saved;
   }
-  let pathsDone: string[] = [];
-  try {
-    const saved = JSON.parse(storage.getItem(PATHS_DONE_KEY) ?? "[]") as unknown;
-    if (Array.isArray(saved)) pathsDone = saved.filter((k): k is string => typeof k === "string");
-  } catch {
-    // An unreadable checklist just isn't carried.
-  }
+  const pathsDone = parseKeyList(storage.getItem(PATHS_DONE_KEY) ?? "[]") ?? [];
   return {
     library: library.entries().map((e) => ({
       id: e.id,
@@ -86,13 +81,7 @@ export function Backup() {
   const length = text().length;
 
   const download = () => {
-    const blob = new Blob([text()], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `streamhopper-backup-${today}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(`streamhopper-backup-${today}.json`, text(), "application/json");
     markBackedUp();
   };
 

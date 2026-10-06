@@ -1,0 +1,31 @@
+// Colours stay CSS custom properties, not Sass variables: they exist at
+// runtime, so a theme switch or a devtools tweak can change them live.
+:root {
+  color-scheme: dark;
+  --bg: #0b0b0f;
+  // Chart series, validated against --surface for colour-blind separation.
+  --chart-keep: #ef4444;
+  --chart-plan: #3b82f6;
+  --surface: #16161d;
+  --border: #26262f;
+  --text: #f2f2f5;
+  --muted: #9a9aa8;
+  --accent: #e50914;
+  --soon: #4ade80;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}

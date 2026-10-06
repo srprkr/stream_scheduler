@@ -4,7 +4,7 @@ import { CancelHowTo, type Cancellation } from "./CancelHowTo";
 import { useLibrary } from "../hooks/useLibrary";
 import { useLibraryDetails } from "../hooks/useLibraryDetails";
 import { useLevels } from "../hooks/useSettings";
-import { useStored } from "../hooks/useStored";
+import { usePathsDone } from "../hooks/usePathsDone";
 import { useRotationPlan } from "../hooks/useRotationPlan";
 import { useSubscriptions } from "../hooks/useSubscriptions";
 import { useWatchlist } from "../hooks/useWatchlist";
@@ -31,30 +31,15 @@ import { monthlyCents } from "../lib/subscriptions";
  */
 export function InsightsSummary() {
   const rotation = useRotationPlan();
-  const { plan, priceOf, plansFor, payingNow, alwaysOn, providers, hoursPerMonth, today } =
+  const { plan, priceOf, plansFor, payingNow, alwaysOn, providers, nameOf, hoursPerMonth, today } =
     rotation;
   const mine = useSubscriptions();
-  const [doneKeys, setDoneKeys] = useStored<string[]>(
-    "stream-scheduler:paths-done",
-    [],
-    (saved) => {
-      try {
-        const keys = JSON.parse(saved) as unknown;
-        return Array.isArray(keys) && keys.every((k) => typeof k === "string") ? keys : undefined;
-      } catch {
-        return undefined;
-      }
-    },
-    (keys) => JSON.stringify(keys),
-  );
-  const { titles, serviceInfo } = useWatchlist();
+  const [doneKeys, setDoneKeys] = usePathsDone();
+  const { titles } = useWatchlist();
   const entries = useLibrary();
   const owned = entries.filter((e) => e.shelf === "owned");
   const wanted = entries.filter((e) => e.shelf === "wanted");
   const details = useLibraryDetails([...owned, ...wanted].map((e) => e.id));
-
-  const nameOf = (key: string) =>
-    providers.find((p) => p.slug === key)?.name ?? serviceInfo.get(key)?.name ?? key;
 
   // At a glance, coloured by the user's own thresholds (Settings).
   const monthMinutes = hoursPerMonth * 60;
@@ -81,15 +66,7 @@ export function InsightsSummary() {
     plan,
     subscriptions: mine,
     monthlyCost: (sub) => monthlyCents(sub, plansFor(sub.slug)),
-    publishedMonthly: (slug) => {
-      const sub = mine.find((s) => s.slug === slug);
-      const plans = plansFor(slug);
-      const chosen =
-        sub && "planId" in sub.choice
-          ? plans.find((p) => "planId" in sub.choice && p.id === sub.choice.planId)
-          : undefined;
-      return (chosen ?? plans.find((p) => p.isDefault))?.monthlyCents ?? null;
-    },
+    publishedMonthly: rotation.publishedMonthly,
     nameOf,
     wishlistOn,
     cancellationOf,
@@ -112,8 +89,7 @@ export function InsightsSummary() {
   // Decorative - the name beside it already says which service.
   const withLogo = (title: string, service: string) => {
     const name = nameOf(service);
-    const logoUrl =
-      providers.find((p) => p.slug === service)?.logoUrl ?? serviceInfo.get(service)?.logoUrl;
+    const logoUrl = rotation.logoOf(service);
     const at = title.indexOf(name);
     if (!logoUrl || at < 0) return title;
     return (

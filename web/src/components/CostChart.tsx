@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useRotationPlan } from "../hooks/useRotationPlan";
-import { useWatchlist } from "../hooks/useWatchlist";
 import { cumulativeCosts, niceTicks, type CostPoint } from "../lib/costChart";
 import { formatDollars } from "../lib/money";
 import { listTitles } from "../lib/replaces";
@@ -30,11 +29,8 @@ const axisDollars = (cents: number) => `$${Math.round(cents / 100).toLocaleStrin
  */
 export function CostChart() {
   const rotation = useRotationPlan();
-  const { plan, priceOf, payingNow, alwaysOn, alwaysOnSlugs, providers, today } = rotation;
-  const { serviceInfo } = useWatchlist();
+  const { plan, priceOf, payingNow, alwaysOn, alwaysOnSlugs, nameOf, today } = rotation;
   const { points, unpriced } = cumulativeCosts(plan, priceOf, payingNow, alwaysOn);
-  const nameOf = (key: string) =>
-    providers.find((p) => p.slug === key)?.name ?? serviceInfo.get(key)?.name ?? key;
 
   const [showTable, setShowTable] = useState(false);
   const last = points.at(-1);

@@ -1,0 +1,32 @@
+// Read by screen readers, invisible on screen: the name behind each logo.
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// A title that opens its tile's dialog on click - a mouse shortcut to the
+// same action as the poster, which stays the keyboard's way in.
+.opens-dialog {
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+@keyframes icon-toggle-word {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

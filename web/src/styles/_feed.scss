@@ -1,0 +1,221 @@
+// --- release grid ---------------------------------------------------------
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 24px 18px;
+}
+
+// A box leading a tile grid - Coming Soon's watchlist stats, What's On's
+// watchlist - in the top right, two tiles wide and one row tall. The tiles
+// fill the cells around it.
+// It takes no height of its own beyond a floor (height: 0, min-height:
+// max(100%, 16rem)), so the row stays as tall as its tiles and the box
+// scrolls if it has more to show - and still shows with no tiles beside it.
+// With room for only one or two columns, it sits full width above them.
+.grid__lead {
+  grid-column: -3 / -1;
+  grid-row: 1;
+  height: 0;
+  min-height: max(100%, 16rem);
+
+  > * {
+    height: 100%;
+    overflow-y: auto;
+  }
+
+  @media (max-width: 560px) {
+    grid-column: 1 / -1;
+    height: auto;
+    min-height: 0;
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  .shelf-toggle {
+    justify-content: space-between;
+  }
+
+  &__art {
+    position: relative;
+    aspect-ratio: 2 / 3;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    transition:
+      transform 140ms ease,
+      border-color 140ms ease;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    &--empty {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      font-size: 2.5rem;
+      font-weight: 600;
+      color: var(--border);
+    }
+  }
+
+  // The whole card is a button: keyboard and screen readers get it for free.
+  &__button {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 4px;
+      border-radius: 12px;
+    }
+    &:hover .card__art {
+      transform: translateY(-3px);
+      border-color: #3a3a46;
+    }
+  }
+
+  &__has-trailer {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 0.6875rem;
+    background: rgba(11, 11, 15, 0.8);
+    border: 1px solid var(--border);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  &__meta {
+    margin: 0;
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    font-size: 0.8125rem;
+  }
+  &__date {
+    color: var(--border);
+    margin-left: auto;
+  }
+  &__note {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #fbbf24;
+    line-height: 1.35;
+  }
+  &__sub {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+}
+
+.countdown {
+  color: var(--muted);
+
+  &--soon {
+    color: var(--soon);
+    font-weight: 600;
+  }
+}
+
+.badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(8px);
+  background: rgba(11, 11, 15, 0.75);
+  border: 1px solid var(--border);
+
+  &--returning {
+    color: #fff;
+    background: rgba(229, 9, 20, 0.9);
+    border-color: transparent;
+  }
+  &--new {
+    color: var(--text);
+  }
+  &--film {
+    color: var(--muted);
+  }
+  &--weekly {
+    color: #fbbf24;
+  }
+}
+
+// --- provider filter tags -------------------------------------------------
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.tag {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background 120ms ease;
+
+  // Only an unselected tag brightens: a selected one is white already, and
+  // light text on it would vanish. A disabled one doesn't respond at all.
+  &:hover:not(.tag--on):not(:disabled) {
+    color: var(--text);
+    border-color: #3a3a46;
+  }
+  &--on {
+    background: var(--text);
+    border-color: var(--text);
+    color: #0b0b0f;
+    font-weight: 600;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--soon);
+    outline-offset: 2px;
+  }
+}

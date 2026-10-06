@@ -3,6 +3,7 @@ import { useLocation } from "react-router";
 
 import { Backup } from "../components/Backup";
 import { MaxWait } from "../components/MaxWait";
+import { NumberInput } from "../components/NumberInput";
 import { useRotationPlan } from "../hooks/useRotationPlan";
 import {
   HOURS_PER_MONTH,
@@ -126,10 +127,7 @@ export function SettingsPage() {
   );
 }
 
-/**
- * A labelled whole-number field. Saves only values in range, so a half-typed
- * number never reaches the plan; the browser's own min/max bound the arrows.
- */
+/** A labelled whole-number field for a setting. */
 function Field({
   label,
   value,
@@ -146,16 +144,7 @@ function Field({
   return (
     <label className="settings__field">
       <span>{label}</span>
-      <input
-        type="number"
-        min={min}
-        max={max}
-        value={value}
-        onChange={(e) => {
-          const n = Number(e.target.value);
-          if (e.target.value !== "" && Number.isInteger(n) && n >= min && n <= max) onChange(n);
-        }}
-      />
+      <NumberInput value={value} min={min} max={max} onChange={onChange} />
     </label>
   );
 }

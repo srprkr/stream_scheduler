@@ -1,0 +1,72 @@
+// --- modal and buttons -------------------------------------------------------
+
+// A small dialog for a form, on the same <dialog> behaviour as .sheet.
+.modal {
+  width: min(420px, calc(100vw - 32px));
+  padding: 0;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+
+  &::backdrop {
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(3px);
+  }
+
+  &__body {
+    display: grid;
+    gap: 18px;
+    padding: 20px 22px 22px;
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    img {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+    }
+    h2 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+}
+
+.button {
+  padding: 8px 18px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--text);
+  border: 1px solid var(--text);
+  border-radius: 999px;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--soon);
+    outline-offset: 2px;
+  }
+
+  // A secondary action: outlined, and it doesn't compete with the main one.
+  &--quiet {
+    color: var(--muted);
+    background: none;
+    border-color: var(--border);
+
+    &:hover {
+      color: var(--text);
+      border-color: #3a3a46;
+    }
+  }
+}
