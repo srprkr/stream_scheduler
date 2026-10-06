@@ -162,6 +162,15 @@ export function ComingSoonStats() {
             );
           })}
         </ul>
+        {rotation.anyTime.map(
+          (a) =>
+            a.titles.length > 0 && (
+              <p key={a.key} className="coming-stats__note">
+                Watch any time on {nameOf(a.key)}, which you always keep:{" "}
+                {listTitles(a.titles.map((t) => t.title))}.
+              </p>
+            ),
+        )}
         {plan.unplaced.length > 0 && (
           <p className="coming-stats__note">
             Waiting for a fuller month or a date: {listTitles(plan.unplaced.map((u) => u.title))}.

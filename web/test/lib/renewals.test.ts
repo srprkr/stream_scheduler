@@ -107,6 +107,20 @@ describe("renewalAdvice", () => {
     expect(advice.action).toBe("keep");
   });
 
+  it("keeps a service the user always keeps, naming what's on it to watch", () => {
+    const advice = renewalAdvice({
+      ...base,
+      service: "Prime Video",
+      key: "prime",
+      renewsOn: "2026-10-14",
+      alwaysKeep: ["Reacher"],
+    });
+    expect(advice).toEqual({
+      action: "keep",
+      text: "You always keep Prime Video (bundled or shared), so it's not in the rotation. Watch Reacher on it any time.",
+    });
+  });
+
   it("asks for a service's notice period before the renewal", () => {
     const advice = renewalAdvice({
       ...base,
@@ -136,7 +150,7 @@ describe("renewalAdvice", () => {
     );
   });
 
-  it("shows how much of the year the plan needs an annual service, and the break-even", () => {
+  it("tells a yearly plan to turn off auto-renew, with the monthly sums", () => {
     const advice = renewalAdvice({
       ...base,
       service: "Netflix",
@@ -146,10 +160,22 @@ describe("renewalAdvice", () => {
       monthlyCents: 1849,
     });
     expect(advice).toEqual({
-      action: "decide",
+      action: "switch",
       text:
-        "Netflix's annual plan renews Mar 2, 2027. The plan needs Netflix for 1 month of the year ahead. " +
-        "At $184.99 a year against $18.49 a month, the annual plan only saves money if you'd keep it about 10 months or more.",
+        "Turn off auto-renew now: you keep Netflix until Mar 2, 2027, so nothing is lost. " +
+        "Your plan needs it for 1 month of the year ahead: 1 × $18.49 = $18.49 by the month, against $184.99 for another year.",
     });
+  });
+
+  it("asks for the yearly price when it isn't known", () => {
+    const advice = renewalAdvice({
+      ...base,
+      service: "Peacock",
+      key: "peacock",
+      billing: { cycle: "annual", renewsOn: "2027-03-02", cents: null },
+      renewsOn: "2027-03-02",
+    });
+    expect(advice.action).toBe("switch");
+    expect(advice.text).toContain("Add its yearly price");
   });
 });

@@ -1145,6 +1145,19 @@ body {
     &[data-action="pause"] {
       color: #fbbf24;
     }
+    // Getting off a yearly plan is the priority: a filled tag.
+    &[data-action="switch"] {
+      color: var(--bg);
+      background: #fbbf24;
+      border-color: #fbbf24;
+    }
+  }
+
+  // A yearly plan's row stands out, with a rule down its side.
+  &__row[data-action="switch"] {
+    margin-left: -12px;
+    padding-left: 10px;
+    border-left: 2px solid #fbbf24;
   }
 
   &__advice,

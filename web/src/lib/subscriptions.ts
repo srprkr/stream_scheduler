@@ -16,6 +16,11 @@ export type Billing =
 export interface Subscription {
   slug: string;
   choice: PlanChoice;
+  /**
+   * "Always keep (bundled or shared)" in the app: kept whatever the plan
+   * says, like Prime with shipping. Named leftOut in storage from when it
+   * meant "leave out of estimates"; renaming it would orphan saved data.
+   */
   leftOut?: boolean;
   /**
    * Unset for services saved before renewal dates existed: their real

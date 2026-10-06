@@ -104,11 +104,9 @@ export function InsightsSummary() {
         />
         <Tile
           figure={`${coming.months.length > 0 ? "~" : ""}${formatHours(comingMinutes)}`}
-          level={comingLevel(comingMinutes, monthMinutes, levels)}
+          level={comingLevel(comingMinutes, monthMinutes)}
           why={{
-            good: "Under half a month of your viewing",
-            warn: "Over half a month of your viewing",
-            bad: "A month or more of your viewing on its way",
+            good: "A month or more of your viewing on its way: a paid month will be well used",
           }}
           label={`coming on your watchlist, ${titles.size} ${titles.size === 1 ? "title" : "titles"}`}
         />

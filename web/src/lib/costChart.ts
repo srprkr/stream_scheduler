@@ -26,7 +26,7 @@ export interface CostPoint {
  * in `unpriced`.
  *
  * `alwaysOn` is what the services the user keeps whatever happens cost a
- * month - ones marked "leave out of estimates", like Prime Video bundled
+ * month - ones marked "always keep (bundled or shared)", like Prime Video bundled
  * with shipping. It goes on both lines every month: it's spent either way,
  * so the gap between the lines doesn't move, but the totals are real.
  */

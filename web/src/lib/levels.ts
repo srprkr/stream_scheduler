@@ -34,15 +34,13 @@ export function spendLevel(cents: number, levels = LEVELS): Level {
 
 /**
  * Hours still coming on the watchlist, against a month of the user's
- * viewing: green while it's under half a month, orange past half, red once
- * it's a month or more - more arriving than a month of watching gets through.
+ * viewing. A backlog isn't a problem here - what waits on a paused service
+ * is money not spent - so nothing turns red. Green once there's a month's
+ * worth coming: enough that a paid month will be well used.
  */
-export function comingLevel(minutes: number, minutesPerMonth: number, levels = LEVELS): Level {
+export function comingLevel(minutes: number, minutesPerMonth: number): Level {
   if (minutes <= 0 || minutesPerMonth <= 0) return null;
-  const share = minutes / minutesPerMonth;
-  if (share >= 1) return "bad";
-  if (share >= levels.approaching) return "warn";
-  return "good";
+  return minutes >= minutesPerMonth ? "good" : null;
 }
 
 /** Higher is better: green at the mark, orange past halfway to it. */

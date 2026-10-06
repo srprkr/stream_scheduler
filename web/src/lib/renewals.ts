@@ -62,11 +62,12 @@ export function renewalsBetween(billing: Billing, from: string, until: string): 
 
 export interface RenewalAdvice {
   /**
-   * keep: this renewal falls in the plan's month for this service. pause:
-   * it doesn't, so the renewal can be skipped. decide: an annual renewal - a
-   * yearly choice the plan can only inform.
+   * keep: this renewal falls in the plan's month for this service (or the
+   * user always keeps it). pause: it doesn't, so cancel before it renews.
+   * switch: a yearly plan - turn off its auto-renew now and pay by the
+   * month from then on, only when the plan needs it.
    */
-  action: "keep" | "pause" | "decide";
+  action: "keep" | "pause" | "switch";
   text: string;
 }
 
@@ -88,6 +89,7 @@ export function renewalAdvice({
   monthlyCents,
   today,
   cancelHoursBefore = null,
+  alwaysKeep = null,
 }: {
   service: string;
   /** The plan's key for this service: its slug. */
@@ -102,26 +104,55 @@ export function renewalAdvice({
   today: string;
   /** Notice the service needs before a renewal (Apple: 24 hours). */
   cancelHoursBefore?: number | null;
+  /**
+   * For a service the user always keeps (bundled or shared): the watchlist
+   * titles on it, free to watch any month. Null for every other service.
+   */
+  alwaysKeep?: readonly string[] | null;
 }): RenewalAdvice {
+  // Kept whatever happens: never advised to cancel. A yearly plan suits it,
+  // since it runs all year anyway.
+  if (alwaysKeep) {
+    const watch = alwaysKeep.length > 0 ? ` Watch ${listTitles(alwaysKeep)} on it any time.` : "";
+    const yearly =
+      billing.cycle === "annual" && billing.cents !== null && monthlyCents
+        ? ` Paying yearly suits it: ${formatDollars(billing.cents)} against ${formatDollars(monthlyCents * 12)} by the month.`
+        : "";
+    return {
+      action: "keep",
+      text: `You always keep ${service} (bundled or shared), so it's not in the rotation.${watch}${yearly}`,
+    };
+  }
+
   const turns = plan.months.filter((m) => m.service === key);
   const waiting = plan.unplaced.filter((u) => u.key === key).map((u) => u.title);
 
+  // A yearly plan: get off it. Turning off auto-renew loses nothing - the
+  // year already paid for runs to its end - and after that the plan pays
+  // month by month, only when it needs the service.
   if (billing.cycle === "annual") {
-    const lines = [`${service}'s annual plan renews ${when(renewsOn, today)}.`];
-    const used = turns.length;
-    lines.push(
-      used === 0
-        ? `The plan doesn't need ${service} in the year ahead.`
-        : `The plan needs ${service} for ${used} ${used === 1 ? "month" : "months"} of the year ahead.`,
-    );
-    if (billing.cents !== null && monthlyCents) {
-      const months = Math.round(billing.cents / monthlyCents);
+    const n = turns.length;
+    const lines = [
+      `Turn off auto-renew now: you keep ${service} until ${when(renewsOn, today)}, so nothing is lost.`,
+    ];
+    if (billing.cents === null || !monthlyCents) {
       lines.push(
-        `At ${formatDollars(billing.cents)} a year against ${formatDollars(monthlyCents)} a month, ` +
-          `the annual plan only saves money if you'd keep it about ${months} months or more.`,
+        `Add its yearly price with the pencil in Your services to see what monthly would cost.`,
+      );
+    } else if (n === 0) {
+      lines.push(
+        `Your plan doesn't need ${service} in the year ahead: that's ${formatDollars(billing.cents)} you'd stop paying.`,
+      );
+    } else if (n * monthlyCents < billing.cents) {
+      lines.push(
+        `Your plan needs it for ${n} ${n === 1 ? "month" : "months"} of the year ahead: ${n} × ${formatDollars(monthlyCents)} = ${formatDollars(n * monthlyCents)} by the month, against ${formatDollars(billing.cents)} for another year.`,
+      );
+    } else {
+      lines.push(
+        `Your plan needs it ${n} months of the year ahead, so another year would be cheaper this time - but with auto-renew off, that's your choice at renewal, not automatic.`,
       );
     }
-    return { action: "decide", text: lines.join(" ") };
+    return { action: "switch", text: lines.join(" ") };
   }
 
   const saves = monthlyCents ? ` That saves ${formatDollars(monthlyCents)}.` : "";

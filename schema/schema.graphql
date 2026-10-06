@@ -137,7 +137,8 @@ type Plan {
 
   """
   True when the plan pays for more than streaming (Amazon Prime's shipping,
-  say), so it starts outside cost estimates until the user brings it in.
+  say), so it starts marked "always keep": the plan never suggests cancelling
+  it, and its cost runs every month. The user can untick it.
   """
   leaveOutByDefault: Boolean!
 

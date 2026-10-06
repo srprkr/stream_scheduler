@@ -142,7 +142,7 @@ export function MyServices({ collapsible = true }: { collapsible?: boolean }) {
               {spend.leftOutCents > 0 && (
                 <span className="services__unpriced">
                   {" "}
-                  · plus {formatDollars(spend.leftOutCents)} left out of estimates
+                  · plus {formatDollars(spend.leftOutCents)} you always keep
                 </span>
               )}
             </p>
@@ -251,7 +251,7 @@ function PlanPicker({ service, subscription }: { service: Service; subscription:
           checked={subscription.leftOut ?? false}
           onChange={(e) => subscriptions.setLeftOut(service.slug, e.target.checked)}
         />
-        Leave out of estimates
+        Always keep (bundled or shared)
       </label>
       <BillingPicker service={service} subscription={subscription} />
     </div>

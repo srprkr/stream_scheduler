@@ -6,7 +6,13 @@ import { useSubscriptions } from "../hooks/useSubscriptions";
 import { useWatchlist } from "../hooks/useWatchlist";
 import { icsCalendar, type CalendarEvent } from "../lib/calendar";
 import { listTitles } from "../lib/replaces";
-import { addDays, renewalAdvice, renewalsBetween, type RenewalAdvice } from "../lib/renewals";
+import {
+  addDays,
+  nextRenewal,
+  renewalAdvice,
+  renewalsBetween,
+  type RenewalAdvice,
+} from "../lib/renewals";
 import { localToday, when } from "../lib/seasons";
 import { monthlyCents } from "../lib/subscriptions";
 import { CancelHowTo, type Cancellation } from "./CancelHowTo";
@@ -22,7 +28,6 @@ interface Upcoming {
   name: string;
   logoUrl: string | null | undefined;
   renewsOn: string;
-  yearly: boolean;
   advice: RenewalAdvice;
   cancellation: Cancellation | null;
 }
@@ -71,13 +76,18 @@ export function Renewals() {
             plans.find((p) => p.isDefault)
           )?.monthlyCents ?? null)
         : monthlyCents(sub, plans);
-    for (const renewsOn of renewalsBetween(sub.billing, today, until)) {
+    // A yearly plan is always listed, however far off its renewal: getting
+    // off it is the point, and its reminder can't wait for the window.
+    const dates = renewalsBetween(sub.billing, today, until);
+    if (sub.billing.cycle === "annual" && dates.length === 0) {
+      dates.push(nextRenewal(sub.billing, today));
+    }
+    for (const renewsOn of dates) {
       renewals.push({
         slug: sub.slug,
         name,
         logoUrl: provider?.logoUrl,
         renewsOn,
-        yearly: sub.billing.cycle === "annual",
         cancellation: provider?.cancellation ?? null,
         advice: renewalAdvice({
           service: name,
@@ -89,6 +99,9 @@ export function Renewals() {
           monthlyCents: monthly,
           today,
           cancelHoursBefore: provider?.cancellation?.cancelHoursBefore ?? null,
+          alwaysKeep: sub.leftOut
+            ? (rotation.anyTime.find((a) => a.key === sub.slug)?.titles.map((t) => t.title) ?? [])
+            : null,
         }),
       });
     }
@@ -97,6 +110,25 @@ export function Renewals() {
   const next = renewals.filter((r, i) => renewals.findIndex((x) => x.slug === r.slug) === i);
 
   const download = () => {
+    // Yearly plans get two extra reminders - a month out and a week out -
+    // to turn off auto-renew before the year rolls over.
+    const yearlyEvents: CalendarEvent[] = next
+      .filter((r) => r.advice.action === "switch")
+      .flatMap((r) =>
+        [30, 7]
+          .map((days) => ({ days, date: addDays(r.renewsOn, -days) }))
+          .filter(({ date }) => date >= today)
+          .map(({ days, date }) => ({
+            uid: `${r.slug}-${r.renewsOn}-yearly-${days}@streamhopper`,
+            date,
+            summary: `Turn off ${r.name}'s yearly auto-renew: renews ${when(r.renewsOn, today)}`,
+            description:
+              `${r.advice.text}` +
+              (r.cancellation
+                ? ` How: ${r.cancellation.steps.join(" ")} ${r.cancellation.url} Refunds: ${r.cancellation.refunds}`
+                : ""),
+          })),
+      );
     const events: CalendarEvent[] = renewals.map((r) => {
       const remindOn = addDays(r.renewsOn, -lead);
       return {
@@ -109,7 +141,9 @@ export function Renewals() {
           (r.cancellation ? ` To cancel: ${r.cancellation.url}` : ""),
       };
     });
-    const blob = new Blob([icsCalendar(events, new Date())], { type: "text/calendar" });
+    const blob = new Blob([icsCalendar([...events, ...yearlyEvents], new Date())], {
+      type: "text/calendar",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -128,7 +162,7 @@ export function Renewals() {
 
       <ul className="renewals__list">
         {next.map((r) => (
-          <li key={r.slug} className="renewals__row">
+          <li key={r.slug} className="renewals__row" data-action={r.advice.action}>
             <ServiceLogo name={r.name} logoUrl={r.logoUrl} active size="row" />
             <div>
               <p className="renewals__head">
@@ -138,7 +172,7 @@ export function Renewals() {
                     ? "Keep"
                     : r.advice.action === "pause"
                       ? "Cancel"
-                      : "Decide"}
+                      : "Go monthly"}
                 </span>
               </p>
               <p className="renewals__advice">{r.advice.text}</p>
@@ -179,8 +213,9 @@ export function Renewals() {
             Add to calendar (.ics)
           </button>
           <p className="renewals__note">
-            Covers every renewal in the next {WINDOW_DAYS} days, with today's advice. Download it
-            again after your watchlist changes; it updates the same events.
+            Covers every renewal in the next {WINDOW_DAYS} days, with today's advice, plus a
+            reminder a month and a week before each yearly plan renews. Download it again after your
+            watchlist changes; it updates the same events.
           </p>
         </div>
       )}
@@ -193,6 +228,5 @@ function summary(r: Upcoming, today: string): string {
   const date = when(r.renewsOn, today);
   if (r.advice.action === "pause") return `Cancel ${r.name} before it renews ${date}`;
   if (r.advice.action === "keep") return `${r.name} renews ${date}: keep it`;
-  if (r.yearly) return `${r.name}'s yearly plan renews ${date}`;
-  return `${r.name} renews ${date}: keep or pause?`;
+  return `Turn off ${r.name}'s yearly auto-renew: renews ${date}`;
 }

@@ -59,24 +59,45 @@ export function useRotationPlan() {
   // take: a coming season's hours, or the whole of what's out now.
   const subscribed = new Set(mine.map((s) => s.slug));
   const { services } = watchlistByService([...titles.values()], subscribed, today);
-  const planServices: PlanService[] = services.map((s) => ({
+
+  // Services the user keeps whatever happens ("always keep", like Prime
+  // with shipping) are paid for every month already. Their titles are
+  // watchable any time, so they're taken out of the rotation entirely -
+  // including from other services that carry them - and listed apart.
+  const alwaysOnSlugs = mine.filter((s) => s.leftOut).map((s) => s.slug);
+  const kept = services.filter((s) => alwaysOnSlugs.includes(s.key));
+  const free = new Set(kept.flatMap((s) => s.titles.map((t) => t.id)));
+  const anyTime = kept.map((s) => ({
     key: s.key,
-    titles: s.titles.map((st) => {
-      const t = titles.get(st.id);
-      const runtime = t && stillToCome(t, today) ? t.comingRuntime : (t?.runtime ?? null);
-      return {
-        id: st.id,
-        title: st.title,
-        minutes: runtime?.minutes ?? null,
-        startsOn: t?.nextSeason?.premieresOn ?? null,
-        readyOn: st.ready.state === "now" ? today : st.ready.state === "on" ? st.ready.date : null,
-      };
-    }),
+    titles: s.titles.map((t) => ({ title: t.title, ready: t.ready })),
   }));
+
+  const planServices: PlanService[] = services
+    .filter((s) => !alwaysOnSlugs.includes(s.key))
+    .map((s) => ({
+      ...s,
+      titles: s.titles.filter((t) => !free.has(t.id)),
+    }))
+    .filter((s) => s.titles.length > 0)
+    .map((s) => ({
+      key: s.key,
+      titles: s.titles.map((st) => {
+        const t = titles.get(st.id);
+        const runtime = t && stillToCome(t, today) ? t.comingRuntime : (t?.runtime ?? null);
+        return {
+          id: st.id,
+          title: st.title,
+          minutes: runtime?.minutes ?? null,
+          startsOn: t?.nextSeason?.premieresOn ?? null,
+          readyOn:
+            st.ready.state === "now" ? today : st.ready.state === "on" ? st.ready.date : null,
+        };
+      }),
+    }));
 
   const plansFor = (slug: string) => providers.find((p) => p.slug === slug)?.plans ?? [];
   // What a plan month on a service adds. Nothing for one the user keeps
-  // whatever happens (left out of estimates, like Prime with shipping): it's
+  // whatever happens ("always keep", like Prime with shipping): it's
   // paid for anyway, so a month of it in the plan costs nothing extra.
   const priceOf = (key: string) => {
     const sub = mine.find((s) => s.slug === key);
@@ -101,7 +122,9 @@ export function useRotationPlan() {
     payingNow: spend.cents,
     /** Monthly cost of the services kept whatever happens, and their slugs. */
     alwaysOn: spend.leftOutCents,
-    alwaysOnSlugs: mine.filter((s) => s.leftOut).map((s) => s.slug),
+    alwaysOnSlugs,
+    /** Watchlist titles on always-kept services: free to watch any month. */
+    anyTime,
     hoursPerMonth,
     maxWaitMonths,
     setMaxWaitMonths,

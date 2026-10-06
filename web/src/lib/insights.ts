@@ -72,7 +72,7 @@ function keepLine(terms: CancelTerms | null, until: string | null, today: string
  * - Cancel now: a service the user pays for monthly that the plan doesn't use
  *   this month. Worth its price for every month until its next turn - or
  *   for the whole horizon if it has none. Services kept whatever happens
- *   ("leave out of estimates", like Prime with shipping) and yearly plans
+ *   ("always keep", like Prime with shipping) and yearly plans
  *   (which can't be paused mid-term) are left alone. If wishlist titles on
  *   disc are what's on it, buying those is the way to let it go.
  * - Turn off a yearly renewal: always, and first. It costs nothing - the

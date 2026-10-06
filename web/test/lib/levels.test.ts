@@ -20,10 +20,10 @@ describe("spendLevel", () => {
 });
 
 describe("comingLevel", () => {
-  it("is green under half a month, orange past half, red at a month", () => {
-    expect(comingLevel(MONTH * 0.4, MONTH)).toBe("good");
-    expect(comingLevel(MONTH * 0.5, MONTH)).toBe("warn");
-    expect(comingLevel(MONTH, MONTH)).toBe("bad");
+  it("is green at a month's worth, and never red: a backlog saves money", () => {
+    expect(comingLevel(MONTH, MONTH)).toBe("good");
+    expect(comingLevel(MONTH * 3, MONTH)).toBe("good");
+    expect(comingLevel(MONTH * 0.6, MONTH)).toBeNull();
     expect(comingLevel(0, MONTH)).toBeNull();
   });
 });
