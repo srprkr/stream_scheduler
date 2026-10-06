@@ -40,7 +40,7 @@ body {
 
 .topbar {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 20px;
   margin-bottom: 32px;
@@ -62,7 +62,40 @@ body {
 
 .nav {
   display: flex;
+  align-items: center;
   gap: 20px;
+
+  // The gear, last in the row and so in the top-right corner.
+  &__settings {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    margin-left: 4px;
+    color: var(--muted);
+    border-radius: 999px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    &:hover,
+    &[aria-current] {
+      color: var(--text);
+    }
+    &[aria-current] {
+      background: var(--surface);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 2px;
+    }
+  }
 
   &__link {
     color: var(--muted);
@@ -1526,6 +1559,95 @@ body {
       font-size: 1rem;
       color: var(--soon);
     }
+  }
+}
+
+// Settings: one panel per group, each field a label and a number, the
+// MaxWait control reused as is.
+.settings {
+  margin-bottom: 20px;
+
+  &__field {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    font-size: 0.9375rem;
+
+    input {
+      width: 6em;
+      padding: 6px 10px;
+      font: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      text-align: right;
+
+      &:focus-visible {
+        outline: 2px solid var(--soon);
+        outline-offset: 2px;
+      }
+    }
+  }
+
+  &__reset {
+    margin-top: 4px;
+  }
+}
+
+// How to cancel a service: folded under a disclosure, opened for the steps,
+// the service's cancel page, refunds and what to watch out for.
+.howto {
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  color: var(--muted);
+
+  summary {
+    width: fit-content;
+    cursor: pointer;
+    color: var(--muted);
+    text-decoration: underline;
+
+    &:hover {
+      color: var(--text);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--soon);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+  &[open] summary {
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  p {
+    margin: 6px 0 0;
+  }
+  strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+  a {
+    color: var(--text);
+  }
+
+  &__steps,
+  &__gotchas {
+    margin: 4px 0 0;
+    padding-left: 20px;
+
+    li + li {
+      margin-top: 2px;
+    }
+  }
+  &__checked {
+    font-size: 0.75rem;
   }
 }
 

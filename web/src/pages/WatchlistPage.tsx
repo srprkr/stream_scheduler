@@ -4,17 +4,11 @@ import { CatalogTile } from "../components/CatalogTile";
 import { TitleDialog } from "../components/TitleDialog";
 import { Renewals } from "../components/Renewals";
 import { WatchServices } from "../components/WatchServices";
-import { useStoredNumber } from "../hooks/useStored";
+import { useHoursPerMonth } from "../hooks/useSettings";
 import { useSubscriptions } from "../hooks/useSubscriptions";
 import { useWatchlist } from "../hooks/useWatchlist";
 import { localToday, when } from "../lib/seasons";
-import {
-  DEFAULT_HOURS_PER_MONTH,
-  formatHours,
-  formatMonths,
-  HOURS_PER_MONTH_KEY,
-  libraryStats,
-} from "../lib/stats";
+import { formatHours, formatMonths, libraryStats } from "../lib/stats";
 import {
   readyOrder,
   soonestArrival,
@@ -32,7 +26,7 @@ import {
 export function WatchlistPage() {
   const { entries, byId, titles, serviceInfo, loading } = useWatchlist();
   const subscribed = new Set(useSubscriptions().map((s) => s.slug));
-  const [hoursPerMonth] = useStoredNumber(HOURS_PER_MONTH_KEY, DEFAULT_HOURS_PER_MONTH);
+  const [hoursPerMonth] = useHoursPerMonth();
   const [openId, setOpenId] = useState<string | null>(null);
   const today = localToday();
 

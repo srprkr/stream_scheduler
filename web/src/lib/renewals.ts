@@ -87,6 +87,7 @@ export function renewalAdvice({
   nameOf,
   monthlyCents,
   today,
+  cancelHoursBefore = null,
 }: {
   service: string;
   /** The plan's key for this service: its slug. */
@@ -99,6 +100,8 @@ export function renewalAdvice({
   /** What it costs a month: the plan's price, or the user's own. */
   monthlyCents: number | null;
   today: string;
+  /** Notice the service needs before a renewal (Apple: 24 hours). */
+  cancelHoursBefore?: number | null;
 }): RenewalAdvice {
   const turns = plan.months.filter((m) => m.service === key);
   const waiting = plan.unplaced.filter((u) => u.key === key).map((u) => u.title);
@@ -121,7 +124,14 @@ export function renewalAdvice({
     return { action: "decide", text: lines.join(" ") };
   }
 
-  const saves = monthlyCents ? ` Pausing saves ${formatDollars(monthlyCents)}.` : "";
+  const saves = monthlyCents ? ` That saves ${formatDollars(monthlyCents)}.` : "";
+  // Every tracked service keeps a cancelled plan to the end of the paid
+  // period, so "pause" means cancel before the renewal - with notice where
+  // the service needs it.
+  const by = cancelHoursBefore
+    ? when(addDays(renewsOn, -Math.ceil(cancelHoursBefore / 24)), today)
+    : when(renewsOn, today);
+  const cancel = `Cancel it before ${by}: you keep it until then, and it won't renew.`;
   const month = monthOn(plan, renewsOn);
 
   if (month?.service === key) {
@@ -136,17 +146,17 @@ export function renewalAdvice({
   if (next) {
     return {
       action: "pause",
-      text: `Pause it: ${service}'s next month in your plan starts ${when(next.start, today)}, for ${listTitles(next.watched.map((w) => w.title))}.${elsewhere}${saves}`,
+      text: `${cancel} ${service}'s next month in your plan starts ${when(next.start, today)}, for ${listTitles(next.watched.map((w) => w.title))}.${elsewhere}${saves}`,
     };
   }
   if (waiting.length > 0) {
     return {
       action: "pause",
-      text: `Pause it: ${listTitles(waiting)} ${waiting.length === 1 ? "isn't" : "aren't"} enough for a month yet, or ${waiting.length === 1 ? "has" : "have"} no dates.${elsewhere}${saves}`,
+      text: `${cancel} ${listTitles(waiting)} ${waiting.length === 1 ? "isn't" : "aren't"} enough for a month yet, or ${waiting.length === 1 ? "has" : "have"} no dates.${elsewhere}${saves}`,
     };
   }
   return {
     action: "pause",
-    text: `Nothing on your watchlist needs ${service}. Pause or cancel it?${saves}`,
+    text: `Nothing on your watchlist needs ${service}. ${cancel}${saves}`,
   };
 }

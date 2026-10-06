@@ -1,8 +1,7 @@
 import type { useRotationPlan } from "../hooks/useRotationPlan";
+import { MAX_WAIT } from "../hooks/useSettings";
 import { formatDollars } from "../lib/money";
 import { planCost } from "../lib/planner";
-
-const CHOICES = [1, 2, 3, 4, 6] as const;
 
 /**
  * How long the plan may leave something on the watchlist waiting, with what
@@ -14,7 +13,7 @@ const CHOICES = [1, 2, 3, 4, 6] as const;
  */
 export function MaxWait({ rotation }: { rotation: ReturnType<typeof useRotationPlan> }) {
   const { planFor, priceOf, maxWaitMonths, setMaxWaitMonths, payingNow } = rotation;
-  const costs = CHOICES.map((m) => ({ months: m, ...planCost(planFor(m), priceOf) }));
+  const costs = MAX_WAIT.choices.map((m) => ({ months: m, ...planCost(planFor(m), priceOf) }));
   const current = planCost(rotation.plan, priceOf);
   const span = rotation.plan.months.length;
 

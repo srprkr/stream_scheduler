@@ -82,6 +82,28 @@ type Provider {
   name: String!
 
   logoUrl(size: ImageSize = SMALL): URL
+
+  "How to cancel it and what to know first. Null when the app has no record."
+  cancellation: Cancellation
+}
+
+"""
+How to cancel a service, checked by hand against its help pages and dated.
+Every tracked service keeps a cancelled subscription running to the end of
+the paid period - so cancelling straight after subscribing costs nothing.
+"""
+type Cancellation {
+  url: URL!
+  steps: [String!]!
+  keepsAccessUntilPeriodEnd: Boolean!
+  "Cancel at least this many hours before renewal for it to take; null if any time."
+  cancelHoursBefore: Int
+  "A built-in pause, when the service has one."
+  pause: String
+  refunds: String!
+  "Contract gotchas: third-party billing, bundles, auto-resume, promotions."
+  gotchas: [String!]!
+  checkedOn: Date!
 }
 
 """

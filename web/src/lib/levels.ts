@@ -1,11 +1,20 @@
 /**
- * Traffic-light levels for the Insights figures. The thresholds live here,
- * in one object, so a settings page can change them later without touching
- * the tiles. "Approaching" a mark means past halfway to it.
+ * Traffic-light levels for the Insights figures. The thresholds are one
+ * object: LEVELS holds the defaults, and the Settings page saves the user's
+ * own (useLevels). "Approaching" a mark means past `approaching` of the way
+ * to it - halfway by default.
  */
 export type Level = "good" | "warn" | "bad" | null;
 
-export const LEVELS = {
+export interface Levels {
+  spendHighCents: number;
+  ownedGoodMonths: number;
+  ownedGoodTitles: number;
+  approaching: number;
+}
+
+/** The defaults; the user's own come from useLevels (Settings page). */
+export const LEVELS: Levels = {
   /** Monthly spend: anything at all is worth watching; past this is a lot. */
   spendHighCents: 2000,
   /** Owned viewing: this many months of it is a healthy library. */

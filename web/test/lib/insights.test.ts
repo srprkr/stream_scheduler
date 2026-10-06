@@ -36,6 +36,7 @@ const names: Record<string, string> = {
   prime: "Prime Video",
   netflix: "Netflix",
   hulu: "Hulu",
+  appletv: "Apple TV",
   hbomax: "HBO Max",
 };
 const prices: Record<string, number> = { prime: 899, netflix: 799, hulu: 1249, hbomax: 1849 };
@@ -48,20 +49,38 @@ const input = (subscriptions: Subscription[], extra: Partial<InsightInput> = {})
   publishedMonthly: (slug) => prices[slug] ?? null,
   nameOf: (k) => names[k] ?? k,
   wishlistOn: () => [],
+  // Every tracked service keeps access to the end of the paid period.
+  cancellationOf: () => ({ keepsAccessUntilPeriodEnd: true, refunds: "No refunds." }),
   ...extra,
 });
 
 describe("pathsForward", () => {
-  it("suggests pausing a service the plan doesn't use now, worth each idle month", () => {
+  it("suggests cancelling a service the plan doesn't use now, keeping what's paid for", () => {
     const [netflix] = pathsForward(input([sub("netflix")]));
     expect(netflix).toEqual({
       id: "pause:netflix",
       kind: "pause",
-      title: "Pause Netflix",
-      detail: "Nothing in your plan needs it until Dec 3, for Dark. $7.99 a month × 2 months.",
+      service: "netflix",
+      title: "Cancel Netflix now",
+      detail:
+        "Nothing in your plan needs it until Dec 3, for Dark. You keep it until Oct 10, then it simply doesn't renew. $7.99 a month × 2 months.",
       savesCents: 1598,
       date: null,
     });
+  });
+
+  it("says to cancel a day early where a service needs notice", () => {
+    const [apple] = pathsForward(
+      input([sub("appletv")], {
+        cancellationOf: () => ({
+          keepsAccessUntilPeriodEnd: true,
+          cancelHoursBefore: 24,
+          refunds: "No refunds.",
+        }),
+        monthlyCost: () => 1299,
+      }),
+    );
+    expect(apple?.detail).toContain("Do it at least 1 day before.");
   });
 
   it("leaves alone the service whose month it is, and ones kept whatever happens", () => {
@@ -80,14 +99,43 @@ describe("pathsForward", () => {
     expect(hulu?.detail).toContain("Shōgun - is on disc: buy it rather than keep paying.");
   });
 
-  it("suggests switching a yearly plan the plan barely uses to monthly", () => {
+  it("puts turning off a yearly renewal first, with the sums and refund terms", () => {
     const yearly = sub("hbomax", {
       billing: { cycle: "annual", renewsOn: "2027-03-02", cents: 18499 },
     });
-    const [hbo] = pathsForward(input([yearly]));
-    expect(hbo?.kind).toBe("switch-to-monthly");
-    expect(hbo?.savesCents).toBe(18499);
-    expect(hbo?.date).toBe("2027-03-02");
+    const steps = pathsForward(input([sub("netflix"), yearly]));
+    expect(steps[0]).toEqual({
+      id: "switch-to-monthly:hbomax",
+      kind: "switch-to-monthly",
+      service: "hbomax",
+      title: "Turn off HBO Max's yearly renewal now",
+      detail:
+        "Nothing is lost: You keep it until Mar 2, 2027, then it simply doesn't renew. " +
+        "Your plan doesn't need it in the year ahead: that's $184.99 you'd stop paying. " +
+        "No refunds.",
+      savesCents: 18499,
+      date: "2027-03-02",
+    });
+  });
+
+  it("still suggests turning off renewal when the yearly price is cheaper, without a saving", () => {
+    const busy: Plan = {
+      months: Array.from({ length: 12 }, (_, i) =>
+        month(
+          `2027-${String(i + 1).padStart(2, "0")}-01`,
+          `2027-${String(i + 1).padStart(2, "0")}-28`,
+          "hbomax",
+          ["X"],
+        ),
+      ),
+      unplaced: [],
+    };
+    const yearly = sub("hbomax", {
+      billing: { cycle: "annual", renewsOn: "2027-03-02", cents: 18499 },
+    });
+    const [hbo] = pathsForward(input([yearly], { plan: busy }));
+    expect(hbo?.savesCents).toBeNull();
+    expect(hbo?.detail).toContain("this year the yearly price is cheaper");
   });
 
   it("says when to subscribe to a service the plan needs but the user doesn't pay for", () => {
@@ -96,6 +144,9 @@ describe("pathsForward", () => {
       ["Subscribe to Prime Video on Oct 4", "2026-10-04"],
       ["Subscribe to Netflix on Dec 3", "2026-12-03"],
     ]);
+    expect(steps[0]?.detail).toBe(
+      "For Reacher - and cancel the same day: you keep the whole month, and it can't renew by accident.",
+    );
   });
 
   it("ranks savings first, biggest first, then dated steps", () => {

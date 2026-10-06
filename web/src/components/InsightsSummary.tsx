@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 
+import { CancelHowTo, type Cancellation } from "./CancelHowTo";
 import { useLibrary } from "../hooks/useLibrary";
 import { useLibraryDetails } from "../hooks/useLibraryDetails";
+import { useLevels } from "../hooks/useSettings";
 import { useRotationPlan } from "../hooks/useRotationPlan";
 import { useSubscriptions } from "../hooks/useSubscriptions";
 import { useWatchlist } from "../hooks/useWatchlist";
@@ -11,7 +13,6 @@ import { pathsForward } from "../lib/insights";
 import { formatDollars } from "../lib/money";
 import {
   comingLevel,
-  LEVELS,
   ownedHoursLevel,
   ownedTitlesLevel,
   spendLevel,
@@ -41,8 +42,9 @@ export function InsightsSummary() {
   const nameOf = (key: string) =>
     providers.find((p) => p.slug === key)?.name ?? serviceInfo.get(key)?.name ?? key;
 
-  // At a glance.
+  // At a glance, coloured by the user's own thresholds (Settings).
   const monthMinutes = hoursPerMonth * 60;
+  const [levels] = useLevels();
   const { points } = cumulativeCosts(plan, priceOf, payingNow, alwaysOn);
   const end = points.at(-1);
   const saved = end ? end.keep - end.plan : 0;
@@ -54,6 +56,8 @@ export function InsightsSummary() {
   );
 
   // Paths forward.
+  const cancellationOf = (slug: string) =>
+    providers.find((p) => p.slug === slug)?.cancellation ?? null;
   const wishlistOn = (slug: string) =>
     wanted
       .filter((e) => details.byId.get(e.id)?.availableOn.some((p) => p.slug === slug))
@@ -74,6 +78,7 @@ export function InsightsSummary() {
     },
     nameOf,
     wishlistOn,
+    cancellationOf,
   });
 
   return (
@@ -82,9 +87,9 @@ export function InsightsSummary() {
         <Tile
           figure={formatDollars(payingNow + alwaysOn)}
           unit="/month"
-          level={spendLevel(payingNow + alwaysOn)}
+          level={spendLevel(payingNow + alwaysOn, levels)}
           why={{
-            bad: `More than ${formatDollars(LEVELS.spendHighCents)} a month`,
+            bad: `More than ${formatDollars(levels.spendHighCents)} a month`,
             warn: "Still paying for streaming",
           }}
           label={`on ${mine.length} ${mine.length === 1 ? "service" : "services"} now`}
@@ -99,7 +104,7 @@ export function InsightsSummary() {
         />
         <Tile
           figure={`${coming.months.length > 0 ? "~" : ""}${formatHours(comingMinutes)}`}
-          level={comingLevel(comingMinutes, monthMinutes)}
+          level={comingLevel(comingMinutes, monthMinutes, levels)}
           why={{
             good: "Under half a month of your viewing",
             warn: "Over half a month of your viewing",
@@ -109,19 +114,19 @@ export function InsightsSummary() {
         />
         <Tile
           figure={`${ownedStats.estimated ? "~" : ""}${formatHours(ownedStats.minutes)}`}
-          level={ownedHoursLevel(ownedStats.minutes, monthMinutes)}
+          level={ownedHoursLevel(ownedStats.minutes, monthMinutes, levels)}
           why={{
-            good: `${LEVELS.ownedGoodMonths}+ months of your viewing`,
-            warn: `Over halfway to ${LEVELS.ownedGoodMonths} months of your viewing`,
+            good: `${levels.ownedGoodMonths}+ months of your viewing`,
+            warn: `Over halfway to ${levels.ownedGoodMonths} months of your viewing`,
           }}
           label={
             <>
               owned on disc,{" "}
               <Level
-                level={ownedTitlesLevel(owned.length)}
+                level={ownedTitlesLevel(owned.length, levels)}
                 why={{
-                  good: `More than ${LEVELS.ownedGoodTitles} titles`,
-                  warn: `Approaching ${LEVELS.ownedGoodTitles} titles`,
+                  good: `More than ${levels.ownedGoodTitles} titles`,
+                  warn: `Approaching ${levels.ownedGoodTitles} titles`,
                 }}
               >
                 {owned.length} {owned.length === 1 ? "title" : "titles"}
@@ -152,6 +157,12 @@ export function InsightsSummary() {
                   <div>
                     <p className="paths__title">{s.title}</p>
                     <p className="paths__detail">{s.detail}</p>
+                    {cancellationOf(s.service) && (
+                      <CancelHowTo
+                        name={nameOf(s.service)}
+                        cancellation={cancellationOf(s.service) as Cancellation}
+                      />
+                    )}
                   </div>
                   {s.savesCents !== null && (
                     <p className="paths__saves">

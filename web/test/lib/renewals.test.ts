@@ -93,7 +93,7 @@ describe("renewalAdvice", () => {
     });
     expect(advice).toEqual({
       action: "pause",
-      text: "Pause it: Netflix's next month in your plan starts Oct 30, for Dark. This month is for Prime Video. Pausing saves $8.99.",
+      text: "Cancel it before Oct 14: you keep it until then, and it won't renew. Netflix's next month in your plan starts Oct 30, for Dark. This month is for Prime Video. That saves $8.99.",
     });
   });
 
@@ -105,6 +105,17 @@ describe("renewalAdvice", () => {
       renewsOn: "2026-11-14",
     });
     expect(advice.action).toBe("keep");
+  });
+
+  it("asks for a service's notice period before the renewal", () => {
+    const advice = renewalAdvice({
+      ...base,
+      service: "Apple TV",
+      key: "appletv",
+      renewsOn: "2026-10-14",
+      cancelHoursBefore: 24,
+    });
+    expect(advice.text).toContain("Cancel it before Oct 13:");
   });
 
   it("pauses a service whose titles aren't enough for a month yet", () => {
@@ -121,7 +132,7 @@ describe("renewalAdvice", () => {
       renewsOn: "2026-10-14",
     });
     expect(advice.text).toBe(
-      "Nothing on your watchlist needs Peacock. Pause or cancel it? Pausing saves $8.99.",
+      "Nothing on your watchlist needs Peacock. Cancel it before Oct 14: you keep it until then, and it won't renew. That saves $8.99.",
     );
   });
 

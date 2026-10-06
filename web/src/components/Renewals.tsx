@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 
 import { useRotationPlan } from "../hooks/useRotationPlan";
-import { useStored } from "../hooks/useStored";
+import { LEAD_DAYS, useLeadDays } from "../hooks/useSettings";
 import { useSubscriptions } from "../hooks/useSubscriptions";
 import { useWatchlist } from "../hooks/useWatchlist";
 import { icsCalendar, type CalendarEvent } from "../lib/calendar";
@@ -9,13 +9,13 @@ import { listTitles } from "../lib/replaces";
 import { addDays, renewalAdvice, renewalsBetween, type RenewalAdvice } from "../lib/renewals";
 import { localToday, when } from "../lib/seasons";
 import { monthlyCents } from "../lib/subscriptions";
+import { CancelHowTo, type Cancellation } from "./CancelHowTo";
 import { MaxWait } from "./MaxWait";
 import { Panel } from "./Panel";
 import { ServiceLogo } from "./ServiceLogo";
 
 /** The horizon the release feed covers, and so the one advice can see. */
 const WINDOW_DAYS = 90;
-const DEFAULT_LEAD_DAYS = 3;
 
 interface Upcoming {
   slug: string;
@@ -24,6 +24,7 @@ interface Upcoming {
   renewsOn: string;
   yearly: boolean;
   advice: RenewalAdvice;
+  cancellation: Cancellation | null;
 }
 
 /**
@@ -42,14 +43,7 @@ export function Renewals() {
   const rotation = useRotationPlan();
   const { plan, providers } = rotation;
   const { serviceInfo } = useWatchlist();
-  const [lead, setLead] = useStored(
-    "stream-scheduler:reminder-lead-days",
-    DEFAULT_LEAD_DAYS,
-    (s) => {
-      const n = Number(s);
-      return Number.isInteger(n) && n >= 0 && n <= 30 ? n : undefined;
-    },
-  );
+  const [lead, setLead] = useLeadDays();
 
   if (mine.length === 0) return null;
 
@@ -84,6 +78,7 @@ export function Renewals() {
         logoUrl: provider?.logoUrl,
         renewsOn,
         yearly: sub.billing.cycle === "annual",
+        cancellation: provider?.cancellation ?? null,
         advice: renewalAdvice({
           service: name,
           key: sub.slug,
@@ -93,6 +88,7 @@ export function Renewals() {
           nameOf,
           monthlyCents: monthly,
           today,
+          cancelHoursBefore: provider?.cancellation?.cancelHoursBefore ?? null,
         }),
       });
     }
@@ -108,7 +104,9 @@ export function Renewals() {
         // A reminder already due fires today rather than in the past.
         date: remindOn < today ? today : remindOn,
         summary: summary(r, today),
-        description: `${r.advice.text} Renews ${when(r.renewsOn, today)}.`,
+        description:
+          `${r.advice.text} Renews ${when(r.renewsOn, today)}.` +
+          (r.cancellation ? ` To cancel: ${r.cancellation.url}` : ""),
       };
     });
     const blob = new Blob([icsCalendar(events, new Date())], { type: "text/calendar" });
@@ -139,11 +137,12 @@ export function Renewals() {
                   {r.advice.action === "keep"
                     ? "Keep"
                     : r.advice.action === "pause"
-                      ? "Pause"
+                      ? "Cancel"
                       : "Decide"}
                 </span>
               </p>
               <p className="renewals__advice">{r.advice.text}</p>
+              {r.cancellation && <CancelHowTo name={r.name} cancellation={r.cancellation} />}
             </div>
           </li>
         ))}
@@ -171,7 +170,7 @@ export function Renewals() {
               aria-label="Days before a renewal to remind you"
               onChange={(e) => {
                 const n = Number(e.target.value);
-                if (Number.isInteger(n) && n >= 0 && n <= 30) setLead(n);
+                if (Number.isInteger(n) && n >= LEAD_DAYS.min && n <= LEAD_DAYS.max) setLead(n);
               }}
             />
             {lead === 1 ? "day" : "days"} before
@@ -192,7 +191,7 @@ export function Renewals() {
 /** The calendar event's title: the decision first, then the date. */
 function summary(r: Upcoming, today: string): string {
   const date = when(r.renewsOn, today);
-  if (r.advice.action === "pause") return `Pause ${r.name} before it renews ${date}`;
+  if (r.advice.action === "pause") return `Cancel ${r.name} before it renews ${date}`;
   if (r.advice.action === "keep") return `${r.name} renews ${date}: keep it`;
   if (r.yearly) return `${r.name}'s yearly plan renews ${date}`;
   return `${r.name} renews ${date}: keep or pause?`;

@@ -3,10 +3,9 @@ import { useQuery } from "@apollo/client/react";
 import { graphql } from "../generated";
 import { planRotation, type PlanService } from "../lib/planner";
 import { localToday } from "../lib/seasons";
-import { DEFAULT_HOURS_PER_MONTH, HOURS_PER_MONTH_KEY } from "../lib/stats";
 import { monthlyCents, monthlySpend } from "../lib/subscriptions";
 import { stillToCome, watchlistByService } from "../lib/watchlist";
-import { useStoredNumber } from "./useStored";
+import { useHoursPerMonth, useMaxWaitMonths } from "./useSettings";
 import { useSubscriptions } from "./useSubscriptions";
 import { useWatchlist } from "./useWatchlist";
 
@@ -17,6 +16,16 @@ const PLAN_SERVICES = graphql(`
   query PlanServices {
     providers {
       ...ServiceLogo
+      cancellation {
+        url
+        steps
+        keepsAccessUntilPeriodEnd
+        cancelHoursBefore
+        pause
+        refunds
+        gotchas
+        checkedOn
+      }
       plans {
         id
         leaveOutByDefault
@@ -31,10 +40,6 @@ const PLAN_SERVICES = graphql(`
   }
 `);
 
-export const MAX_WAIT_KEY = "stream-scheduler:max-wait-months";
-/** The feed's 90-day window: as far ahead as release dates are known. */
-export const DEFAULT_MAX_WAIT_MONTHS = 3;
-
 /**
  * The rotation plan (planner.ts) from everything the user has told the app:
  * their watchlist, their hours a month, how long they'll wait, and what
@@ -47,8 +52,8 @@ export function useRotationPlan() {
   const { titles } = useWatchlist();
   const mine = useSubscriptions();
   const providers = useQuery(PLAN_SERVICES).data?.providers ?? [];
-  const [hoursPerMonth] = useStoredNumber(HOURS_PER_MONTH_KEY, DEFAULT_HOURS_PER_MONTH);
-  const [maxWaitMonths, setMaxWaitMonths] = useStoredNumber(MAX_WAIT_KEY, DEFAULT_MAX_WAIT_MONTHS);
+  const [hoursPerMonth] = useHoursPerMonth();
+  const [maxWaitMonths, setMaxWaitMonths] = useMaxWaitMonths();
 
   // Each service's titles with when they're ready there, and how long they
   // take: a coming season's hours, or the whole of what's out now.

@@ -15,6 +15,8 @@ export interface Insight {
   /** Stable, for React keys and tests: kind + service. */
   id: string;
   kind: "pause" | "switch-to-monthly" | "resubscribe";
+  /** The service it's about, so the page can show how to cancel it. */
+  service: string;
   /** The action, said plainly: "Pause Hulu". */
   title: string;
   /** The evidence and the detail: when, for what, and how it's worked out. */
@@ -36,22 +38,48 @@ export interface InsightInput {
   nameOf: (key: string) => string;
   /** Wishlist titles (wanted, on disc) each service streams, by slug. */
   wishlistOn: (slug: string) => readonly string[];
+  /** How cancelling works for a service, from the app's checked records. */
+  cancellationOf: (slug: string) => CancelTerms | null;
+}
+
+/** The parts of a service's cancellation record the advice reads. */
+export interface CancelTerms {
+  keepsAccessUntilPeriodEnd: boolean;
+  cancelHoursBefore?: number | null;
+  refunds: string;
+}
+
+/** "You keep it until Oct 14, then it stops." - or as near as is known. */
+function keepLine(terms: CancelTerms | null, until: string | null, today: string): string {
+  if (!terms?.keepsAccessUntilPeriodEnd) return "";
+  const early =
+    terms.cancelHoursBefore && until
+      ? ` Do it at least ${Math.round(terms.cancelHoursBefore / 24)} day before.`
+      : "";
+  return until
+    ? ` You keep it until ${when(until, today)}, then it simply doesn't renew.${early}`
+    : " You keep what you've paid for, then it simply doesn't renew.";
 }
 
 /**
  * The paths forward, best first: money-saving steps by how much they save,
  * then dated steps (resubscribing for a plan month) soonest first.
  *
- * - Pause: a service the user pays for monthly that the plan doesn't use
+ * Every service the app tracks keeps a cancelled plan running to the end of
+ * the period paid for, so the advice is to cancel - not pause - and when to
+ * subscribe, to cancel that same day.
+ *
+ * - Cancel now: a service the user pays for monthly that the plan doesn't use
  *   this month. Worth its price for every month until its next turn - or
  *   for the whole horizon if it has none. Services kept whatever happens
  *   ("leave out of estimates", like Prime with shipping) and yearly plans
  *   (which can't be paused mid-term) are left alone. If wishlist titles on
  *   disc are what's on it, buying those is the way to let it go.
- * - Switch to monthly: a yearly plan the plan needs for fewer months than
- *   the year costs - the break-even, shown with its sums.
- * - Resubscribe: a service the user doesn't pay for that has a month in the
- *   plan. Not a saving, a step: when, for what, and to cancel after.
+ * - Turn off a yearly renewal: always, and first. It costs nothing - the
+ *   year runs out as paid for - and frees the user to pay monthly, only when
+ *   the plan needs the service. The sums say whether that's cheaper.
+ * - Subscribe: a service the user doesn't pay for that has a month in the
+ *   plan. Not a saving, a step: when, for what, and to cancel the same day.
  */
 export function pathsForward(input: InsightInput): Insight[] {
   const { today, plan, subscriptions, monthlyCost, publishedMonthly, nameOf, wishlistOn } = input;
@@ -62,22 +90,35 @@ export function pathsForward(input: InsightInput): Insight[] {
     const name = nameOf(sub.slug);
     const turns = plan.months.filter((m) => m.service === sub.slug);
 
+    const terms = input.cancellationOf(sub.slug);
+
+    // Yearly plans first, always: turning off the renewal costs nothing -
+    // the year already paid for runs out as normal - and after that the
+    // plan pays month by month, only when it needs the service.
     if (sub.billing?.cycle === "annual") {
+      if (sub.leftOut) continue;
       const yearly = sub.billing.cents;
       const monthly = publishedMonthly(sub.slug);
-      if (yearly === null || !monthly || sub.leftOut) continue;
-      const needed = turns.length * monthly;
-      if (needed >= yearly) continue;
       const renews = nextRenewal(sub.billing, today);
+      const n = turns.length;
+      const needed = monthly ? n * monthly : null;
+      const sums =
+        yearly !== null && needed !== null && monthly
+          ? n === 0
+            ? ` Your plan doesn't need it in the year ahead: that's ${formatDollars(yearly)} you'd stop paying.`
+            : needed < yearly
+              ? ` After that, monthly in just the ${n} ${n === 1 ? "month" : "months"} your plan needs it: ${n} × ${formatDollars(monthly)} = ${formatDollars(needed)}, against ${formatDollars(yearly)} for another year.`
+              : ` Your plan needs it ${n} ${n === 1 ? "month" : "months"} of the year, so this year the yearly price is cheaper - but with renewal off, it's your choice at the end, not automatic.`
+          : "";
       insights.push({
         id: `switch-to-monthly:${sub.slug}`,
         kind: "switch-to-monthly",
-        title: `Switch ${name} to monthly when it renews`,
+        service: sub.slug,
+        title: `Turn off ${name}'s yearly renewal now`,
         detail:
-          `Your plan needs ${name} for ${turns.length} ${turns.length === 1 ? "month" : "months"} ` +
-          `of the year ahead: ${turns.length} × ${formatDollars(monthly)} = ${formatDollars(needed)}, ` +
-          `against ${formatDollars(yearly)} for the year. It renews ${when(renews, today)}.`,
-        savesCents: yearly - needed,
+          `Nothing is lost:${keepLine(terms, renews, today) || ` it renews ${when(renews, today)}.`}${sums}` +
+          (terms ? ` ${terms.refunds}` : ""),
+        savesCents: yearly !== null && needed !== null && needed < yearly ? yearly - needed : null,
         date: renews,
       });
       continue;
@@ -100,11 +141,13 @@ export function pathsForward(input: InsightInput): Insight[] {
             wishlist.length === 1 ? "it" : "those"
           } rather than keep paying.`
         : "";
+    const renews = sub.billing ? nextRenewal(sub.billing, today) : null;
     insights.push({
       id: `pause:${sub.slug}`,
       kind: "pause",
-      title: `Pause ${name}`,
-      detail: `${why}${buy} ${formatDollars(price)} a month × ${idle} ${idle === 1 ? "month" : "months"}.`,
+      service: sub.slug,
+      title: `Cancel ${name} now`,
+      detail: `${why}${keepLine(terms, renews, today)}${buy} ${formatDollars(price)} a month × ${idle} ${idle === 1 ? "month" : "months"}.`,
       savesCents: price * idle,
       date: null,
     });
@@ -118,18 +161,28 @@ export function pathsForward(input: InsightInput): Insight[] {
     if (m.service.startsWith("other:")) continue;
     seen.add(m.service);
     const name = nameOf(m.service);
+    // Cancel on the day you subscribe: the month runs out as paid for and
+    // can't renew by accident.
+    const terms = input.cancellationOf(m.service);
+    const sameDay = terms?.keepsAccessUntilPeriodEnd
+      ? "and cancel the same day: you keep the whole month, and it can't renew by accident."
+      : "then cancel before it renews.";
     insights.push({
       id: `resubscribe:${m.service}`,
       kind: "resubscribe",
+      service: m.service,
       title: `Subscribe to ${name} on ${when(m.start, today)}`,
-      detail: `For ${listTitles(m.watched.map((w) => w.title))}, then cancel before it renews - your plan gives it one month.`,
+      detail: `For ${listTitles(m.watched.map((w) => w.title))} - ${sameDay}`,
       savesCents: null,
       date: m.start,
     });
   }
 
+  // Yearly plans lead - getting off them is the priority - then savings,
+  // biggest first, then dated steps, soonest first.
   return insights.sort(
     (a, b) =>
+      Number(b.kind === "switch-to-monthly") - Number(a.kind === "switch-to-monthly") ||
       (b.savesCents ?? -1) - (a.savesCents ?? -1) ||
       (a.date ?? "9999").localeCompare(b.date ?? "9999"),
   );

@@ -1,12 +1,6 @@
 import type { Runtime } from "../lib/stats";
-import {
-  DEFAULT_HOURS_PER_MONTH,
-  formatHours,
-  formatMonths,
-  HOURS_PER_MONTH_KEY,
-  libraryStats,
-} from "../lib/stats";
-import { useStoredNumber } from "../hooks/useStored";
+import { formatHours, formatMonths, libraryStats } from "../lib/stats";
+import { useHoursPerMonth } from "../hooks/useSettings";
 
 export function LibraryStats({
   runtimes,
@@ -16,10 +10,7 @@ export function LibraryStats({
   runtimes: readonly (Runtime | null | undefined)[];
   loading: boolean;
 }) {
-  const [hoursPerMonth, setHoursPerMonth] = useStoredNumber(
-    HOURS_PER_MONTH_KEY,
-    DEFAULT_HOURS_PER_MONTH,
-  );
+  const [hoursPerMonth, setHoursPerMonth] = useHoursPerMonth();
 
   if (loading) return <p className="panel stats stats--loading">Adding up your library…</p>;
   if (runtimes.length === 0) return null;
