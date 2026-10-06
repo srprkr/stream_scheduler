@@ -1,3 +1,7 @@
+import { useEffect } from "react";
+import { useLocation } from "react-router";
+
+import { Backup } from "../components/Backup";
 import { MaxWait } from "../components/MaxWait";
 import { useRotationPlan } from "../hooks/useRotationPlan";
 import {
@@ -17,6 +21,12 @@ import { LEVELS, type Levels } from "../lib/levels";
  * read and write the same saved value.
  */
 export function SettingsPage() {
+  // Home's backup reminder links to /settings#backup: the router doesn't
+  // scroll to a hash by itself.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
+  }, [hash]);
   const rotation = useRotationPlan();
   const [hours, setHours] = useHoursPerMonth();
   const [lead, setLead] = useLeadDays();
@@ -109,6 +119,9 @@ export function SettingsPage() {
       <button type="button" className="button button--quiet settings__reset" onClick={reset}>
         Reset all to defaults
       </button>
+
+      {/* Backup sits last: it covers everything above, and the library. */}
+      <Backup />
     </>
   );
 }

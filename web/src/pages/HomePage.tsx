@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 
 import { SearchBox } from "../components/SearchBox";
 import { Shelf } from "../components/Shelf";
@@ -6,10 +7,12 @@ import { TitleDialog } from "../components/TitleDialog";
 import { LibraryStats } from "../components/LibraryStats";
 import { LibraryReplaces } from "../components/LibraryReplaces";
 import { useLibraryDetails, type LibraryDetail } from "../hooks/useLibraryDetails";
+import { useBackupStatus } from "../hooks/useBackup";
 import { useLibrary } from "../hooks/useLibrary";
 
 export function HomePage() {
   const entries = useLibrary();
+  const backup = useBackupStatus();
   const [openId, setOpenId] = useState<string | null>(null);
 
   const owned = entries.filter((e) => e.shelf === "owned");
@@ -52,6 +55,15 @@ export function HomePage() {
           loading={owned.length > 0 && details.loading}
         />
       </div>
+
+      {/* A gentle nudge, only when the library has changed since the last
+          backup and a couple of weeks have passed. */}
+      {backup.due && (
+        <p className="backup-nudge">
+          Your library has changed since your last backup.{" "}
+          <Link to="/settings#backup">Save a backup</Link>
+        </p>
+      )}
 
       <LibraryReplaces
         owned={owned.flatMap((entry) => {

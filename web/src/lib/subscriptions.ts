@@ -55,6 +55,8 @@ export interface SubscriptionStore {
   setLeftOut(slug: string, leftOut: boolean): void;
   /** Sets when a subscribed service bills; ignored for other services. */
   setBilling(slug: string, billing: Billing): void;
+  /** Swaps every subscription at once - for restoring a backup. */
+  replaceAll(subscriptions: readonly Subscription[]): void;
 
   subscribe(listener: () => void): () => void;
 }
@@ -144,6 +146,10 @@ export function localSubscriptions(
     setBilling(slug, billing) {
       if (!snapshot.some((s) => s.slug === slug)) return;
       commit(snapshot.map((s) => (s.slug === slug ? { ...s, billing } : s)));
+    },
+
+    replaceAll(subscriptions) {
+      commit([...subscriptions]);
     },
 
     subscribe(listener) {

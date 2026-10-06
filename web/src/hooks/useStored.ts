@@ -32,7 +32,12 @@ export function useStored<T>(
   const [value, setValue] = useState(read);
 
   useEffect(() => {
-    const here = (e: Event) => setValue((e as CustomEvent<T>).detail);
+    // A value in the event is the new value; none means "read it again" -
+    // sent by writeStoredText, which only has the saved text.
+    const here = (e: Event) => {
+      const { detail } = e as CustomEvent<{ value: T } | undefined>;
+      setValue(detail ? detail.value : read());
+    };
     // Another tab saved it: read it back, through parse, like at start.
     const elsewhere = (e: StorageEvent) => {
       if (e.key === key || e.key === null) setValue(read());
@@ -52,7 +57,7 @@ export function useStored<T>(
     } catch {
       // Quota exceeded: the setting lasts until the page closes.
     }
-    changes.dispatchEvent(new CustomEvent(key, { detail: next }));
+    changes.dispatchEvent(new CustomEvent(key, { detail: { value: next } }));
   };
 
   return [value, save];
@@ -63,4 +68,18 @@ export function useStoredFlag(key: string, fallback: boolean) {
   return useStored(key, fallback, (saved) =>
     saved === "true" ? true : saved === "false" ? false : undefined,
   );
+}
+
+/**
+ * Saves a setting's text directly - for restoring a backup, which holds
+ * settings as saved text - and has every component using it read it again,
+ * through its own checks.
+ */
+export function writeStoredText(key: string, text: string): void {
+  try {
+    browserStorage().setItem(key, text);
+  } catch {
+    // Quota exceeded: nothing to read back.
+  }
+  changes.dispatchEvent(new CustomEvent(key));
 }

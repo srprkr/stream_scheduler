@@ -34,6 +34,8 @@ export interface LibraryStore {
   entries(): readonly LibraryEntry[];
   /** Puts a title on a shelf, moves it between shelves, or (null) removes it. */
   shelve(item: LibraryItem, shelf: Shelf | null): void;
+  /** Swaps the whole library, dates and all - for restoring a backup. */
+  replaceAll(entries: readonly LibraryEntry[]): void;
   subscribe(listener: () => void): () => void;
 }
 
@@ -90,6 +92,16 @@ export function localLibrary(
               },
               ...rest,
             ];
+      try {
+        storage.setItem(LIBRARY_KEY, JSON.stringify({ version: VERSION, entries: snapshot }));
+      } catch {
+        // Quota exceeded or storage disabled: keep working from memory.
+      }
+      notify();
+    },
+
+    replaceAll(entries) {
+      snapshot = [...entries];
       try {
         storage.setItem(LIBRARY_KEY, JSON.stringify({ version: VERSION, entries: snapshot }));
       } catch {
