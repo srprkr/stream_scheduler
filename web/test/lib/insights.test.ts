@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { pathsForward, type InsightInput } from "../../src/lib/insights";
+import { pathsForward, splitDone, type InsightInput } from "../../src/lib/insights";
 import type { Plan } from "../../src/lib/planner";
 import type { Subscription } from "../../src/lib/subscriptions";
 
@@ -59,6 +59,7 @@ describe("pathsForward", () => {
     const [netflix] = pathsForward(input([sub("netflix")]));
     expect(netflix).toEqual({
       id: "pause:netflix",
+      key: "pause:netflix@2026-10-10",
       kind: "pause",
       service: "netflix",
       title: "Cancel Netflix now",
@@ -106,6 +107,7 @@ describe("pathsForward", () => {
     const steps = pathsForward(input([sub("netflix"), yearly]));
     expect(steps[0]).toEqual({
       id: "switch-to-monthly:hbomax",
+      key: "switch-to-monthly:hbomax@2027-03-02",
       kind: "switch-to-monthly",
       service: "hbomax",
       title: "Turn off HBO Max's yearly renewal now",
@@ -141,8 +143,8 @@ describe("pathsForward", () => {
   it("says when to subscribe to a service the plan needs but the user doesn't pay for", () => {
     const steps = pathsForward(input([]));
     expect(steps.map((s) => [s.title, s.date])).toEqual([
-      ["Subscribe to Prime Video on Oct 4", "2026-10-04"],
-      ["Subscribe to Netflix on Dec 3", "2026-12-03"],
+      ["Subscribe to Prime Video on or after Oct 4", "2026-10-04"],
+      ["Subscribe to Netflix on or after Dec 3", "2026-12-03"],
     ]);
     expect(steps[0]?.detail).toBe(
       "For Reacher - and cancel the same day: you keep the whole month, and it can't renew by accident.",
@@ -152,5 +154,21 @@ describe("pathsForward", () => {
   it("ranks savings first, biggest first, then dated steps", () => {
     const kinds = pathsForward(input([sub("netflix"), sub("hulu")])).map((i) => i.id);
     expect(kinds).toEqual(["pause:hulu", "pause:netflix", "resubscribe:prime"]);
+  });
+});
+
+describe("splitDone", () => {
+  it("moves ticked steps apart and adds up what they saved", () => {
+    const steps = pathsForward(input([sub("netflix"), sub("hulu")]));
+    const { todo, done, savedCents } = splitDone(steps, new Set(["pause:hulu@2026-10-10"]));
+    expect(todo.map((s) => s.id)).toEqual(["pause:netflix", "resubscribe:prime"]);
+    expect(done.map((s) => s.id)).toEqual(["pause:hulu"]);
+    expect(savedCents).toBe(1249 * 3);
+  });
+
+  it("brings a step back when it's needed again for a new date", () => {
+    const steps = pathsForward(input([sub("netflix")]));
+    const { done } = splitDone(steps, new Set(["pause:netflix@2026-09-10"]));
+    expect(done).toEqual([]);
   });
 });

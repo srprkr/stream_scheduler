@@ -11,6 +11,7 @@ import type { CatalogQuery, CatalogSort } from "../generated/graphql";
 import { useDebounced } from "../hooks/useDebounced";
 import { useLibrary } from "../hooks/useLibrary";
 import { useBrowseFilters, type Kind } from "../hooks/useBrowseFilters";
+import { mergeCatalog, selectedLists } from "../lib/catalog";
 
 const CATALOG = graphql(`
   query Catalog($providerSlugs: [String!]!, $kind: MediaKind!, $sort: CatalogSort, $after: String) {
@@ -67,16 +68,6 @@ const SORTS: { value: CatalogSort; label: string }[] = [
 
 type Item = CatalogQuery["catalog"]["items"][number];
 
-/** Alternates two lists, so neither type is buried under a page of the other. */
-function interleave<T>(a: readonly T[], b: readonly T[]): T[] {
-  const out: T[] = [];
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    if (i < a.length) out.push(a[i] as T);
-    if (i < b.length) out.push(b[i] as T);
-  }
-  return out;
-}
-
 /**
  * Everything streaming now on the selected services, in one grid, and a
  * search across them. The filters are shared with Coming Soon.
@@ -103,16 +94,19 @@ export function WhatsOnPage() {
     providerSlugs.length > 0 && kinds.includes(kind) && !searching
       ? { variables: { providerSlugs, kind, sort } }
       : skipToken;
-  const series = useQuery(CATALOG, variables("SERIES"));
-  const films = useQuery(CATALOG, variables("MOVIE"));
-  const lists = [series, films].filter((q) => q.data);
-  const items: Item[] = interleave(
-    series.data?.catalog.items ?? [],
-    films.data?.catalog.items ?? [],
-  );
-  const loading = !filters.ready || ((series.loading || films.loading) && items.length === 0);
-  const error = series.error ?? films.error;
-  const more = lists.some((q) => q.data?.catalog.nextCursor);
+  const seriesQuery = useQuery(CATALOG, variables("SERIES"));
+  const filmsQuery = useQuery(CATALOG, variables("MOVIE"));
+  // Only the selected types count, whatever the queries still hold: a
+  // skipped query keeps its last result in Apollo 4 (see lib/catalog.ts).
+  const active = selectedLists(kinds, searching, { SERIES: seriesQuery, MOVIE: filmsQuery });
+  const queries = [active.SERIES, active.MOVIE].filter((q) => q !== undefined);
+  const { items, more } = mergeCatalog<Item>({
+    SERIES: active.SERIES?.data?.catalog,
+    MOVIE: active.MOVIE?.data?.catalog,
+  });
+  const lists = queries.filter((q) => q.data);
+  const loading = !filters.ready || (queries.some((q) => q.loading) && items.length === 0);
+  const error = queries.find((q) => q.error)?.error;
 
   // Searching replaces the catalogue in the grid; clearing the box brings
   // the catalogue back, with every page already loaded still in the cache.

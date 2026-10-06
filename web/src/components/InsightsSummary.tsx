@@ -4,12 +4,13 @@ import { CancelHowTo, type Cancellation } from "./CancelHowTo";
 import { useLibrary } from "../hooks/useLibrary";
 import { useLibraryDetails } from "../hooks/useLibraryDetails";
 import { useLevels } from "../hooks/useSettings";
+import { useStored } from "../hooks/useStored";
 import { useRotationPlan } from "../hooks/useRotationPlan";
 import { useSubscriptions } from "../hooks/useSubscriptions";
 import { useWatchlist } from "../hooks/useWatchlist";
 import { comingSoonStats } from "../lib/comingSoon";
 import { cumulativeCosts } from "../lib/costChart";
-import { pathsForward } from "../lib/insights";
+import { pathsForward, splitDone, type Insight } from "../lib/insights";
 import { formatDollars } from "../lib/money";
 import {
   comingLevel,
@@ -33,6 +34,19 @@ export function InsightsSummary() {
   const { plan, priceOf, plansFor, payingNow, alwaysOn, providers, hoursPerMonth, today } =
     rotation;
   const mine = useSubscriptions();
+  const [doneKeys, setDoneKeys] = useStored<string[]>(
+    "stream-scheduler:paths-done",
+    [],
+    (saved) => {
+      try {
+        const keys = JSON.parse(saved) as unknown;
+        return Array.isArray(keys) && keys.every((k) => typeof k === "string") ? keys : undefined;
+      } catch {
+        return undefined;
+      }
+    },
+    (keys) => JSON.stringify(keys),
+  );
   const { titles, serviceInfo } = useWatchlist();
   const entries = useLibrary();
   const owned = entries.filter((e) => e.shelf === "owned");
@@ -80,6 +94,60 @@ export function InsightsSummary() {
     wishlistOn,
     cancellationOf,
   });
+
+  // The checklist: ticks are kept in this browser, tied to each step's date.
+  const doneSet = new Set(doneKeys);
+  const checklist = splitDone(steps, doneSet);
+  const toggle = (key: string) => {
+    const next = new Set(doneSet);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    // Only keys for steps still on the list: old ones would pile up forever.
+    const current = new Set(steps.map((s) => s.key));
+    setDoneKeys([...next].filter((k) => current.has(k)));
+  };
+
+  // The service's logo just before its name in a step's title: "Cancel
+  // [logo] Netflix now", "Turn off [logo] Peacock's yearly renewal now".
+  // Decorative - the name beside it already says which service.
+  const withLogo = (title: string, service: string) => {
+    const name = nameOf(service);
+    const logoUrl =
+      providers.find((p) => p.slug === service)?.logoUrl ?? serviceInfo.get(service)?.logoUrl;
+    const at = title.indexOf(name);
+    if (!logoUrl || at < 0) return title;
+    return (
+      <>
+        {title.slice(0, at)}
+        <img className="paths__logo" src={logoUrl} alt="" />
+        {title.slice(at)}
+      </>
+    );
+  };
+
+  const step = (s: Insight, isDone: boolean) => (
+    <li key={s.key} className="paths__item" data-done={isDone}>
+      <div>
+        <label className="paths__check">
+          <input type="checkbox" checked={isDone} onChange={() => toggle(s.key)} />
+          <span className="paths__title">{withLogo(s.title, s.service)}</span>
+        </label>
+        {/* Once done, the working and the how-to step aside. */}
+        {!isDone && <p className="paths__detail">{s.detail}</p>}
+        {!isDone && cancellationOf(s.service) && (
+          <CancelHowTo
+            name={nameOf(s.service)}
+            cancellation={cancellationOf(s.service) as Cancellation}
+          />
+        )}
+      </div>
+      {s.savesCents !== null && (
+        <p className="paths__saves">
+          {isDone ? "saved" : "saves"} <strong>{formatDollars(s.savesCents)}</strong>
+        </p>
+      )}
+    </li>
+  );
 
   return (
     <>
@@ -146,30 +214,27 @@ export function InsightsSummary() {
         ) : (
           <>
             <p className="panel__lede">
-              What would save money, biggest first, then what your plan needs next. Each shows its
-              working.
+              Getting off yearly plans first, then what would save money, biggest first, then what
+              your plan needs next. Tick each off as you do it.
             </p>
-            <ol className="paths__list">
-              {steps.map((s) => (
-                <li key={s.id} className="paths__item">
-                  <div>
-                    <p className="paths__title">{s.title}</p>
-                    <p className="paths__detail">{s.detail}</p>
-                    {cancellationOf(s.service) && (
-                      <CancelHowTo
-                        name={nameOf(s.service)}
-                        cancellation={cancellationOf(s.service) as Cancellation}
-                      />
-                    )}
-                  </div>
-                  {s.savesCents !== null && (
-                    <p className="paths__saves">
-                      saves <strong>{formatDollars(s.savesCents)}</strong>
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ol>
+            <p className="paths__progress" role="status">
+              {checklist.done.length} of {steps.length} done
+              {checklist.savedCents > 0 && (
+                <>
+                  {" "}
+                  · <strong>{formatDollars(checklist.savedCents)}</strong> saved
+                </>
+              )}
+            </p>
+            <ul className="paths__list">{checklist.todo.map((s) => step(s, false))}</ul>
+            {checklist.done.length > 0 && (
+              <>
+                <h3 className="paths__done-title">Done</h3>
+                <ul className="paths__list paths__list--done">
+                  {checklist.done.map((s) => step(s, true))}
+                </ul>
+              </>
+            )}
           </>
         )}
       </section>

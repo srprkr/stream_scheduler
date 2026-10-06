@@ -1522,10 +1522,21 @@ body {
   }
 }
 
-// Paths forward: numbered steps, each with its evidence underneath and what
-// it saves on the right.
+// Paths forward as a checklist: a box to tick on each step, its evidence
+// underneath and what it saves on the right. Ticked steps move under Done,
+// struck through and quieter, keeping only their title and saving.
 .paths {
   margin-bottom: 24px;
+
+  &__progress {
+    margin: 0 0 12px;
+    font-size: 0.875rem;
+    color: var(--muted);
+
+    strong {
+      color: var(--soon);
+    }
+  }
 
   &__list {
     display: grid;
@@ -1533,7 +1544,6 @@ body {
     margin: 0;
     padding: 0;
     list-style: none;
-    counter-reset: path;
   }
 
   &__item {
@@ -1547,21 +1557,62 @@ body {
     p {
       margin: 0;
     }
+
+    &[data-done="true"] {
+      opacity: 0.6;
+
+      .paths__title {
+        text-decoration: line-through;
+      }
+    }
+  }
+
+  &__check {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+
+    input {
+      flex: none;
+      width: 18px;
+      height: 18px;
+      margin: 2px 0 0;
+      accent-color: var(--soon);
+      cursor: pointer;
+    }
   }
 
   &__title {
     font-weight: 600;
-
-    &::before {
-      counter-increment: path;
-      content: counter(path) ". ";
-      color: var(--muted);
-    }
   }
+
+  // The service's logo inline before its name in a step's title, sized to
+  // the text and sitting on its line.
+  &__logo {
+    display: inline-block;
+    width: 1.15em;
+    height: 1.15em;
+    margin-right: 0.3em;
+    border-radius: 4px;
+    vertical-align: -0.2em;
+  }
+
+  &__done-title {
+    margin: 20px 0 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
   &__detail {
     margin-top: 2px;
+    padding-left: 28px;
     font-size: 0.8125rem;
     color: var(--muted);
+  }
+  &__item .howto {
+    padding-left: 28px;
   }
   &__saves {
     font-size: 0.8125rem;

@@ -114,7 +114,7 @@ export function Sheet({
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Watch on YouTube →
+                    Watch trailer on YouTube →
                   </a>
                 )}
               </>

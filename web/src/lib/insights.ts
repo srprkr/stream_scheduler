@@ -14,6 +14,12 @@ import type { Subscription } from "./subscriptions";
 export interface Insight {
   /** Stable, for React keys and tests: kind + service. */
   id: string;
+  /**
+   * What a checklist tick is tied to: the step and the date it's about - the
+   * renewal to cancel before, the plan month to subscribe for. So a step
+   * ticked off comes back unticked when it's needed again for a new date.
+   */
+  key: string;
   kind: "pause" | "switch-to-monthly" | "resubscribe";
   /** The service it's about, so the page can show how to cancel it. */
   service: string;
@@ -112,6 +118,7 @@ export function pathsForward(input: InsightInput): Insight[] {
           : "";
       insights.push({
         id: `switch-to-monthly:${sub.slug}`,
+        key: `switch-to-monthly:${sub.slug}@${renews}`,
         kind: "switch-to-monthly",
         service: sub.slug,
         title: `Turn off ${name}'s yearly renewal now`,
@@ -144,6 +151,7 @@ export function pathsForward(input: InsightInput): Insight[] {
     const renews = sub.billing ? nextRenewal(sub.billing, today) : null;
     insights.push({
       id: `pause:${sub.slug}`,
+      key: `pause:${sub.slug}@${renews ?? "unset"}`,
       kind: "pause",
       service: sub.slug,
       title: `Cancel ${name} now`,
@@ -169,9 +177,10 @@ export function pathsForward(input: InsightInput): Insight[] {
       : "then cancel before it renews.";
     insights.push({
       id: `resubscribe:${m.service}`,
+      key: `resubscribe:${m.service}@${m.start}`,
       kind: "resubscribe",
       service: m.service,
-      title: `Subscribe to ${name} on ${when(m.start, today)}`,
+      title: `Subscribe to ${name} on or after ${when(m.start, today)}`,
       detail: `For ${listTitles(m.watched.map((w) => w.title))} - ${sameDay}`,
       savesCents: null,
       date: m.start,
@@ -186,4 +195,20 @@ export function pathsForward(input: InsightInput): Insight[] {
       (b.savesCents ?? -1) - (a.savesCents ?? -1) ||
       (a.date ?? "9999").localeCompare(b.date ?? "9999"),
   );
+}
+
+/**
+ * The checklist's two halves: what's still to do, in the order given, and
+ * what's been ticked off - with the money the ticked steps saved.
+ */
+export function splitDone(
+  steps: readonly Insight[],
+  done: ReadonlySet<string>,
+): { todo: Insight[]; done: Insight[]; savedCents: number } {
+  const finished = steps.filter((s) => done.has(s.key));
+  return {
+    todo: steps.filter((s) => !done.has(s.key)),
+    done: finished,
+    savedCents: finished.reduce((n, s) => n + (s.savesCents ?? 0), 0),
+  };
 }
