@@ -308,7 +308,7 @@ describe("Coming Soon: services only", () => {
   it("asks for a service when none is picked - On disc doesn't count here", async () => {
     renderApp(<Feed slugs={[]} />, { mocks: feedMocks });
     expect(
-      await screen.findByText("Pick a service to see what's coming to it."),
+      await screen.findByText(/^Pick a service to see what's coming to it\./),
     ).toBeInTheDocument();
   });
 });

@@ -146,7 +146,7 @@ export function ReleaseFeed({
         <p className="state">
           {/* On disc can still be picked on What's On; it isn't a service. */}
           {slugs.length === 0 && !everywhere
-            ? "Pick a service to see what's coming to it."
+            ? "Pick a service to see what's coming to it. Upcoming disc titles can be searched from the Library page"
             : "Nothing scheduled in this window for this selection."}
         </p>
       )}

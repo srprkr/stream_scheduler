@@ -81,11 +81,11 @@
   }
 }
 
-// Own's icon, a disc and its case. Off: the case is an outline in front of
-// the disc, which pokes out of its open side. Pressed: the disc slides in
-// behind the case, the case fills, and its window shows the disc inside.
-// The case and window are filled with the page colour, so whatever is behind
-// them is hidden - the half of the disc already "in", say.
+// Own's icon, a disc and its sleeve. Off: the sleeve is an outline in front
+// of the disc, which pokes out of its open side. Pressed: the disc slides in
+// behind the sleeve and the sleeve fills. The sleeve is filled with the page
+// colour, so whatever is behind it is hidden - except through its thumb
+// notch, which shows the disc's edge either way.
 .own-icon {
   display: block;
   width: 1.3em;
@@ -109,28 +109,19 @@
     stroke-width: 1.4;
     transition: fill 200ms ease;
   }
-  &__window {
-    fill: var(--bg);
-    opacity: 0;
-    transition: opacity 200ms ease;
-  }
 
   [aria-pressed="true"] & {
     .own-icon__disc {
-      transform: translateX(-7.4px);
+      transform: translateX(-6.9px);
     }
     .own-icon__case {
       fill: currentColor;
-    }
-    .own-icon__window {
-      opacity: 1;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
     &__disc,
-    &__case,
-    &__window {
+    &__case {
       transition: none;
     }
   }

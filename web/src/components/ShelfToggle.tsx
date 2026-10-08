@@ -88,9 +88,11 @@ export function ShelfToggle({
 }
 
 /**
- * Own's icon: a disc and its case. Off, the disc sits half out of the case's
- * open side; pressed, it slides in and the case fills - the copy put away on your shelf. One drawing, moved by CSS
- * on the button's aria-pressed, so the slide plays as it's clicked.
+ * Own's icon: a disc and its cardboard sleeve, with a thumb notch in the
+ * sleeve's open edge that shows the disc behind it. Off, the disc sits half
+ * out of the sleeve; pressed, it slides in and the sleeve fills - the copy
+ * put away on your shelf. One drawing, moved by CSS on the button's
+ * aria-pressed, so the slide plays as it's clicked.
  */
 function OwnIcon() {
   return (
@@ -101,9 +103,12 @@ function OwnIcon() {
         {/* A shine across the part that shows, so it reads as a disc. */}
         <path className="own-icon__shine" d="M15.23 4.45A3.6 3.6 0 0 1 17.72 6.20" />
       </g>
-      <rect className="own-icon__case" x="1" y="1" width="12.4" height="14" rx="1.6" />
-      {/* The case's window, showing the disc inside once it's in. */}
-      <circle className="own-icon__window" cx="7.2" cy="8" r="2.4" />
+      {/* The sleeve, with a thumb notch cut into its open edge: the disc
+          shows through it, half out or all the way in. */}
+      <path
+        className="own-icon__case"
+        d="M2.6 1H11.8A1.6 1.6 0 0 1 13.4 2.6V4.9A3.1 3.1 0 0 0 13.4 11.1V13.4A1.6 1.6 0 0 1 11.8 15H2.6A1.6 1.6 0 0 1 1 13.4V2.6A1.6 1.6 0 0 1 2.6 1Z"
+      />
     </svg>
   );
 }
