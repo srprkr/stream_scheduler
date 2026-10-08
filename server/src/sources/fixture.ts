@@ -5,7 +5,6 @@ import type {
   CatalogPageRecord,
   CatalogQuery,
   DiscCatalogQuery,
-  DiscReleaseRecord,
   ImageSize,
   MediaRecord,
   OtherServiceRecord,
@@ -138,25 +137,25 @@ const MEDIA: MediaRecord[] = [
     score: { average: 7.4, votes: 880 },
     releaseYear: 1998,
   },
+
   {
-    id: "media:7",
-    kind: "MOVIE",
-    title: "The Long Weekend",
-    overview: "A ferry strike strands a wedding party on the wrong island.",
-    posterPath: "/long-weekend-poster.jpg",
+    id: "media:8",
+    kind: "SERIES",
+    title: "Lighthouse Keepers",
+    overview: "Three generations tend one light on a rock off the Cornish coast.",
+    posterPath: "/lighthouse-poster.jpg",
     backdropPath: null,
     trailer: null,
-    runtimeMinutes: 97,
-    seasonCount: null,
-    score: { average: 6.9, votes: 150 },
-    releaseYear: 2025,
+    runtimeMinutes: null,
+    seasonCount: 4,
+    score: { average: 8.1, votes: 640 },
+    releaseYear: 2003,
   },
 ];
 
 /**
  * Where each fixture title streams. media:3 is on nothing, deliberately, and
- * so are the two disc-only films: media:6 is out on disc, media:7 comes out
- * on disc in DISC_RELEASE_DAYS.
+ * so are the two titles out on disc: media:6 a film and media:8 a series.
  */
 const AVAILABILITY: Record<string, string[]> = {
   "media:1": ["netflix"],
@@ -173,11 +172,8 @@ const OTHERS: Record<string, OtherServiceRecord[]> = {
 /** media:1 is a streaming exclusive with no disc release. */
 const NOT_ON_DISC = new Set(["media:1"]);
 
-/** The fixture's one coming disc release, in days from today. */
-const DISC_RELEASE_DAYS = 20;
-
-/** Films out on disc that no service streams. */
-const DISC_ONLY = ["media:6"];
+/** Titles out on disc that no service streams: a film and a series. */
+const DISC_ONLY = ["media:6", "media:8"];
 
 /** (mediaId, providerSlug, days from today, seasonNumber) */
 const RELEASE_PLAN: ReadonlyArray<readonly [string, string, number, number | null]> = [
@@ -281,20 +277,11 @@ export class FixtureSource implements CatalogSource {
     };
   }
 
-  async listDiscReleases(first: number): Promise<DiscReleaseRecord[]> {
-    const releases = [
-      {
-        id: "disc:media:7",
-        mediaId: "media:7",
-        availableFrom: isoDate(addDays(this.now(), DISC_RELEASE_DAYS)),
-      },
-    ];
-    return releases.slice(0, first);
-  }
-
   /** One title a page, like listCatalog. */
   async listDiscCatalog(query: DiscCatalogQuery): Promise<CatalogPageRecord> {
-    const matching = MEDIA.filter((m) => DISC_ONLY.includes(m.id) && passes(m, query));
+    const matching = MEDIA.filter(
+      (m) => m.kind === query.kind && DISC_ONLY.includes(m.id) && passes(m, query),
+    );
     const start = query.page - 1;
     return {
       items: matching.slice(start, start + 1).map((m) => ({ ...m, summary: true })),

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { EXCEPTIONS } from "../../../src/sources/tmdb/discs.js";
 import { TmdbSource } from "../../../src/sources/tmdb/source.js";
 import type { CatalogFilters, CatalogSort } from "../../../src/sources/types.js";
 import type {
@@ -130,6 +131,7 @@ describe("TmdbSource.listDiscCatalog", () => {
     const client = fakeClient({ [path]: films([1, 2], 3) });
     const page = await new TmdbSource(client, NOW).listDiscCatalog({
       ...noFilters,
+      kind: "MOVIE",
       sort: "POPULAR",
       page: 1,
     });
@@ -194,6 +196,7 @@ describe("TmdbSource.listDiscCatalog: sorts and filters", () => {
       "&primary_release_date.gte=1990-01-01&primary_release_date.lte=1999-12-31&page=1";
     const client = fakeClient({ [path]: films([603]) });
     const page = await new TmdbSource(client, NOW).listDiscCatalog({
+      kind: "MOVIE",
       sort: "NEWEST",
       page: 1,
       minScore: null,
@@ -206,27 +209,41 @@ describe("TmdbSource.listDiscCatalog: sorts and filters", () => {
   });
 });
 
-describe("TmdbSource.listDiscReleases", () => {
-  const discover = (page: number) =>
-    "/discover/movie?region=US&with_release_type=5&release_date.gte=2026-10-08" +
-    `&release_date.lte=2027-01-06&sort_by=popularity.desc&page=${page}`;
-
-  it("dates each film by its disc release in the window, soonest first", async () => {
-    const client = fakeClient({
-      [discover(1)]: films([1, 2, 3], 2),
-      // Film 2 again: popularity shifted between pages.
-      [discover(2)]: films([2]),
-      "/movie/1/release_dates": usDiscs("2026-12-01"),
-      // A re-release: listed by discover under its first disc date.
-      "/movie/2/release_dates": usDiscs("2000-03-07", "2026-10-20"),
-      // Its disc date moved out of the window since discover's index was built.
-      "/movie/3/release_dates": usDiscs("2027-03-01"),
+describe("TmdbSource.listDiscCatalog: series", () => {
+  it("asks for the disc networks' series no tracked service streams, minus daily genres", async () => {
+    const path =
+      "/discover/tv?with_networks=2|4|6|9|13|14|16|19|26|30|34|41|47|49|54|56|67|68|71|74|77|80|88|129|174|318|332|359|1035" +
+      "&watch_region=US&without_watch_providers=8|9|15|337|350|386|387|1796|1899|2100|2303|2616" +
+      "&without_genres=10763|10764|10766|10767&sort_by=popularity.desc&vote_count.gte=50&page=1";
+    const show = (id: number, name: string) => ({
+      id,
+      name,
+      overview: "",
+      poster_path: null,
+      backdrop_path: null,
+      first_air_date: "2016-10-02",
     });
-    const releases = await new TmdbSource(client, NOW).listDiscReleases(50);
-    expect(releases).toEqual([
-      { id: "disc:movie:2", mediaId: "movie:2", availableFrom: "2026-10-20" },
-      { id: "disc:movie:1", mediaId: "movie:1", availableFrom: "2026-12-01" },
-    ]);
-    expect(client.calls.filter((c) => c === "/movie/2/release_dates")).toHaveLength(1);
+    const client = fakeClient({
+      [path]: {
+        page: 1,
+        total_pages: 1,
+        total_results: 2,
+        results: [show(63247, "Westworld"), show(1, "Never On Disc")],
+      },
+    });
+    EXCEPTIONS.set(1, false);
+    try {
+      const page = await new TmdbSource(client, NOW).listDiscCatalog({
+        ...noFilters,
+        kind: "SERIES",
+        sort: "POPULAR",
+        page: 1,
+      });
+      // A first air date is a real first release, so the year stays.
+      expect(page.items.map((m) => [m.id, m.releaseYear])).toEqual([["tv:63247", 2016]]);
+      expect(client.calls).toEqual([path]);
+    } finally {
+      EXCEPTIONS.delete(1);
+    }
   });
 });

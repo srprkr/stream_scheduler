@@ -42,9 +42,9 @@ export function createCache(): InMemoryCache {
             keyArgs: ["providerSlugs", "kind", "sort", "minScore", "fromYear", "toYear"],
             merge: appendPages,
           },
-          // Films out on disc page the same way, one list per order and filters.
+          // Titles out on disc page the same way: one list per kind, order and filters.
           discCatalog: {
-            keyArgs: ["sort", "minScore", "fromYear", "toYear"],
+            keyArgs: ["kind", "sort", "minScore", "fromYear", "toYear"],
             merge: appendPages,
           },
         },

@@ -2,7 +2,7 @@ import { GraphQLError } from "graphql";
 import { daysUntil } from "../dates.js";
 
 import type { Context } from "../context.js";
-import type { DiscReleaseResolvers, ReleaseResolvers } from "../generated/graphql.js";
+import type { ReleaseResolvers } from "../generated/graphql.js";
 
 export const Release: ReleaseResolvers = {
   media: async (release, _a, ctx) => {
@@ -31,18 +31,6 @@ export const Release: ReleaseResolvers = {
     if (release.watchTimeMinutes !== null) return release.watchTimeMinutes;
     const media = await ctx.loaders.media.load(release.mediaId);
     return media?.runtimeMinutes ?? null;
-  },
-
-  daysUntilRelease: (release, args, ctx) => daysUntilFor(release.availableFrom, args.timezone, ctx),
-};
-
-export const DiscRelease: DiscReleaseResolvers = {
-  media: async (release, _a, ctx) => {
-    const media = await ctx.loaders.media.load(release.mediaId);
-    if (!media) {
-      throw new Error(`Disc release ${release.id} references missing media ${release.mediaId}`);
-    }
-    return media;
   },
 
   daysUntilRelease: (release, args, ctx) => daysUntilFor(release.availableFrom, args.timezone, ctx),

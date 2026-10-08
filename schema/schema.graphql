@@ -404,25 +404,6 @@ type Release {
 }
 
 """
-A film coming out on DVD or Blu-ray: the day a copy can be owned. The
-ownership counterpart to a Release, and kept apart from it because it
-arrives on no service, so it has no provider. US releases only, from TMDB's
-crowd-sourced physical release dates.
-"""
-type DiscRelease {
-  "Opaque. Clients must not parse it."
-  id: ID!
-
-  media: MediaItem!
-
-  "The day it's out on disc."
-  availableFrom: Date!
-
-  "Whole days from today to `availableFrom`, in the caller's timezone. See Release."
-  daysUntilRelease(timezone: String = "UTC"): Int!
-}
-
-"""
 One page of a catalogue. `nextCursor` is opaque: pass it back as `after` to
 get the page that follows, and do not build or parse it. Null on the last page.
 """
@@ -506,18 +487,14 @@ type Query {
   ): CatalogPage!
 
   """
-  Films coming out on DVD or Blu-ray in the US in the next 90 days, soonest
-  first - whether or not a service streams them too: a disc of a streaming
-  original is still a copy to own.
-  """
-  discReleases(first: Int = 50): [DiscRelease!]!
-
-  """
-  Films out on DVD or Blu-ray in the US that no tracked service streams on
-  subscription: owning a copy is the way to watch them. Films only - TMDB has
-  no disc data for series. Paged like catalog.
+  Titles out on DVD or Blu-ray that no tracked service streams on
+  subscription: owning a copy is the way to watch them. One kind at a time,
+  paged like catalog. Films use TMDB's US disc releases; series, which TMDB
+  has no disc data for, the networks that sell their shows on disc (see
+  MediaItem.onDisc) - so for series it's a rule of thumb, not a record.
   """
   discCatalog(
+    kind: MediaKind = MOVIE
     sort: CatalogSort = POPULAR
     "A cursor from a previous page's nextCursor. Omitted means the first page."
     after: String

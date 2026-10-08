@@ -36,18 +36,24 @@ export function interleave<T>(...lists: readonly (readonly T[])[]): T[] {
   return out;
 }
 
+/** What's On's lists: each type on the services, and each type out on disc. */
+export type ListKey = Kind | "DISC_SERIES" | "DISC_MOVIE";
+
 /**
- * The grid What's On shows from the selected lists: series, films and films
- * out on disc interleaved, and whether any has another page to load.
+ * The grid What's On shows from the selected lists: series and films, on the
+ * services and out on disc, interleaved - and whether any has another page.
  */
-export function mergeCatalog<T>(
-  lists: Partial<Record<Kind | "DISC", CatalogList<T> | undefined>>,
-): {
+export function mergeCatalog<T>(lists: Partial<Record<ListKey, CatalogList<T> | undefined>>): {
   items: T[];
   more: boolean;
 } {
   return {
-    items: interleave(lists.SERIES?.items ?? [], lists.MOVIE?.items ?? [], lists.DISC?.items ?? []),
-    more: Boolean(lists.SERIES?.nextCursor || lists.MOVIE?.nextCursor || lists.DISC?.nextCursor),
+    items: interleave(
+      lists.SERIES?.items ?? [],
+      lists.MOVIE?.items ?? [],
+      lists.DISC_SERIES?.items ?? [],
+      lists.DISC_MOVIE?.items ?? [],
+    ),
+    more: Object.values(lists).some((l) => Boolean(l?.nextCursor)),
   };
 }

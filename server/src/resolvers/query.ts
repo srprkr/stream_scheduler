@@ -67,10 +67,9 @@ export const Query: QueryResolvers = {
     };
   },
 
-  discReleases: (_p, args, ctx) => ctx.source.listDiscReleases(args.first ?? 50),
-
   discCatalog: async (_p, args, ctx) => {
     const page = await ctx.source.listDiscCatalog({
+      kind: args.kind ?? "MOVIE",
       sort: args.sort ?? "POPULAR",
       page: decodeCursor(args.after),
       ...filtersFrom(args),

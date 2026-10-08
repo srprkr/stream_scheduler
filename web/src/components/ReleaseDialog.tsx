@@ -1,6 +1,5 @@
 import { badge, bingeNote, countdown, formatDate, watchTime } from "../lib/format";
-import type { Arrival, Release } from "../lib/format";
-import { DiscGlyph } from "./DiscLogo";
+import type { Release } from "../lib/format";
 import { ScoreFact } from "./ScoreBadge";
 import { Sheet } from "./Sheet";
 import { ProviderLogos } from "./ProviderLogos";
@@ -9,18 +8,15 @@ import { ProviderLogos } from "./ProviderLogos";
 export function ReleaseDialog({
   release,
   providers,
-  disc = false,
   onClose,
 }: {
-  release: Arrival | null;
+  release: Release | null;
   onClose: () => void;
   providers: readonly Release["provider"][];
-  /** Coming out on disc rather than arriving on a service. */
-  disc?: boolean;
 }) {
   if (!release) return <Sheet open={false} media={null} onClose={onClose} />;
 
-  const { text, kind } = badge(release, disc);
+  const { text, kind } = badge(release);
   const note = bingeNote(release);
   const runtime = watchTime(release.watchTimeMinutes);
 
@@ -39,7 +35,7 @@ export function ReleaseDialog({
       <dl className="facts">
         <ScoreFact score={release.media.score} />
         <div>
-          <dt>{disc ? "Out on disc" : "Arrives"}</dt>
+          <dt>Arrives</dt>
           <dd>
             {formatDate(release.availableFrom, true)} · {countdown(release.daysUntilRelease)}
           </dd>
@@ -66,27 +62,13 @@ export function ReleaseDialog({
           </div>
         )}
         <div>
-          {disc ? (
-            <div>
-              <dt>Format</dt>
-              <dd className="facts__services">
-                <ul className="logos">
-                  <li>
-                    <DiscGlyph className="logos__img" />
-                  </li>
-                </ul>
-                DVD or Blu-ray
-              </dd>
-            </div>
-          ) : (
-            <div>
-              <dt>{providers.length > 1 ? "Services" : "Service"}</dt>
-              <dd className="facts__services">
-                <ProviderLogos providers={providers} />
-                {providers.map((p) => p.name).join(", ")}
-              </dd>
-            </div>
-          )}
+          <div>
+            <dt>{providers.length > 1 ? "Services" : "Service"}</dt>
+            <dd className="facts__services">
+              <ProviderLogos providers={providers} />
+              {providers.map((p) => p.name).join(", ")}
+            </dd>
+          </div>
         </div>
       </dl>
     </Sheet>

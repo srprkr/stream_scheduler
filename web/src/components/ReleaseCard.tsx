@@ -1,5 +1,5 @@
 import { badge, bingeNote, countdown, formatDate, watchTime } from "../lib/format";
-import type { Arrival, Release } from "../lib/format";
+import type { Release } from "../lib/format";
 import { ProviderLogos } from "./ProviderLogos";
 import { ScoreBadge } from "./ScoreBadge";
 import { ShelfToggle } from "./ShelfToggle";
@@ -7,18 +7,15 @@ import { ShelfToggle } from "./ShelfToggle";
 export function ReleaseCard({
   release,
   providers,
-  disc = false,
   onOpen,
 }: {
-  release: Arrival;
+  release: Release;
   onOpen: () => void;
   /** Every service this title arrives on that day; usually one. */
   providers: readonly Release["provider"][];
-  /** Coming out on disc rather than arriving on a service. */
-  disc?: boolean;
 }) {
   const { media } = release;
-  const { text, kind } = badge(release, disc);
+  const { text, kind } = badge(release);
   const note = bingeNote(release);
   const runtime = watchTime(release.watchTimeMinutes);
   const imminent =
@@ -29,7 +26,7 @@ export function ReleaseCard({
       {/* Where it arrives, above the poster as on every other tile - a
           fixed-height slot, so posters line up across a row. */}
       <div className="shelf__services">
-        <ProviderLogos providers={providers} disc={disc} />
+        <ProviderLogos providers={providers} />
       </div>
 
       {/* The poster is the button that opens the release: keyboard and screen

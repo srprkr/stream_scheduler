@@ -22,7 +22,27 @@ import { ServiceLogo } from "./ServiceLogo";
  * in a panel underneath. The page links stay out: they're navigation, not
  * a filter. The CSS decides which layout shows; the markup is the same.
  */
-export function BrowseFilters({ filters }: { filters: Filters }) {
+export function BrowseFilters({
+  filters: all,
+  offerDisc = true,
+}: {
+  filters: Filters;
+  /**
+   * Whether On disc is offered. Coming Soon leaves it out: it shows what's
+   * arriving on services, and a disc to buy is a wishlist matter. There the
+   * shortcuts are judged by the services alone, so a hidden On disc never
+   * makes Select All or My Services look half-done.
+   */
+  offerDisc?: boolean;
+}) {
+  const filters = offerDisc
+    ? all
+    : {
+        ...all,
+        disc: false,
+        allServices: all.everyService,
+        allSubscribed: all.myServicesOnly,
+      };
   const { providers, mySlugs, slugs, kinds } = filters;
   const tag = (on: boolean) => `tag${on ? " tag--on" : ""}`;
   const [open, setOpen] = useState(false);
@@ -110,18 +130,20 @@ export function BrowseFilters({ filters }: { filters: Filters }) {
           >
             My Services
           </button>
-          {/* Not a service but picked like one: films you can only watch by
-              owning the disc - or, on Coming Soon, coming out on disc. */}
-          <button
-            type="button"
-            className="filters__service"
-            aria-pressed={filters.disc}
-            aria-label="On disc"
-            title="On disc: DVD and Blu-ray"
-            onClick={filters.toggleDisc}
-          >
-            <DiscLogo active={filters.disc} />
-          </button>
+          {/* Not a service but picked like one: titles you can only watch
+              by owning the disc. */}
+          {offerDisc && (
+            <button
+              type="button"
+              className="filters__service"
+              aria-pressed={filters.disc}
+              aria-label="On disc"
+              title="On disc: DVD and Blu-ray"
+              onClick={filters.toggleDisc}
+            >
+              <DiscLogo active={filters.disc} />
+            </button>
+          )}
           {/* Logos rather than names, to keep the row to one line: in colour
               when selected, greyed when not, as elsewhere in the app. The
               name is the button's label and its hover text. */}

@@ -62,9 +62,9 @@ export function filmOnDisc(dates: TmdbReleaseDates): boolean {
 
 /**
  * The film's first US disc release between `from` and `to`, inclusive, or
- * null. Discover finds a re-release - a 4K edition of a 2000 film - by its
- * new date but lists it under its first one, so the date has to come from
- * here.
+ * null - a re-release (a 4K edition of a 2000 film) by its new date. Kept
+ * for the planned reminder when a wanted film comes out on disc; nothing
+ * calls it yet.
  */
 export function usDiscRelease(dates: TmdbReleaseDates, from: string, to: string): string | null {
   const local = dates.results.find((c) => c.iso_3166_1 === WATCH_REGION);

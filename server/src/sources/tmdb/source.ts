@@ -5,7 +5,6 @@ import type {
   CatalogSort,
   CatalogSource,
   DiscCatalogQuery,
-  DiscReleaseRecord,
   ImageSize,
   AvailabilityRecord,
   MediaRecord,
@@ -18,7 +17,7 @@ import type {
 } from "../types.js";
 import { addDays, isoDate } from "../../dates.js";
 import type { TmdbClient } from "./client.js";
-import { seriesOnDisc } from "./discs.js";
+import { DISC_NETWORKS, EXCEPTIONS, seriesOnDisc } from "./discs.js";
 import {
   WATCH_REGION,
   PROVIDER_CONFIGS,
@@ -27,13 +26,7 @@ import {
   otherServices,
   type ProviderConfig,
 } from "./services.js";
-import {
-  DIGITAL_RELEASE,
-  PHYSICAL_RELEASE,
-  streamingPremieres,
-  filmOnDisc,
-  usDiscRelease,
-} from "./films.js";
+import { DIGITAL_RELEASE, PHYSICAL_RELEASE, streamingPremieres, filmOnDisc } from "./films.js";
 import {
   analyseSeason,
   seriesRuntime,
@@ -73,12 +66,6 @@ const FILM_PAGES = 20;
 const WINDOW_DAYS = 90;
 
 /**
- * Candidate pages of coming disc releases. About 30 films a quarter when
- * this was set - two pages - so five leaves room for a busy one.
- */
-const DISC_PAGES = 5;
-
-/**
  * Fewer votes than this and a film is too obscure to list among films out on
  * disc: unfiltered, the list runs past 20,000, deep into titles nobody knows.
  */
@@ -112,6 +99,13 @@ async function mapLimit<T, R>(
 const TALK_GENRE = 10767;
 
 const NEWS_GENRE = 10763;
+
+/** TMDB's TV genre ids for soaps and reality, which networks seldom put on disc. */
+const SOAP_GENRE = 10766;
+const REALITY_GENRE = 10764;
+
+/** Series genres left out of the On disc list: daily or disposable. */
+const NOT_ON_DISC_GENRES = [NEWS_GENRE, REALITY_GENRE, SOAP_GENRE, TALK_GENRE];
 
 /**
  * Votes a title needs before its score counts. Without a floor, "top rated"
@@ -525,6 +519,7 @@ export class TmdbSource implements CatalogSource {
   async listDiscCatalog(query: DiscCatalogQuery): Promise<CatalogPageRecord> {
     const today = isoDate(this.now());
     const tracked = PROVIDER_CONFIGS.flatMap((c) => c.watchProviderIds).sort((a, b) => a - b);
+    if (query.kind === "SERIES") return this.discSeries(query, today, tracked);
     // Years are first releases; "newest" is newest out on disc, not newest
     // in cinemas, and release_date - the disc date - is capped below.
     const order = discoverOrder(query, "primary_release_date", today, {
@@ -546,59 +541,29 @@ export class TmdbSource implements CatalogSource {
   }
 
   /**
-   * Discover finds the films with a US disc date in the window, a page or two
-   * of them; then each film's release dates - the URL getOnDisc reads, so
-   * cached for the dialog - say which date that is.
+   * Series out on disc that no tracked service streams, in one discover
+   * request a page: TMDB has no disc data for TV, so it asks instead for the
+   * networks that sell their shows on disc (discs.ts) - the same rule onDisc
+   * uses. Soaps, reality, talk and news are left out: daily and disposable,
+   * they're seldom put on disc in full, whatever the network.
    */
-  async listDiscReleases(first: number): Promise<DiscReleaseRecord[]> {
-    const today = isoDate(this.now());
-    const end = isoDate(addDays(this.now(), WINDOW_DAYS));
-    const discover = (page: number) =>
-      this.client.get<TmdbPage<TmdbMovieListItem>>(
-        `/discover/movie?region=${WATCH_REGION}&with_release_type=${PHYSICAL_RELEASE}` +
-          `&release_date.gte=${today}&release_date.lte=${end}` +
-          `&sort_by=popularity.desc&page=${page}`,
-      );
-
-    let firstPage: TmdbPage<TmdbMovieListItem>;
-    try {
-      firstPage = await discover(1);
-    } catch {
-      return [];
-    }
-    const remaining = Array.from(
-      { length: Math.max(0, Math.min(firstPage.total_pages, DISC_PAGES) - 1) },
-      (_, i) => i + 2,
+  private async discSeries(
+    query: DiscCatalogQuery,
+    today: string,
+    tracked: readonly number[],
+  ): Promise<CatalogPageRecord> {
+    const networks = [...DISC_NETWORKS.keys()].sort((a, b) => a - b);
+    const order = discoverOrder(query, "first_air_date", today, { voteFloor: DISC_VOTE_FLOOR });
+    const body = await this.client.get<TmdbPage<TmdbTvListItem>>(
+      `/discover/tv?with_networks=${networks.join("|")}&watch_region=${WATCH_REGION}` +
+        `&without_watch_providers=${tracked.join("|")}` +
+        `&without_genres=${NOT_ON_DISC_GENRES.join("|")}&${order}&page=${query.page}`,
     );
-    const rest = await mapLimit(remaining, CONCURRENCY, async (page) => {
-      try {
-        return (await discover(page)).results;
-      } catch {
-        return [];
-      }
-    });
-    // Popularity can shift between page fetches, so a film may appear twice.
-    const candidates = [
-      ...new Map([firstPage.results, ...rest].flat().map((m) => [m.id, m])).values(),
-    ];
-
-    const dated = await mapLimit(candidates, CONCURRENCY, async (m) => {
-      try {
-        const dates = await this.client.get<TmdbReleaseDates>(`/movie/${m.id}/release_dates`);
-        return { id: m.id, date: usDiscRelease(dates, today, end) };
-      } catch {
-        return null;
-      }
-    });
-
-    return dated
-      .flatMap((d) =>
-        d?.date
-          ? [{ id: `disc:movie:${d.id}`, mediaId: `movie:${d.id}`, availableFrom: d.date }]
-          : [],
-      )
-      .sort((a, b) => a.availableFrom.localeCompare(b.availableFrom))
-      .slice(0, first);
+    // The hand-kept misses: a network show known never to have had discs.
+    const items = body.results
+      .filter((s) => EXCEPTIONS.get(s.id) !== false)
+      .map((s) => seriesRecord(s));
+    return catalogPage(items, body.total_pages, query.page);
   }
 
   /**

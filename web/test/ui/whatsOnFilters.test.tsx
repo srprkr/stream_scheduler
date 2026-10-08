@@ -74,21 +74,22 @@ const catalog = (kind: "SERIES" | "MOVIE", titles: string[]) => ({
 });
 
 /** Nothing out on disc: every service is selected to start, On disc included. */
-const noDiscs = {
+const noDiscs = (kind: "SERIES" | "MOVIE") => ({
   request: {
     query: DiscCatalogDocument,
-    variables: { sort: "POPULAR", minScore: null, fromYear: null, toYear: null },
+    variables: { kind, sort: "POPULAR", minScore: null, fromYear: null, toYear: null },
   },
   result: {
     data: { discCatalog: { __typename: "CatalogPage" as const, nextCursor: null, items: [] } },
   },
-};
+});
 
 const mocks = [
   services,
   catalog("SERIES", ["Severance", "Slow Horses"]),
   catalog("MOVIE", ["Heat", "Ronin"]),
-  noDiscs,
+  noDiscs("SERIES"),
+  noDiscs("MOVIE"),
 ];
 
 /** The type toggles are buttons that say whether they're on. */

@@ -99,7 +99,13 @@ describe("What's On: sort, score and year", () => {
       {
         request: {
           query: DiscCatalogDocument,
-          variables: { sort: "POPULAR", minScore: null, fromYear: null, toYear: null },
+          variables: {
+            kind: "MOVIE",
+            sort: "POPULAR",
+            minScore: null,
+            fromYear: null,
+            toYear: null,
+          },
         },
         result: {
           data: { discCatalog: { __typename: "CatalogPage", nextCursor: null, items: [] } },

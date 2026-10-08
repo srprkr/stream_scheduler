@@ -69,22 +69,6 @@ describe("GraphQL layer", () => {
     expect(getMedia).toHaveBeenCalledTimes(1);
   });
 
-  it("lists coming disc releases with their film and countdown", async () => {
-    const { data, errors } = await run(`{
-      discReleases { availableFrom daysUntilRelease media { __typename title } }
-    }`);
-    expect(errors).toBeUndefined();
-    expect(data).toEqual({
-      discReleases: [
-        {
-          availableFrom: "2026-10-08",
-          daysUntilRelease: 20,
-          media: { __typename: "Movie", title: "The Long Weekend" },
-        },
-      ],
-    });
-  });
-
   it("pages films out on disc that no service streams", async () => {
     const { data, errors } = await run(`{
       discCatalog { items { title availableOn { slug } onDisc } nextCursor }
@@ -114,6 +98,12 @@ describe("GraphQL layer", () => {
     expect(titles(withDisc.data)).toContain("Paper Lanterns");
     // On Netflix only - a tracked service, not the one asked for - so still out.
     expect(titles(withDisc.data)).not.toContain("The Quiet Harbor");
+  });
+
+  it("pages series out on disc too, one kind at a time", async () => {
+    const { data, errors } = await run(`{ discCatalog(kind: SERIES) { items { title } } }`);
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({ discCatalog: { items: [{ title: "Lighthouse Keepers" }] } });
   });
 
   it("filters a catalogue by score and year, and reports each title's score", async () => {

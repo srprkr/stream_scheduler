@@ -7,7 +7,6 @@ import { ReleaseFeed } from "../../src/components/ReleaseFeed";
 import {
   CatalogDocument,
   DiscCatalogDocument,
-  DiscReleasesDocument,
   ReleaseFeedDocument,
   SearchEverywhereDocument,
   SearchMyServicesDocument,
@@ -67,9 +66,32 @@ const whatsOnMocks = [
   {
     request: {
       query: DiscCatalogDocument,
-      variables: { sort: "POPULAR", minScore: null, fromYear: null, toYear: null },
+      variables: { kind: "MOVIE", sort: "POPULAR", minScore: null, fromYear: null, toYear: null },
     },
     result: { data: { discCatalog: page([film("movie:2", "Paper Lanterns")]) } },
+  },
+  {
+    request: {
+      query: DiscCatalogDocument,
+      variables: { kind: "SERIES", sort: "POPULAR", minScore: null, fromYear: null, toYear: null },
+    },
+    result: {
+      data: {
+        discCatalog: page([
+          {
+            __typename: "Series" as const,
+            id: "tv:8",
+            title: "Lighthouse Keepers",
+            posterUrl: null,
+            onDisc: true,
+            availableOn: [],
+            score: null,
+            releaseYear: null,
+            nextSeason: null,
+          },
+        ]),
+      },
+    },
   },
 ];
 
@@ -84,15 +106,18 @@ describe("What's On: On disc", () => {
     renderApp(<WhatsOnPage />, { mocks: whatsOnMocks, route: "/whats-on" });
     expect(await screen.findByText("Paper Lanterns")).toBeInTheDocument();
     expect(await screen.findByText("Heat")).toBeInTheDocument();
+    expect(await screen.findByText("Lighthouse Keepers")).toBeInTheDocument();
     expect(
       within(tile("Paper Lanterns")).getByRole("img", { name: "On disc" }),
     ).toBeInTheDocument();
     // Heat is listed for Netflix, not for its disc.
     expect(within(tile("Heat")).queryByRole("img", { name: "On disc" })).not.toBeInTheDocument();
-    expect(screen.getByText(/and films out on disc that no service streams/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/and films and series out on disc that no service streams/),
+    ).toBeInTheDocument();
   });
 
-  it("shows only films out on disc when it's picked alone, and asks for Films if they're off", async () => {
+  it("shows only titles out on disc when it's picked alone - series too, with Films off", async () => {
     const user = userEvent.setup();
     renderApp(<WhatsOnPage />, { mocks: whatsOnMocks, route: "/whats-on" });
     await screen.findByText("Paper Lanterns");
@@ -103,9 +128,17 @@ describe("What's On: On disc", () => {
     expect(screen.getByText("Paper Lanterns")).toBeInTheDocument();
     expect(screen.getByText(/owning a copy is the way to watch them/)).toBeInTheDocument();
 
+    expect(screen.getByText("Lighthouse Keepers")).toBeInTheDocument();
+    expect(
+      within(tile("Lighthouse Keepers")).getByRole("img", { name: "On disc" }),
+    ).toBeInTheDocument();
+
     await user.click(screen.getByRole("button", { name: "Films", pressed: true }));
-    expect(await screen.findByText(/On disc lists films only/)).toBeInTheDocument();
-    expect(screen.queryByText("Paper Lanterns")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("Paper Lanterns")).not.toBeInTheDocument());
+    expect(screen.getByText("Lighthouse Keepers")).toBeInTheDocument();
+    expect(
+      screen.getByText(/^Series out on DVD or Blu-ray that no service streams/),
+    ).toBeInTheDocument();
   });
 });
 
@@ -254,72 +287,28 @@ const feedMocks = [
       },
     },
   },
-  {
-    request: { query: DiscReleasesDocument, variables: { timezone } },
-    result: {
-      data: {
-        discReleases: [
-          {
-            __typename: "DiscRelease",
-            id: "disc:movie:2",
-            availableFrom: "2026-10-21",
-            daysUntilRelease: 20,
-            media: media("movie:2", "The Long Weekend", "Movie"),
-          },
-        ],
-      },
-    },
-  },
 ];
 
-function Feed({ disc }: { disc: boolean }) {
-  return (
-    <ReleaseFeed slugs={["netflix"]} disc={disc} kinds={["SERIES", "MOVIE"]} ready filters={null} />
-  );
+function Feed({ slugs }: { slugs: string[] }) {
+  return <ReleaseFeed slugs={slugs} kinds={["SERIES", "MOVIE"]} ready filters={null} />;
 }
 
-describe("Coming Soon: On disc", () => {
-  it("lists a film coming out on disc in date order, marked and badged On disc", async () => {
-    renderApp(<Feed disc />, { mocks: feedMocks });
-    // Two queries, landing in either order: wait for a title from each.
-    await screen.findByText("The Long Weekend");
-    await screen.findByText("Late Film");
-    const titles = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-    expect(titles).toEqual(["The Quiet Harbor", "The Long Weekend", "Late Film"]);
-
-    const card = tile("The Long Weekend");
-    expect(within(card).getByRole("img", { name: "On disc" })).toBeInTheDocument();
-    expect(within(card).getByText("On disc", { selector: ".badge" })).toBeInTheDocument();
-  });
-
-  it("says in its dialog that it's coming out on disc, not on a service", async () => {
-    const user = userEvent.setup();
-    renderApp(<Feed disc />, { mocks: feedMocks });
-    await user.click(await screen.findByRole("button", { name: "The Long Weekend" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Out on disc")).toBeInTheDocument();
-    expect(within(dialog).getByText("DVD or Blu-ray")).toBeInTheDocument();
-    expect(within(dialog).queryByText("Service")).not.toBeInTheDocument();
-  });
-
-  it("filters every arrival when set to Everywhere, past the selected services and On disc", async () => {
+describe("Coming Soon: services only", () => {
+  it("filters every arrival when the search covers more than what's selected", async () => {
     const user = userEvent.setup();
     // Selected: Max only, which has nothing in this feed.
-    renderApp(
-      <ReleaseFeed slugs={["max"]} disc={false} kinds={["SERIES", "MOVIE"]} ready filters={null} />,
-      { mocks: feedMocks },
-    );
+    renderApp(<Feed slugs={["max"]} />, { mocks: feedMocks });
     await user.type(screen.getByRole("searchbox", { name: "Filter by title" }), "the");
     await user.click(await screen.findByRole("button", { name: "Search everywhere instead" }));
 
-    expect(await screen.findByText("The Long Weekend")).toBeInTheDocument();
-    expect(screen.getByText("The Quiet Harbor")).toBeInTheDocument();
-    expect(screen.getByText(/2 matches for “the” everywhere/)).toBeInTheDocument();
+    expect(await screen.findByText("The Quiet Harbor")).toBeInTheDocument();
+    expect(screen.getByText(/1 match for “the” everywhere/)).toBeInTheDocument();
   });
 
-  it("leaves disc releases out when On disc isn't picked", async () => {
-    renderApp(<Feed disc={false} />, { mocks: feedMocks });
-    await screen.findByText("The Quiet Harbor");
-    expect(screen.queryByText("The Long Weekend")).not.toBeInTheDocument();
+  it("asks for a service when none is picked - On disc doesn't count here", async () => {
+    renderApp(<Feed slugs={[]} />, { mocks: feedMocks });
+    expect(
+      await screen.findByText("Pick a service to see what's coming to it."),
+    ).toBeInTheDocument();
   });
 });

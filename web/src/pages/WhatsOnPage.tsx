@@ -61,6 +61,7 @@ const CATALOG = graphql(`
  */
 const DISC_CATALOG = graphql(`
   query DiscCatalog(
+    $kind: MediaKind!
     $sort: CatalogSort
     $after: String
     $minScore: Float
@@ -68,6 +69,7 @@ const DISC_CATALOG = graphql(`
     $toYear: Int
   ) {
     discCatalog(
+      kind: $kind
       sort: $sort
       after: $after
       minScore: $minScore
@@ -214,12 +216,13 @@ export function WhatsOnPage() {
       : skipToken;
   const seriesQuery = useQuery(CATALOG, variables("SERIES"));
   const filmsQuery = useQuery(CATALOG, variables("MOVIE"));
-  // Films out on disc: films only, since TMDB has no disc data for series.
-  const discOn = disc && kinds.includes("MOVIE") && !searching;
-  const discQuery = useQuery(
-    DISC_CATALOG,
-    discOn ? { variables: { sort, ...titleFilters } } : skipToken,
-  );
+  // Out on disc, one query per type like the services' lists.
+  const discVariables = (kind: Kind) =>
+    disc && kinds.includes(kind) && !searching
+      ? { variables: { kind, sort, ...titleFilters } }
+      : skipToken;
+  const discSeriesQuery = useQuery(DISC_CATALOG, discVariables("SERIES"));
+  const discFilmsQuery = useQuery(DISC_CATALOG, discVariables("MOVIE"));
   // Only the selected types count, whatever the queries still hold: a
   // skipped query keeps its last result in Apollo 4 (see lib/catalog.ts).
   // The same goes for services all switched off, and for On disc.
@@ -228,17 +231,25 @@ export function WhatsOnPage() {
     MOVIE: filmsQuery,
   });
   const queries = [active.SERIES, active.MOVIE].filter((q) => q !== undefined);
-  const discList = discOn ? discQuery.data?.discCatalog : undefined;
+  const onDisc = selectedLists(disc ? kinds : [], searching, {
+    SERIES: discSeriesQuery,
+    MOVIE: discFilmsQuery,
+  });
+  const discQueries = [onDisc.SERIES, onDisc.MOVIE].filter((q) => q !== undefined);
   const { items, more } = mergeCatalog<Item>({
     SERIES: active.SERIES?.data?.catalog,
     MOVIE: active.MOVIE?.data?.catalog,
-    DISC: discList,
+    DISC_SERIES: onDisc.SERIES?.data?.discCatalog,
+    DISC_MOVIE: onDisc.MOVIE?.data?.discCatalog,
   });
-  const fromDisc = new Set(discList?.items.map((i) => i.id) ?? []);
+  const fromDisc = new Set(
+    discQueries.flatMap((q) => q.data?.discCatalog.items.map((i) => i.id) ?? []),
+  );
   const lists = queries.filter((q) => q.data);
-  const anyLoading = queries.some((q) => q.loading) || (discOn && discQuery.loading);
+  const everyQuery = [...queries, ...discQueries];
+  const anyLoading = everyQuery.some((q) => q.loading);
   const loading = !filters.ready || (anyLoading && items.length === 0);
-  const error = [...queries, ...(discOn ? [discQuery] : [])].find((q) => q.error)?.error;
+  const error = everyQuery.find((q) => q.error)?.error;
 
   // Searching replaces the catalogue in the grid; clearing the box brings
   // the catalogue back, with every page already loaded still in the cache.
@@ -278,13 +289,15 @@ export function WhatsOnPage() {
   const loadMore = async () => {
     setLoadingMore(true);
     try {
-      const discAfter = discList?.nextCursor;
       await Promise.all([
         ...lists.map((q) => {
           const after = q.data?.catalog.nextCursor;
           return after ? q.fetchMore({ variables: { after } }) : null;
         }),
-        discAfter ? discQuery.fetchMore({ variables: { after: discAfter } }) : null,
+        ...discQueries.map((q) => {
+          const after = q.data?.discCatalog.nextCursor;
+          return after ? q.fetchMore({ variables: { after } }) : null;
+        }),
       ]);
     } finally {
       setLoadingMore(false);
@@ -293,8 +306,6 @@ export function WhatsOnPage() {
 
   const nothingSelected =
     filters.ready && ((providerSlugs.length === 0 && !disc) || kinds.length === 0);
-  // On disc alone, with Films off: nothing to show, and a different fix.
-  const discWithoutFilms = disc && providerSlugs.length === 0 && !kinds.includes("MOVIE");
   const scope =
     providerSlugs.length === filters.providers.length
       ? "every service"
@@ -308,11 +319,14 @@ export function WhatsOnPage() {
       : `on ${scope}${disc ? " and on disc" : ""}`;
   // Everywhere searches whatever the row says; Selected needs something picked.
   const showSearch = searching && (everywhere || !nothingSelected);
+  // What On disc adds, by the types picked: "films", "series", or both.
+  const discKinds =
+    kinds.length === 2 ? "films and series" : kinds[0] === "MOVIE" ? "films" : "series";
   const lede =
     providerSlugs.length === 0 && disc
-      ? "Films out on DVD or Blu-ray that no service streams: owning a copy is the way to watch them."
+      ? `${discKinds[0]?.toUpperCase()}${discKinds.slice(1)} out on DVD or Blu-ray that no service streams: owning a copy is the way to watch them.`
       : disc
-        ? `Streaming now on ${scope}, and films out on disc that no service streams.`
+        ? `Streaming now on ${scope}, and ${discKinds} out on disc that no service streams.`
         : `Streaming now on ${scope}.`;
 
   return (
@@ -402,8 +416,6 @@ export function WhatsOnPage() {
             ))}
           </ul>
         </>
-      ) : discWithoutFilms ? (
-        <p className="state">On disc lists films only: switch Films on to see them.</p>
       ) : nothingSelected ? (
         <p className="state">Pick at least one service and a type to see what's on.</p>
       ) : (

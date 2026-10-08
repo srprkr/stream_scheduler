@@ -81,6 +81,14 @@ export function useBrowseFilters() {
     kinds,
     allServices: savedServices === ALL || (providers.length > 0 && sameSet(selected, everything)),
     allSubscribed: mySlugs.length > 0 && !disc && sameSet(slugs, mySlugs),
+    /** The same two, judged by the services alone: for a page without On disc. */
+    everyService:
+      providers.length > 0 &&
+      sameSet(
+        slugs,
+        providers.map((p) => p.slug),
+      ),
+    myServicesOnly: mySlugs.length > 0 && sameSet(slugs, mySlugs),
     selectAll: () => saveServices(ALL),
     selectNone: () => saveServices(""),
     selectSubscribed: () => select(mySlugs),
