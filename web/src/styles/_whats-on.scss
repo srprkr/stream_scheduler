@@ -66,6 +66,73 @@
   max-width: 360px;
 }
 
+// The search box and what it searches (Selected / Everywhere), side by side;
+// on a narrow screen the toggle wraps under the box.
+.search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+
+  .filter {
+    flex: 1 1 260px;
+  }
+}
+
+// An on/off switch: a track with a sliding thumb, then its label. Green
+// and slid right when on; the thumb's position, not just colour, says which.
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+
+  &__track {
+    position: relative;
+    flex: none;
+    width: 34px;
+    height: 20px;
+    border-radius: 999px;
+    background: var(--border);
+    transition: background 120ms ease;
+  }
+
+  &__thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--text);
+    transition: transform 120ms ease;
+  }
+
+  &[aria-checked="true"] {
+    color: var(--text);
+  }
+  &[aria-checked="true"] &__track {
+    background: var(--soon);
+  }
+  &[aria-checked="true"] &__thumb {
+    transform: translateX(14px);
+  }
+
+  &:hover {
+    color: var(--text);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--soon);
+    outline-offset: 2px;
+  }
+}
+
 // "12 results for …" - a quiet status line, announced by screen readers
 // through role="status" as the count changes.
 .state--count {

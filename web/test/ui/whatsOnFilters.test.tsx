@@ -3,7 +3,11 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { CatalogDocument, ServiceNamesDocument } from "../../src/generated/graphql";
+import {
+  CatalogDocument,
+  DiscCatalogDocument,
+  ServiceNamesDocument,
+} from "../../src/generated/graphql";
 import { WhatsOnPage } from "../../src/pages/WhatsOnPage";
 import { renderApp } from "./render";
 
@@ -58,10 +62,19 @@ const catalog = (kind: "SERIES" | "MOVIE", titles: string[]) => ({
   },
 });
 
+/** Nothing out on disc: every service is selected to start, On disc included. */
+const noDiscs = {
+  request: { query: DiscCatalogDocument, variables: { sort: "POPULAR" } },
+  result: {
+    data: { discCatalog: { __typename: "CatalogPage" as const, nextCursor: null, items: [] } },
+  },
+};
+
 const mocks = [
   services,
   catalog("SERIES", ["Severance", "Slow Horses"]),
   catalog("MOVIE", ["Heat", "Ronin"]),
+  noDiscs,
 ];
 
 /** The type toggles are buttons that say whether they're on. */

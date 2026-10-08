@@ -26,26 +26,28 @@ export function selectedLists<Q>(
   return out;
 }
 
-/** Alternates two lists, so neither type is buried under a page of the other. */
-export function interleave<T>(a: readonly T[], b: readonly T[]): T[] {
+/** Takes from each list in turn, so none is buried under a page of another. */
+export function interleave<T>(...lists: readonly (readonly T[])[]): T[] {
   const out: T[] = [];
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    if (i < a.length) out.push(a[i] as T);
-    if (i < b.length) out.push(b[i] as T);
+  const longest = Math.max(0, ...lists.map((l) => l.length));
+  for (let i = 0; i < longest; i++) {
+    for (const list of lists) if (i < list.length) out.push(list[i] as T);
   }
   return out;
 }
 
 /**
- * The grid What's On shows from the selected lists: series and films
- * interleaved, and whether either has another page to load.
+ * The grid What's On shows from the selected lists: series, films and films
+ * out on disc interleaved, and whether any has another page to load.
  */
-export function mergeCatalog<T>(lists: Partial<Record<Kind, CatalogList<T> | undefined>>): {
+export function mergeCatalog<T>(
+  lists: Partial<Record<Kind | "DISC", CatalogList<T> | undefined>>,
+): {
   items: T[];
   more: boolean;
 } {
   return {
-    items: interleave(lists.SERIES?.items ?? [], lists.MOVIE?.items ?? []),
-    more: Boolean(lists.SERIES?.nextCursor || lists.MOVIE?.nextCursor),
+    items: interleave(lists.SERIES?.items ?? [], lists.MOVIE?.items ?? [], lists.DISC?.items ?? []),
+    more: Boolean(lists.SERIES?.nextCursor || lists.MOVIE?.nextCursor || lists.DISC?.nextCursor),
   };
 }

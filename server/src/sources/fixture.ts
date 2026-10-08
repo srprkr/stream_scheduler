@@ -3,6 +3,8 @@ import type {
   CatalogSource,
   CatalogPageRecord,
   CatalogQuery,
+  DiscCatalogQuery,
+  DiscReleaseRecord,
   ImageSize,
   MediaRecord,
   OtherServiceRecord,
@@ -111,9 +113,36 @@ const MEDIA: MediaRecord[] = [
     runtimeMinutes: null,
     seasonCount: 3,
   },
+  {
+    id: "media:6",
+    kind: "MOVIE",
+    title: "Paper Lanterns",
+    overview:
+      "Two sisters reopen their late father's video shop for one last weekend, and every regular comes back with a tape they never returned.",
+    posterPath: "/paper-lanterns-poster.jpg",
+    backdropPath: null,
+    trailer: null,
+    runtimeMinutes: 101,
+    seasonCount: null,
+  },
+  {
+    id: "media:7",
+    kind: "MOVIE",
+    title: "The Long Weekend",
+    overview: "A ferry strike strands a wedding party on the wrong island.",
+    posterPath: "/long-weekend-poster.jpg",
+    backdropPath: null,
+    trailer: null,
+    runtimeMinutes: 97,
+    seasonCount: null,
+  },
 ];
 
-/** Where each fixture title streams. media:3 is on nothing, deliberately. */
+/**
+ * Where each fixture title streams. media:3 is on nothing, deliberately, and
+ * so are the two disc-only films: media:6 is out on disc, media:7 comes out
+ * on disc in DISC_RELEASE_DAYS.
+ */
 const AVAILABILITY: Record<string, string[]> = {
   "media:1": ["netflix"],
   "media:2": ["netflix", "max"],
@@ -128,6 +157,12 @@ const OTHERS: Record<string, OtherServiceRecord[]> = {
 
 /** media:1 is a streaming exclusive with no disc release. */
 const NOT_ON_DISC = new Set(["media:1"]);
+
+/** The fixture's one coming disc release, in days from today. */
+const DISC_RELEASE_DAYS = 20;
+
+/** Films out on disc that no service streams. */
+const DISC_ONLY = ["media:6"];
 
 /** (mediaId, providerSlug, days from today, seasonNumber) */
 const RELEASE_PLAN: ReadonlyArray<readonly [string, string, number, number | null]> = [
@@ -215,6 +250,27 @@ export class FixtureSource implements CatalogSource {
         m.kind === query.kind &&
         (AVAILABILITY[m.id] ?? []).some((slug) => query.providerSlugs.includes(slug)),
     );
+    const start = query.page - 1;
+    return {
+      items: matching.slice(start, start + 1).map((m) => ({ ...m, summary: true })),
+      nextPage: start + 1 < matching.length ? query.page + 1 : null,
+    };
+  }
+
+  async listDiscReleases(first: number): Promise<DiscReleaseRecord[]> {
+    const releases = [
+      {
+        id: "disc:media:7",
+        mediaId: "media:7",
+        availableFrom: isoDate(addDays(this.now(), DISC_RELEASE_DAYS)),
+      },
+    ];
+    return releases.slice(0, first);
+  }
+
+  /** One title a page, like listCatalog. */
+  async listDiscCatalog(query: DiscCatalogQuery): Promise<CatalogPageRecord> {
+    const matching = MEDIA.filter((m) => DISC_ONLY.includes(m.id));
     const start = query.page - 1;
     return {
       items: matching.slice(start, start + 1).map((m) => ({ ...m, summary: true })),

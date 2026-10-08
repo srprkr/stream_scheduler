@@ -42,4 +42,16 @@ describe("interleave", () => {
   it("alternates, then runs out the longer list", () => {
     expect(interleave([1, 2], [10, 20, 30, 40])).toEqual([1, 10, 2, 20, 30, 40]);
   });
+
+  it("takes from three lists in turn", () => {
+    expect(interleave([1, 2], [10], [100, 200, 300])).toEqual([1, 10, 100, 2, 200, 300]);
+  });
+});
+
+describe("mergeCatalog with films out on disc", () => {
+  it("weaves them in, and offers more when only they have another page", () => {
+    const disc: CatalogList<string> = { items: ["D1", "D2"], nextCursor: "p2" };
+    const merged = mergeCatalog({ MOVIE: { items: ["F1"], nextCursor: null }, DISC: disc });
+    expect(merged).toEqual({ items: ["F1", "D1", "D2"], more: true });
+  });
 });

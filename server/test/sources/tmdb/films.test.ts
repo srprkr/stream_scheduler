@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { filmOnDisc, streamingPremieres } from "../../../src/sources/tmdb/films.js";
+import { filmOnDisc, streamingPremieres, usDiscRelease } from "../../../src/sources/tmdb/films.js";
 import type { TmdbReleaseDate } from "../../../src/sources/tmdb/types.js";
 
 describe("streamingPremieres", () => {
@@ -70,5 +70,36 @@ describe("filmOnDisc", () => {
 
   it("doesn't count a digital release as ownable", () => {
     expect(filmOnDisc(dates("US", 4))).toBe(false);
+  });
+});
+
+describe("usDiscRelease", () => {
+  const entry = (type: number, date: string) => ({
+    type,
+    release_date: `${date}T00:00:00.000Z`,
+    note: "",
+  });
+
+  it("takes a re-release's date in the window, not the film's first disc", () => {
+    // Eyes Wide Shut: first on disc in 2000, a 4K edition this October.
+    const dates = {
+      results: [
+        {
+          iso_3166_1: "US",
+          release_dates: [entry(5, "2000-03-07"), entry(5, "2026-10-20"), entry(5, "2027-02-01")],
+        },
+      ],
+    };
+    expect(usDiscRelease(dates, "2026-10-08", "2027-01-06")).toBe("2026-10-20");
+  });
+
+  it("ignores digital dates and other countries' discs", () => {
+    const dates = {
+      results: [
+        { iso_3166_1: "US", release_dates: [entry(4, "2026-10-20")] },
+        { iso_3166_1: "GB", release_dates: [entry(5, "2026-10-21")] },
+      ],
+    };
+    expect(usDiscRelease(dates, "2026-10-08", "2027-01-06")).toBeNull();
   });
 });

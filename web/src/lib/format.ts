@@ -3,6 +3,12 @@ import type { ReleaseFeedQuery } from "../generated/graphql";
 export type Release = ReleaseFeedQuery["releases"][number];
 
 /**
+ * A release as a tile shows it, without the service it arrives on: a
+ * streaming Release, or a film coming out on disc, which arrives on none.
+ */
+export type Arrival = Omit<Release, "provider">;
+
+/**
  * `availableFrom` is a calendar date, so it is formatted in UTC. Letting the
  * browser interpret "2026-09-22" in local time renders it as the 21st for
  * anyone west of Greenwich - the same bug class daysUntilRelease exists to
@@ -26,7 +32,8 @@ export function countdown(days: number): string {
   return `In ${Math.round(days / 7)} weeks`;
 }
 
-export function badge(release: Release): { text: string; kind: string } {
+export function badge(release: Arrival, disc = false): { text: string; kind: string } {
+  if (disc) return { text: "On disc", kind: "film" };
   const season = release.seasonNumber;
   if (season === null || season === undefined) return { text: "Film", kind: "film" };
   if (season === 1) return { text: "New series", kind: "new" };
@@ -45,7 +52,7 @@ export function watchTime(minutes: number | null | undefined): string | null {
  * The line that actually answers "should I unsubscribe this month?".
  * A weekly season is not worth resuming for until its last episode lands.
  */
-export function bingeNote(release: Release): string | null {
+export function bingeNote(release: Arrival): string | null {
   if (release.isFullDrop) return null;
   if (!release.bingeableFrom) {
     return release.isFullDrop === false

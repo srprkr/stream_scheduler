@@ -118,6 +118,13 @@ export interface ReleaseRecord {
   watchTimeMinutes: number | null;
 }
 
+/** A film's US disc release. Dates are YYYY-MM-DD. */
+export interface DiscReleaseRecord {
+  id: string;
+  mediaId: string;
+  availableFrom: string;
+}
+
 export interface ReleaseQuery {
   providerSlug?: string | undefined;
   /** Inclusive lower bound, YYYY-MM-DD. */
@@ -132,6 +139,13 @@ export interface CatalogQuery {
   kind: MediaKind;
   sort: CatalogSort;
   /** 1-based. Cursors are the resolver's concern; sources deal in pages. */
+  page: number;
+}
+
+/** A page of films out on disc that no tracked service streams. */
+export interface DiscCatalogQuery {
+  sort: CatalogSort;
+  /** 1-based. */
   page: number;
 }
 
@@ -205,6 +219,15 @@ export interface CatalogSource {
 
   /** One page of everything the given services stream on subscription. */
   listCatalog(query: CatalogQuery): Promise<CatalogPageRecord>;
+
+  /**
+   * US disc releases in the next 90 days, soonest first, at most `first`.
+   * Films only.
+   */
+  listDiscReleases(first: number): Promise<DiscReleaseRecord[]>;
+
+  /** One page of films out on disc in the US that no tracked service streams. */
+  listDiscCatalog(query: DiscCatalogQuery): Promise<CatalogPageRecord>;
 
   /** Upstream path -> absolute URL. Each source has its own CDN conventions. */
   imageUrl(path: string | null, size: ImageSize): string | null;

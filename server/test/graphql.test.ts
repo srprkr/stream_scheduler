@@ -69,6 +69,53 @@ describe("GraphQL layer", () => {
     expect(getMedia).toHaveBeenCalledTimes(1);
   });
 
+  it("lists coming disc releases with their film and countdown", async () => {
+    const { data, errors } = await run(`{
+      discReleases { availableFrom daysUntilRelease media { __typename title } }
+    }`);
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({
+      discReleases: [
+        {
+          availableFrom: "2026-10-08",
+          daysUntilRelease: 20,
+          media: { __typename: "Movie", title: "The Long Weekend" },
+        },
+      ],
+    });
+  });
+
+  it("pages films out on disc that no service streams", async () => {
+    const { data, errors } = await run(`{
+      discCatalog { items { title availableOn { slug } onDisc } nextCursor }
+    }`);
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({
+      discCatalog: {
+        items: [{ title: "Paper Lanterns", availableOn: [], onDisc: true }],
+        nextCursor: null,
+      },
+    });
+  });
+
+  it("finds titles out on disc in a service-filtered search, only when asked", async () => {
+    // media:6 is out on disc and streams nowhere; media:3 streams nowhere and
+    // is on disc too, by the fixture's rule; neither is on Netflix.
+    const query = (onDisc: boolean) => `{
+      searchMedia(query: "a", first: 20, providerSlugs: ["max"], onDisc: ${onDisc}) { title }
+    }`;
+    const without = await run(query(false));
+    const titles = (data: unknown) =>
+      (data as { searchMedia: { title: string }[] }).searchMedia.map((m) => m.title);
+    expect(titles(without.data)).not.toContain("Paper Lanterns");
+
+    const withDisc = await run(query(true));
+    expect(withDisc.errors).toBeUndefined();
+    expect(titles(withDisc.data)).toContain("Paper Lanterns");
+    // On Netflix only - a tracked service, not the one asked for - so still out.
+    expect(titles(withDisc.data)).not.toContain("The Quiet Harbor");
+  });
+
   it("counts days in the caller's timezone", async () => {
     const { data } = await run(`{ releases(first: 1) { daysUntilRelease } }`);
     expect(data).toEqual({ releases: [{ daysUntilRelease: 3 }] });

@@ -5,12 +5,26 @@ interface CatalogPageShape {
   nextCursor: string | null;
 }
 
+/** A first page replaces the list; a later page is appended to it. */
+function appendPages(
+  existing: CatalogPageShape | undefined,
+  incoming: CatalogPageShape,
+  { args }: { args: Record<string, unknown> | null },
+): CatalogPageShape {
+  if (!existing || !args?.["after"]) return incoming;
+  return { ...incoming, items: [...existing.items, ...incoming.items] };
+}
+
 /**
  * The client's cache rules. Exported separately from the client so tests can
  * build the same cache without a network link.
  */
 export function createCache(): InMemoryCache {
   return new InMemoryCache({
+    // Which types implement each interface. Without it the cache can't tell
+    // that a fragment on MediaItem applies to a Movie or a Series, and reads
+    // its fields back as missing.
+    possibleTypes: { MediaItem: ["Movie", "Series"] },
     typePolicies: {
       // Apollo files every object with an id under one shared key,
       // "Plan:premium". But plan ids are only unique within a service -
@@ -26,12 +40,10 @@ export function createCache(): InMemoryCache {
             // One cached list per filter combination. `after` is left out on
             // purpose: every page of the same list lands in the same entry.
             keyArgs: ["providerSlugs", "kind", "sort"],
-            // A first page replaces the list; a later page is appended to it.
-            merge(existing: CatalogPageShape | undefined, incoming: CatalogPageShape, { args }) {
-              if (!existing || !args?.["after"]) return incoming;
-              return { ...incoming, items: [...existing.items, ...incoming.items] };
-            },
+            merge: appendPages,
           },
+          // Films out on disc page the same way, one list per order.
+          discCatalog: { keyArgs: ["sort"], merge: appendPages },
         },
       },
     },

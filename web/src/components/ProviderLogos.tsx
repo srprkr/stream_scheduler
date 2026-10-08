@@ -1,3 +1,5 @@
+import { DiscGlyph } from "./DiscLogo";
+
 /** The fields a logo needs. Every query's provider selection fits it. */
 export interface LogoProvider {
   id: string;
@@ -10,7 +12,14 @@ export interface LogoProvider {
  * for a screen reader the image IS the information, so it must say which
  * service. Falls back to the name as text when TMDB has no logo.
  */
-export function ProviderLogos({ providers }: { providers: readonly LogoProvider[] }) {
+export function ProviderLogos({
+  providers,
+  disc = false,
+}: {
+  providers: readonly LogoProvider[];
+  /** End the row with the On disc mark: a disc is somewhere to watch it too. */
+  disc?: boolean;
+}) {
   return (
     <ul className="logos">
       {providers.map((p) => (
@@ -22,6 +31,11 @@ export function ProviderLogos({ providers }: { providers: readonly LogoProvider[
           )}
         </li>
       ))}
+      {disc && (
+        <li>
+          <DiscGlyph className="logos__img" label="On disc" />
+        </li>
+      )}
     </ul>
   );
 }

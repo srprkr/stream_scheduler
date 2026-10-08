@@ -34,15 +34,20 @@ export const Query: QueryResolvers = {
     // availableOn later in the same request costs nothing more.
     const wanted = new Set(args.providerSlugs);
     const hits = await ctx.source.searchMedia(args.query, SEARCH_POOL);
-    const availability = await ctx.loaders.availability.loadMany(hits.map((h) => h.id));
+    const ids = hits.map((h) => h.id);
+    // Disc lookups only when asked for; batched and cached like availability,
+    // so each result's onDisc later in the request costs nothing more.
+    const [availability, discs] = await Promise.all([
+      ctx.loaders.availability.loadMany(ids),
+      args.onDisc ? ctx.loaders.onDisc.loadMany(ids) : [],
+    ]);
     return hits
       .filter((_, i) => {
         const found = availability[i];
-        return (
-          found !== undefined &&
-          !(found instanceof Error) &&
-          found.slugs.some((slug) => wanted.has(slug))
-        );
+        if (found === undefined || found instanceof Error) return false;
+        if (found.slugs.some((slug) => wanted.has(slug))) return true;
+        // On disc: out on disc, and on none of the tracked services.
+        return args.onDisc === true && found.slugs.length === 0 && discs[i] === true;
       })
       .slice(0, first);
   },
@@ -51,6 +56,19 @@ export const Query: QueryResolvers = {
     const page = await ctx.source.listCatalog({
       providerSlugs: args.providerSlugs,
       kind: args.kind,
+      sort: args.sort ?? "POPULAR",
+      page: decodeCursor(args.after),
+    });
+    return {
+      items: page.items,
+      nextCursor: page.nextPage === null ? null : encodeCursor(page.nextPage),
+    };
+  },
+
+  discReleases: (_p, args, ctx) => ctx.source.listDiscReleases(args.first ?? 50),
+
+  discCatalog: async (_p, args, ctx) => {
+    const page = await ctx.source.listDiscCatalog({
       sort: args.sort ?? "POPULAR",
       page: decodeCursor(args.after),
     });

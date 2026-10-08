@@ -13,7 +13,7 @@ export function InsightsPage() {
       <header className="masthead">
         <h1>Insights</h1>
         <p>
-          The services you pay for and what they cost. Browse's All Subscribed filter, the renewal
+          The services you pay for and what they cost. Browse's My Services filter, the renewal
           advice and the cost estimates all start here.
         </p>
       </header>

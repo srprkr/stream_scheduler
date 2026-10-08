@@ -62,6 +62,7 @@ export function ComingSoonStats() {
             type="button"
             className={`tag${view === v.id ? " tag--on" : ""}`}
             aria-pressed={view === v.id}
+            data-label={v.label}
             onClick={() => setView(v.id)}
           >
             {v.label}

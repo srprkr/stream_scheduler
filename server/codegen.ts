@@ -10,6 +10,7 @@ const config: CodegenConfig = {
 
         mappers: {
           Release: "../sources/types.js#ReleaseRecord",
+          DiscRelease: "../sources/types.js#DiscReleaseRecord",
           Provider: "../sources/types.js#ProviderRecord",
           OtherService: "../sources/types.js#OtherServiceRecord",
           MediaItem: "../sources/types.js#MediaRecord",

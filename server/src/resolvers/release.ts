@@ -1,7 +1,8 @@
 import { GraphQLError } from "graphql";
 import { daysUntil } from "../dates.js";
 
-import type { ReleaseResolvers } from "../generated/graphql.js";
+import type { Context } from "../context.js";
+import type { DiscReleaseResolvers, ReleaseResolvers } from "../generated/graphql.js";
 
 export const Release: ReleaseResolvers = {
   media: async (release, _a, ctx) => {
@@ -32,17 +33,32 @@ export const Release: ReleaseResolvers = {
     return media?.runtimeMinutes ?? null;
   },
 
-  daysUntilRelease: (release, args, ctx) => {
-    const timezone = args.timezone ?? "UTC";
-    try {
-      return daysUntil(release.availableFrom, timezone, ctx.now);
-    } catch (err) {
-      if (err instanceof RangeError) {
-        throw new GraphQLError(`Unknown timezone "${timezone}"`, {
-          extensions: { code: "BAD_USER_INPUT" },
-        });
-      }
-      throw err;
-    }
-  },
+  daysUntilRelease: (release, args, ctx) => daysUntilFor(release.availableFrom, args.timezone, ctx),
 };
+
+export const DiscRelease: DiscReleaseResolvers = {
+  media: async (release, _a, ctx) => {
+    const media = await ctx.loaders.media.load(release.mediaId);
+    if (!media) {
+      throw new Error(`Disc release ${release.id} references missing media ${release.mediaId}`);
+    }
+    return media;
+  },
+
+  daysUntilRelease: (release, args, ctx) => daysUntilFor(release.availableFrom, args.timezone, ctx),
+};
+
+/** Days until a date in the caller's timezone; an unknown zone is their mistake. */
+function daysUntilFor(date: string, zone: string | null | undefined, ctx: Context): number {
+  const timezone = zone ?? "UTC";
+  try {
+    return daysUntil(date, timezone, ctx.now);
+  } catch (err) {
+    if (err instanceof RangeError) {
+      throw new GraphQLError(`Unknown timezone "${timezone}"`, {
+        extensions: { code: "BAD_USER_INPUT" },
+      });
+    }
+    throw err;
+  }
+}

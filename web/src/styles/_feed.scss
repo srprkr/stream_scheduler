@@ -220,4 +220,28 @@
     outline: 2px solid var(--soon);
     outline-offset: 2px;
   }
+
+  // Room for the widest the label gets, so a tag never changes width - and
+  // never nudges the ones after it - when it's selected (bold is wider) or
+  // its label changes. An invisible, zero-height copy of the label in
+  // data-label sets the width: bold by default, as the selected look.
+  &[data-label] {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  &[data-label]::after {
+    content: attr(data-label);
+    font-weight: 600;
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+    user-select: none;
+  }
+  // An action, never shown selected: its copy holds the longer of its two
+  // labels, at the normal weight.
+  &--action[data-label]::after {
+    font-weight: inherit;
+  }
 }

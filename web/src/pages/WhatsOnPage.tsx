@@ -4,13 +4,14 @@ import { useState } from "react";
 import { BrowseFilters } from "../components/BrowseFilters";
 import { CatalogTile } from "../components/CatalogTile";
 import { FilterInput } from "../components/FilterInput";
+import { SearchScope } from "../components/SearchScope";
 import { WatchlistMini } from "../components/WatchlistMini";
 import { TitleDialog } from "../components/TitleDialog";
 import { graphql } from "../generated";
 import type { CatalogQuery, CatalogSort } from "../generated/graphql";
 import { useDebounced } from "../hooks/useDebounced";
 import { useLibrary } from "../hooks/useLibrary";
-import { useBrowseFilters, type Kind } from "../hooks/useBrowseFilters";
+import { useBrowseFilters, useSearchScope, type Kind } from "../hooks/useBrowseFilters";
 import { mergeCatalog, selectedLists } from "../lib/catalog";
 
 const CATALOG = graphql(`
@@ -36,10 +37,62 @@ const CATALOG = graphql(`
   }
 `);
 
-/** Same fields as the catalogue, so both lists render with one tile. */
+/**
+ * Films out on disc that no tracked service streams: the same fields as the
+ * catalogue, so they render with the same tile.
+ */
+const DISC_CATALOG = graphql(`
+  query DiscCatalog($sort: CatalogSort, $after: String) {
+    discCatalog(sort: $sort, after: $after) {
+      nextCursor
+      items {
+        __typename
+        id
+        title
+        posterUrl(size: MEDIUM)
+        onDisc
+        availableOn {
+          ...ServiceLogo
+        }
+        ... on Series {
+          nextSeason {
+            ...SeasonScheduleFields
+          }
+        }
+      }
+    }
+  }
+`);
+
+/**
+ * Search, Selected: the selected services, and films and series out on disc
+ * if On disc is picked. Same fields as the catalogue, so both lists render
+ * with one tile.
+ */
 const SEARCH_MINE = graphql(`
-  query SearchMyServices($query: String!, $providerSlugs: [String!]!) {
-    searchMedia(query: $query, first: 20, providerSlugs: $providerSlugs) {
+  query SearchMyServices($query: String!, $providerSlugs: [String!]!, $onDisc: Boolean!) {
+    searchMedia(query: $query, first: 20, providerSlugs: $providerSlugs, onDisc: $onDisc) {
+      __typename
+      id
+      title
+      posterUrl(size: MEDIUM)
+      onDisc
+      availableOn {
+        ...ServiceLogo
+      }
+      ... on Series {
+        nextSeason {
+          ...SeasonScheduleFields
+        }
+      }
+    }
+  }
+`);
+
+/** Search, Everywhere: every title, wherever it's watched - or nowhere. */
+const SEARCH_ALL = graphql(`
+  query SearchEverywhere($query: String!) {
+    searchMedia(query: $query, first: 20) {
       __typename
       id
       title
@@ -78,7 +131,8 @@ type Item = CatalogQuery["catalog"]["items"][number];
  */
 export function WhatsOnPage() {
   const filters = useBrowseFilters();
-  const { slugs, kinds } = filters;
+  const { slugs, kinds, disc } = filters;
+  const [searchScope, setSearchScope] = useSearchScope();
   const hasWatchlist = useLibrary().some((e) => e.shelf === "watchlist");
   const [sort, setSort] = useState<CatalogSort>("POPULAR");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -96,26 +150,45 @@ export function WhatsOnPage() {
       : skipToken;
   const seriesQuery = useQuery(CATALOG, variables("SERIES"));
   const filmsQuery = useQuery(CATALOG, variables("MOVIE"));
+  // Films out on disc: films only, since TMDB has no disc data for series.
+  const discOn = disc && kinds.includes("MOVIE") && !searching;
+  const discQuery = useQuery(DISC_CATALOG, discOn ? { variables: { sort } } : skipToken);
   // Only the selected types count, whatever the queries still hold: a
   // skipped query keeps its last result in Apollo 4 (see lib/catalog.ts).
-  const active = selectedLists(kinds, searching, { SERIES: seriesQuery, MOVIE: filmsQuery });
+  // The same goes for services all switched off, and for On disc.
+  const active = selectedLists(providerSlugs.length > 0 ? kinds : [], searching, {
+    SERIES: seriesQuery,
+    MOVIE: filmsQuery,
+  });
   const queries = [active.SERIES, active.MOVIE].filter((q) => q !== undefined);
+  const discList = discOn ? discQuery.data?.discCatalog : undefined;
   const { items, more } = mergeCatalog<Item>({
     SERIES: active.SERIES?.data?.catalog,
     MOVIE: active.MOVIE?.data?.catalog,
+    DISC: discList,
   });
+  const fromDisc = new Set(discList?.items.map((i) => i.id) ?? []);
   const lists = queries.filter((q) => q.data);
-  const loading = !filters.ready || (queries.some((q) => q.loading) && items.length === 0);
-  const error = queries.find((q) => q.error)?.error;
+  const anyLoading = queries.some((q) => q.loading) || (discOn && discQuery.loading);
+  const loading = !filters.ready || (anyLoading && items.length === 0);
+  const error = [...queries, ...(discOn ? [discQuery] : [])].find((q) => q.error)?.error;
 
   // Searching replaces the catalogue in the grid; clearing the box brings
   // the catalogue back, with every page already loaded still in the cache.
-  const search = useQuery(
+  // Everywhere ignores the services and On disc, but not Series / Films.
+  const everywhere = searchScope === "everywhere";
+  const mine = useQuery(
     SEARCH_MINE,
-    searching && providerSlugs.length > 0
-      ? { variables: { query: term, providerSlugs } }
+    searching && !everywhere && (providerSlugs.length > 0 || disc)
+      ? { variables: { query: term, providerSlugs, onDisc: disc } }
       : skipToken,
   );
+  const all = useQuery(
+    SEARCH_ALL,
+    searching && everywhere ? { variables: { query: term } } : skipToken,
+  );
+  // Only the scope in use counts: the other query keeps its last result.
+  const search = everywhere ? all : mine;
   const results = ((search.data ?? search.previousData)?.searchMedia ?? []).filter((r) =>
     kinds.includes(r.__typename === "Movie" ? "MOVIE" : "SERIES"),
   );
@@ -133,37 +206,59 @@ export function WhatsOnPage() {
   const loadMore = async () => {
     setLoadingMore(true);
     try {
-      await Promise.all(
-        lists.map((q) => {
+      const discAfter = discList?.nextCursor;
+      await Promise.all([
+        ...lists.map((q) => {
           const after = q.data?.catalog.nextCursor;
           return after ? q.fetchMore({ variables: { after } }) : null;
         }),
-      );
+        discAfter ? discQuery.fetchMore({ variables: { after: discAfter } }) : null,
+      ]);
     } finally {
       setLoadingMore(false);
     }
   };
 
-  const nothingSelected = filters.ready && (providerSlugs.length === 0 || kinds.length === 0);
-  const scope = filters.allServices
-    ? "every service"
-    : filters.allSubscribed
-      ? "your services"
-      : `${providerSlugs.length} ${providerSlugs.length === 1 ? "service" : "services"}`;
+  const nothingSelected =
+    filters.ready && ((providerSlugs.length === 0 && !disc) || kinds.length === 0);
+  // On disc alone, with Films off: nothing to show, and a different fix.
+  const discWithoutFilms = disc && providerSlugs.length === 0 && !kinds.includes("MOVIE");
+  const scope =
+    providerSlugs.length === filters.providers.length
+      ? "every service"
+      : filters.allSubscribed
+        ? "your services"
+        : `${providerSlugs.length} ${providerSlugs.length === 1 ? "service" : "services"}`;
+  const searched = everywhere
+    ? "everywhere"
+    : providerSlugs.length === 0
+      ? "on disc"
+      : `on ${scope}${disc ? " and on disc" : ""}`;
+  // Everywhere searches whatever the row says; Selected needs something picked.
+  const showSearch = searching && (everywhere || !nothingSelected);
+  const lede =
+    providerSlugs.length === 0 && disc
+      ? "Films out on DVD or Blu-ray that no service streams: owning a copy is the way to watch them."
+      : disc
+        ? `Streaming now on ${scope}, and films out on disc that no service streams.`
+        : `Streaming now on ${scope}.`;
 
   return (
     <>
       <header className="masthead">
         <h1>What's On</h1>
         <p>
-          Streaming now on {scope}.
+          {lede}
           {filters.mySlugs.length === 0 &&
-            " Tell us which services you pay for in Insights, and All Subscribed narrows to them."}
+            " Tell us which services you pay for in Insights, and My Services narrows to them."}
         </p>
       </header>
 
       <div className="catalog__controls">
-        <FilterInput value={text} onChange={setText} label="Search these services" />
+        <div className="search-row">
+          <FilterInput value={text} onChange={setText} label="Search titles" />
+          <SearchScope scope={searchScope} onChange={setSearchScope} />
+        </div>
         <BrowseFilters filters={filters} />
         <label className="catalog__sort">
           Sort
@@ -177,22 +272,44 @@ export function WhatsOnPage() {
         </label>
       </div>
 
-      {nothingSelected ? (
-        <p className="state">Pick at least one service and a type to see what's on.</p>
-      ) : searching ? (
+      {showSearch ? (
         <>
           <p className="state state--count" role="status">
             {search.loading && !search.data
               ? "Searching…"
-              : `${results.length} ${results.length === 1 ? "result" : "results"} for “${term}” on ${scope}`}
+              : `${results.length} ${results.length === 1 ? "result" : "results"} for “${term}” ${searched}`}
+            {/* Nothing in what's selected: offer the wider search. */}
+            {!everywhere && !search.loading && results.length === 0 && (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => setSearchScope("everywhere")}
+                >
+                  Search everywhere instead
+                </button>
+              </>
+            )}
           </p>
           <ul className="shelf__grid">
             {watchlist}
             {results.map((item) => (
-              <CatalogTile key={item.id} item={item} onOpen={() => setOpenId(item.id)} />
+              <CatalogTile
+                key={item.id}
+                item={item}
+                onOpen={() => setOpenId(item.id)}
+                // A disc is how to watch it when no service streams it.
+                disc={item.onDisc && item.availableOn.length === 0}
+                flagNotStreaming={everywhere}
+              />
             ))}
           </ul>
         </>
+      ) : discWithoutFilms ? (
+        <p className="state">On disc lists films only: switch Films on to see them.</p>
+      ) : nothingSelected ? (
+        <p className="state">Pick at least one service and a type to see what's on.</p>
       ) : (
         <>
           {loading && <p className="state">Loading what's on…</p>}
@@ -203,7 +320,12 @@ export function WhatsOnPage() {
           <ul className="shelf__grid">
             {watchlist}
             {items.map((item) => (
-              <CatalogTile key={item.id} item={item} onOpen={() => setOpenId(item.id)} />
+              <CatalogTile
+                key={item.id}
+                item={item}
+                onOpen={() => setOpenId(item.id)}
+                disc={fromDisc.has(item.id)}
+              />
             ))}
           </ul>
           {more && (

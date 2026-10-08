@@ -30,3 +30,21 @@
     opacity: 1;
   }
 }
+
+// A button that reads as a link in a sentence: an action, like "Search
+// everywhere instead", that changes the page rather than leaving it.
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--soon);
+    outline-offset: 2px;
+  }
+}

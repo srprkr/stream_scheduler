@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { TmdbSource } from "../../../src/sources/tmdb/source.js";
-import type { TmdbMultiItem, TmdbPage } from "../../../src/sources/tmdb/types.js";
+import type {
+  TmdbMovieListItem,
+  TmdbMultiItem,
+  TmdbPage,
+} from "../../../src/sources/tmdb/types.js";
 
 /**
  * Answers only the paths it was given and throws on anything else, so a test
@@ -87,5 +91,69 @@ describe("TmdbSource.searchMedia", () => {
     const client = fakeClient({});
     expect(await new TmdbSource(client).searchMedia("   ", 10)).toEqual([]);
     expect(client.calls).toEqual([]);
+  });
+});
+
+const NOW = () => new Date("2026-10-08T12:00:00Z");
+function films(ids: number[], totalPages = 1): TmdbPage<TmdbMovieListItem> {
+  return {
+    page: 1,
+    total_pages: totalPages,
+    total_results: ids.length,
+    results: ids.map((id) => ({
+      id,
+      title: `Film ${id}`,
+      overview: "",
+      poster_path: null,
+      backdrop_path: null,
+      release_date: "2000-01-01",
+    })),
+  };
+}
+const usDiscs = (...dates: string[]) => ({
+  results: [
+    {
+      iso_3166_1: "US",
+      release_dates: dates.map((d) => ({ type: 5, release_date: `${d}T00:00:00.000Z`, note: "" })),
+    },
+  ],
+});
+
+describe("TmdbSource.listDiscCatalog", () => {
+  it("asks for US disc releases with every tracked service excluded, in one request", async () => {
+    const path =
+      "/discover/movie?region=US&with_release_type=5&release_date.lte=2026-10-08&watch_region=US" +
+      "&without_watch_providers=8|9|15|337|350|386|387|1796|1899|2100|2303|2616" +
+      "&sort_by=popularity.desc&vote_count.gte=50&page=1";
+    const client = fakeClient({ [path]: films([1, 2], 3) });
+    const page = await new TmdbSource(client, NOW).listDiscCatalog({ sort: "POPULAR", page: 1 });
+    expect(page.items.map((m) => m.id)).toEqual(["movie:1", "movie:2"]);
+    expect(page.nextPage).toBe(2);
+    expect(client.calls).toEqual([path]);
+  });
+});
+
+describe("TmdbSource.listDiscReleases", () => {
+  const discover = (page: number) =>
+    "/discover/movie?region=US&with_release_type=5&release_date.gte=2026-10-08" +
+    `&release_date.lte=2027-01-06&sort_by=popularity.desc&page=${page}`;
+
+  it("dates each film by its disc release in the window, soonest first", async () => {
+    const client = fakeClient({
+      [discover(1)]: films([1, 2, 3], 2),
+      // Film 2 again: popularity shifted between pages.
+      [discover(2)]: films([2]),
+      "/movie/1/release_dates": usDiscs("2026-12-01"),
+      // A re-release: listed by discover under its first disc date.
+      "/movie/2/release_dates": usDiscs("2000-03-07", "2026-10-20"),
+      // Its disc date moved out of the window since discover's index was built.
+      "/movie/3/release_dates": usDiscs("2027-03-01"),
+    });
+    const releases = await new TmdbSource(client, NOW).listDiscReleases(50);
+    expect(releases).toEqual([
+      { id: "disc:movie:2", mediaId: "movie:2", availableFrom: "2026-10-20" },
+      { id: "disc:movie:1", mediaId: "movie:1", availableFrom: "2026-12-01" },
+    ]);
+    expect(client.calls.filter((c) => c === "/movie/2/release_dates")).toHaveLength(1);
   });
 });

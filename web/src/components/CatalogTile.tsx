@@ -33,6 +33,7 @@ export function CatalogTile({
   note,
   inLibrary = false,
   flagNotStreaming = false,
+  disc = false,
 }: {
   item: CatalogItem;
   onOpen: () => void;
@@ -45,6 +46,8 @@ export function CatalogTile({
    * library, where it means only the user's copy plays it.
    */
   flagNotStreaming?: boolean;
+  /** Mark it On disc, after any services: listed because a disc is how to watch it. */
+  disc?: boolean;
 }) {
   // Where it streams, then where it's coming - each service once: a new
   // season of a show on Prime is still just Prime.
@@ -56,8 +59,8 @@ export function CatalogTile({
       {/* Renders even while loading, at a fixed height, so every poster in
           a row starts on the same line whatever its slot is showing. */}
       <div className="shelf__services">
-        {logos.length > 0 && <ProviderLogos providers={logos} />}
-        {flagNotStreaming && item.availableOn?.length === 0 && logos.length === 0 && (
+        {(logos.length > 0 || disc) && <ProviderLogos providers={logos} disc={disc} />}
+        {flagNotStreaming && !disc && item.availableOn?.length === 0 && logos.length === 0 && (
           <span className="shelf__unhosted">Not streaming</span>
         )}
       </div>

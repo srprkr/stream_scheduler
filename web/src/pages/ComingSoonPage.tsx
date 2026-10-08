@@ -10,13 +10,15 @@ export function ComingSoonPage() {
       <header className="masthead">
         <h1>Coming Soon</h1>
         <p>
-          Seasons and films arriving on different services in the next 90 days. Time your
-          subscriptions around them.
+          Seasons and films arriving on different services in the next 90 days
+          {filters.disc && ", and films coming out on DVD or Blu-ray"}. Time your subscriptions
+          around them.
         </p>
       </header>
       {/* The watchlist's numbers open the feed, among the tiles. */}
       <ReleaseFeed
         slugs={filters.slugs}
+        disc={filters.disc}
         ready={filters.ready}
         kinds={filters.kinds}
         filters={<BrowseFilters filters={filters} />}

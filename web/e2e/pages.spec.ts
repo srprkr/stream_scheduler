@@ -79,3 +79,28 @@ test("the filter row is one line on a desktop, and folds on a phone", async ({ p
     await expect(services).toBeVisible();
   }
 });
+
+test("filter tags hold their place as they're clicked", async ({ page }, info) => {
+  await page.goto("/whats-on");
+  if (info.project.name !== "desktop") await page.getByRole("button", { name: /Filters:/ }).click();
+  const services = page.getByRole("group", { name: "Services" });
+  // Exact names: the tags' hidden width-holding copy must not be read out.
+  const mine = services.getByRole("button", { name: "My Services", exact: true });
+  const films = page.getByRole("button", { name: "Films", exact: true });
+  await expect(services.getByRole("button", { name: "Netflix" })).toBeVisible();
+  const lefts = () =>
+    page
+      .locator(".filters__panel .tag, .filters__service")
+      .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().left)));
+
+  const before = await lefts();
+  // Selected: bold. And Select All / Clear All swap labels as it changes.
+  await services.getByRole("button", { name: "Select All", exact: true }).click();
+  await expect(services.getByRole("button", { name: "Clear All", exact: true })).toBeVisible();
+  expect(await lefts()).toEqual(before);
+  await mine.click();
+  await expect(mine).toHaveAttribute("aria-pressed", "true");
+  await films.click();
+  await expect(films).toHaveAttribute("aria-pressed", "false");
+  expect(await lefts()).toEqual(before);
+});

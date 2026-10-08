@@ -46,7 +46,7 @@ export function streamingPremieres(
 }
 
 /** TMDB's release type for a physical release: DVD, Blu-ray or 4K disc. */
-const PHYSICAL_RELEASE = 5;
+export const PHYSICAL_RELEASE = 5;
 
 /**
  * Whether a film has been released on disc anywhere. Any country, not just
@@ -58,4 +58,20 @@ export function filmOnDisc(dates: TmdbReleaseDates): boolean {
   return dates.results.some((country) =>
     country.release_dates.some((d) => d.type === PHYSICAL_RELEASE),
   );
+}
+
+/**
+ * The film's first US disc release between `from` and `to`, inclusive, or
+ * null. Discover finds a re-release - a 4K edition of a 2000 film - by its
+ * new date but lists it under its first one, so the date has to come from
+ * here.
+ */
+export function usDiscRelease(dates: TmdbReleaseDates, from: string, to: string): string | null {
+  const local = dates.results.find((c) => c.iso_3166_1 === WATCH_REGION);
+  const inWindow = (local?.release_dates ?? [])
+    .filter((d) => d.type === PHYSICAL_RELEASE)
+    .map((d) => d.release_date.slice(0, 10))
+    .filter((date) => date >= from && date <= to)
+    .sort();
+  return inWindow[0] ?? null;
 }

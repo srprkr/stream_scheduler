@@ -14,7 +14,9 @@ function Row() {
   return (
     <>
       <BrowseFilters filters={filters} />
-      <p data-testid="selected">{filters.slugs.join(",")}</p>
+      <p data-testid="selected">
+        {[...filters.slugs, ...(filters.disc ? ["disc"] : [])].join(",")}
+      </p>
     </>
   );
 }
@@ -27,11 +29,10 @@ describe("Browse filters", () => {
   it("starts on all services when none are subscribed", async () => {
     renderApp(<Row />, { mocks, route: "/whats-on" });
     await within(services()).findByRole("button", { name: "Netflix" });
-    expect(within(services()).getByRole("button", { name: "All Services" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(within(services()).getByRole("button", { name: "All Subscribed" })).toBeDisabled();
+    expect(selected()).toBe("hulu,netflix,peacock,disc");
+    // With every service on, the shortcut offers the way out instead.
+    expect(within(services()).getByRole("button", { name: "Clear All" })).toBeInTheDocument();
+    expect(within(services()).getByRole("button", { name: "My Services" })).toBeDisabled();
   });
 
   it("starts on the user's services when they have some", async () => {
@@ -39,29 +40,69 @@ describe("Browse filters", () => {
     renderApp(<Row />, { mocks, route: "/whats-on" });
     await within(services()).findByRole("button", { name: "Netflix" });
     expect(selected()).toBe("netflix");
-    expect(within(services()).getByRole("button", { name: "All Subscribed" })).toHaveAttribute(
+    expect(within(services()).getByRole("button", { name: "My Services" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
   });
 
-  it("toggles services like checkboxes, and lights the shortcut that matches", async () => {
+  it("toggles services like checkboxes, and the shortcut follows the selection", async () => {
     const user = userEvent.setup();
     renderApp(<Row />, { mocks, route: "/whats-on" });
     const peacockButton = await within(services()).findByRole("button", { name: "Peacock" });
 
     await user.click(peacockButton);
-    expect(selected()).toBe("hulu,netflix");
-    expect(within(services()).getByRole("button", { name: "All Services" })).toHaveAttribute(
+    expect(selected()).toBe("hulu,netflix,disc");
+    expect(within(services()).getByRole("button", { name: "Select All" })).toBeInTheDocument();
+
+    await user.click(peacockButton);
+    expect(within(services()).getByRole("button", { name: "Clear All" })).toBeInTheDocument();
+  });
+
+  it("clears every service with Clear All, so one can be picked alone", async () => {
+    const user = userEvent.setup();
+    renderApp(<Row />, { mocks, route: "/whats-on" });
+    await within(services()).findByRole("button", { name: "Peacock" });
+
+    await user.click(within(services()).getByRole("button", { name: "Clear All" }));
+    expect(selected()).toBe("");
+    expect(within(services()).getByRole("button", { name: "Hulu" })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
 
-    await user.click(peacockButton);
-    expect(within(services()).getByRole("button", { name: "All Services" })).toHaveAttribute(
+    await user.click(within(services()).getByRole("button", { name: "Hulu" }));
+    expect(selected()).toBe("hulu");
+
+    await user.click(within(services()).getByRole("button", { name: "Select All" }));
+    expect(selected()).toBe("hulu,netflix,peacock,disc");
+  });
+
+  it("picks On disc like a service: in Select All, out of My Services", async () => {
+    const user = userEvent.setup();
+    saveSubscriptions([{ slug: "netflix", choice: { planId: "x" } }]);
+    renderApp(<Row />, { mocks, route: "/whats-on" });
+    // On disc draws at once; the services wait for their query.
+    await within(services()).findByRole("button", { name: "Netflix" });
+    const disc = within(services()).getByRole("button", { name: "On disc" });
+    expect(disc).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(disc);
+    expect(selected()).toBe("netflix,disc");
+    // No longer exactly the user's services.
+    expect(within(services()).getByRole("button", { name: "My Services" })).toHaveAttribute(
       "aria-pressed",
-      "true",
+      "false",
     );
+
+    await user.click(within(services()).getByRole("button", { name: "Select All" }));
+    expect(selected()).toBe("hulu,netflix,peacock,disc");
+    await user.click(within(services()).getByRole("button", { name: "Clear All" }));
+    expect(disc).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(disc);
+    expect(selected()).toBe("disc");
+    expect(screen.getByRole("button", { name: /Filters:/ })).toHaveTextContent("On disc");
   });
 
   it("toggles Series and Films independently", async () => {

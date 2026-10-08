@@ -4,12 +4,13 @@ import { NavLink } from "react-router";
 import type { BrowseFilters as Filters } from "../hooks/useBrowseFilters";
 import { KINDS } from "../hooks/useBrowseFilters";
 import { summary } from "../lib/browse";
+import { DiscLogo } from "./DiscLogo";
 import { ServiceLogo } from "./ServiceLogo";
 
 /**
  * One row of filters shared by What's On and Coming Soon:
  *
- *   What's On  Coming Soon | All Services  All Subscribed  [logos…] | Series  Films
+ *   What's On  Coming Soon | Select/Clear All  My Services  [disc] [logos…] | Series  Films
  *
  * The first two switch page - one or the other, like radio buttons. The
  * services and the two types are checkboxes: any mix can be on. The pipes
@@ -52,10 +53,14 @@ export function BrowseFilters({ filters }: { filters: Filters }) {
   return (
     <div className="filters" ref={root}>
       <nav className="filters__group" aria-label="Show">
-        <NavLink to="/whats-on" className={({ isActive }) => tag(isActive)}>
+        <NavLink to="/whats-on" className={({ isActive }) => tag(isActive)} data-label="What's On">
           What's On
         </NavLink>
-        <NavLink to="/coming-soon" className={({ isActive }) => tag(isActive)}>
+        <NavLink
+          to="/coming-soon"
+          className={({ isActive }) => tag(isActive)}
+          data-label="Coming Soon"
+        >
           Coming Soon
         </NavLink>
       </nav>
@@ -82,23 +87,40 @@ export function BrowseFilters({ filters }: { filters: Filters }) {
 
       <div id={panelId} className="filters__panel" data-open={open}>
         <div className="filters__group" role="group" aria-label="Services">
+          {/* An action, not a toggle: its label says what a click does -
+              select every service, or with all of them on, clear them to
+              pick one. So no pressed state; the logos show the selection. */}
           <button
             type="button"
-            className={tag(filters.allServices)}
-            aria-pressed={filters.allServices}
-            onClick={filters.selectAll}
+            className="tag tag--action"
+            // The wider of its two labels, so swapping them moves nothing.
+            data-label="Select All"
+            onClick={filters.allServices ? filters.selectNone : filters.selectAll}
           >
-            All Services
+            {filters.allServices ? "Clear All" : "Select All"}
           </button>
           <button
             type="button"
             className={tag(filters.allSubscribed)}
+            data-label="My Services"
             aria-pressed={filters.allSubscribed}
             disabled={mySlugs.length === 0}
             title={mySlugs.length === 0 ? "Choose the services you pay for in Insights" : undefined}
             onClick={filters.selectSubscribed}
           >
-            All Subscribed
+            My Services
+          </button>
+          {/* Not a service but picked like one: films you can only watch by
+              owning the disc - or, on Coming Soon, coming out on disc. */}
+          <button
+            type="button"
+            className="filters__service"
+            aria-pressed={filters.disc}
+            aria-label="On disc"
+            title="On disc: DVD and Blu-ray"
+            onClick={filters.toggleDisc}
+          >
+            <DiscLogo active={filters.disc} />
           </button>
           {/* Logos rather than names, to keep the row to one line: in colour
               when selected, greyed when not, as elsewhere in the app. The
@@ -134,6 +156,7 @@ export function BrowseFilters({ filters }: { filters: Filters }) {
               key={k}
               type="button"
               className={tag(kinds.includes(k))}
+              data-label={k === "SERIES" ? "Series" : "Films"}
               aria-pressed={kinds.includes(k)}
               onClick={() => filters.toggleKind(k)}
             >

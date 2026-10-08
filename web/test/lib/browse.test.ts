@@ -10,6 +10,7 @@ const providers = [
 const base = {
   providers,
   slugs: ["netflix"],
+  disc: false,
   kinds: ["SERIES", "MOVIE"] as Kind[],
   allServices: false,
   allSubscribed: false,
@@ -28,6 +29,14 @@ describe("summary", () => {
     expect(summary({ ...base, slugs: ["a", "b", "c"], kinds: ["SERIES"] })).toBe(
       "3 services · Series",
     );
+  });
+
+  it("names On disc among the services", () => {
+    expect(summary({ ...base, disc: true, kinds: ["MOVIE"] })).toBe("Netflix, On disc · Films");
+    expect(summary({ ...base, slugs: ["a", "b", "c"], disc: true })).toBe(
+      "3 services + On disc · Series & films",
+    );
+    expect(summary({ ...base, slugs: [], disc: true })).toBe("On disc · Series & films");
   });
 
   it("says when nothing is selected", () => {
