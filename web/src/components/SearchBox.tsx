@@ -85,6 +85,12 @@ export function SearchBox() {
           className="search__input"
           placeholder="Search films and series"
           aria-label="Search films and series"
+          // A box that opens a panel of results: a combobox, whose popup is
+          // a dialog because each result holds its own Own/Want controls -
+          // not a list of options to pick one from. aria-expanded is only
+          // valid on an input with this role.
+          role="combobox"
+          aria-haspopup="dialog"
           aria-expanded={showPanel}
           aria-controls="search-results"
           value={text}
@@ -96,7 +102,12 @@ export function SearchBox() {
         />
 
         {showPanel && (
-          <div className="search__panel" id="search-results">
+          <div
+            className="search__panel"
+            id="search-results"
+            role="dialog"
+            aria-label="Search results"
+          >
             {!loading && results.length === 0 ? (
               <p className="search__empty">No matches for “{term}”.</p>
             ) : (

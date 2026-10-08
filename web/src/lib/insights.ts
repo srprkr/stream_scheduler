@@ -1,7 +1,7 @@
 import { formatDollars } from "./money";
 import type { Plan } from "./planner";
 import { listTitles } from "./replaces";
-import { nextRenewal } from "./renewals";
+import { upcomingRenewal } from "./renewals";
 import { when } from "./seasons";
 import type { Subscription } from "./subscriptions";
 
@@ -105,7 +105,7 @@ export function pathsForward(input: InsightInput): Insight[] {
       if (sub.leftOut) continue;
       const yearly = sub.billing.cents;
       const monthly = publishedMonthly(sub.slug);
-      const renews = nextRenewal(sub.billing, today);
+      const renews = upcomingRenewal(sub.billing, today);
       const n = turns.length;
       const needed = monthly ? n * monthly : null;
       const sums =
@@ -148,7 +148,7 @@ export function pathsForward(input: InsightInput): Insight[] {
             wishlist.length === 1 ? "it" : "those"
           } rather than keep paying.`
         : "";
-    const renews = sub.billing ? nextRenewal(sub.billing, today) : null;
+    const renews = sub.billing ? upcomingRenewal(sub.billing, today) : null;
     insights.push({
       id: `pause:${sub.slug}`,
       key: `pause:${sub.slug}@${renews ?? "unset"}`,

@@ -50,6 +50,15 @@ export function nextRenewal(billing: Billing, from: string): string {
   return thisYear >= from ? thisYear : onDay(y + 1, rm, rd);
 }
 
+/**
+ * The next renewal still to come: the first one after today. A renewal
+ * falling on today has already been charged - a service ticked today is
+ * billed today - so advice about it would be too late to act on.
+ */
+export function upcomingRenewal(billing: Billing, today: string): string {
+  return nextRenewal(billing, addDays(today, 1));
+}
+
 /** Every renewal from `from` up to and including `until`, soonest first. */
 export function renewalsBetween(billing: Billing, from: string, until: string): string[] {
   const dates: string[] = [];

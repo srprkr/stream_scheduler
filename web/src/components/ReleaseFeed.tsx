@@ -124,7 +124,6 @@ export function ReleaseFeed({
             release={release}
             providers={providers}
             onOpen={() => setOpenId(release.id)}
-            showProvider={slugs.length > 1}
           />
         ))}
       </ul>

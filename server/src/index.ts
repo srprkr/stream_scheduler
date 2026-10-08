@@ -8,7 +8,8 @@ import { resolvers } from "./resolvers/index.js";
 const server = new ApolloServer<Context>({ typeDefs, resolvers });
 
 const { url } = await startStandaloneServer(server, {
-  listen: { port: 4000 },
+  // PORT lets browser tests run a second server beside the dev one.
+  listen: { port: Number(process.env.PORT ?? 4000) },
   context: createContext,
 });
 

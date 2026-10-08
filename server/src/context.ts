@@ -24,7 +24,17 @@ function tmdbSource(store: Pick<FileCache, "read" | "write">): TmdbSource {
  * credential. That the switch is this small is the point of CatalogSource.
  */
 const fixture = process.env.CATALOG_SOURCE === "fixture";
-const source: CatalogSource = fixture ? new FixtureSource() : tmdbSource(cache);
+
+/**
+ * FIXTURE_NOW pins "today" (an ISO date or time) for the fixture source and
+ * every request, so browser tests and their screenshots see the same dates
+ * every day. Only honoured with the fixture source; real data runs on the
+ * real clock.
+ */
+const pinned = fixture && process.env.FIXTURE_NOW ? new Date(process.env.FIXTURE_NOW) : null;
+const clock = () => (pinned ? new Date(pinned) : new Date());
+
+const source: CatalogSource = fixture ? new FixtureSource(clock) : tmdbSource(cache);
 
 /** Half the cache TTL, so no entry is ever old enough to expire under a visitor. */
 const REFRESH_EVERY_MS = config.tmdb.cacheTtlMs / 2;
@@ -58,5 +68,5 @@ export function startFeedRefresher(): void {
 }
 
 export async function createContext(): Promise<Context> {
-  return { source, loaders: createLoaders(source), now: new Date() };
+  return { source, loaders: createLoaders(source), now: clock() };
 }

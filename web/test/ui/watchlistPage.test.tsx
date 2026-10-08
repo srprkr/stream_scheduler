@@ -7,7 +7,7 @@ import { LIBRARY_KEY } from "../../src/lib/library";
 import { addDays } from "../../src/lib/renewals";
 import { localToday } from "../../src/lib/seasons";
 import { WatchlistPage } from "../../src/pages/WatchlistPage";
-import { netflix, peacock, planServicesMock } from "./mocks";
+import { netflix, peacock, planServicesMock, saveSubscriptions } from "./mocks";
 import { renderApp } from "./render";
 
 const today = localToday();
@@ -108,5 +108,23 @@ describe("Watchlist page", () => {
     ) as HTMLElement;
     const film = within(coming).getByText("Coming Film").closest("li") as HTMLElement;
     expect(within(film).getByText(/^Arrives /)).toBeInTheDocument();
+  });
+
+  it("still shows renewals when the watchlist is empty", async () => {
+    // Paying for a yearly plan with nothing on the watchlist is when the
+    // renewal advice matters most.
+    window.localStorage.removeItem(LIBRARY_KEY);
+    saveSubscriptions([
+      {
+        slug: "peacock",
+        choice: { planId: "premium" },
+        billing: { cycle: "annual", renewsOn: addDays(today, 200), cents: 13999 },
+      },
+    ]);
+    renderApp(<WatchlistPage />, { mocks: [planServicesMock()], route: "/watchlist" });
+
+    expect(await screen.findByText(/Nothing here yet/)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Renewals" })).toBeInTheDocument();
+    expect(screen.getByText("Go monthly")).toBeInTheDocument();
   });
 });

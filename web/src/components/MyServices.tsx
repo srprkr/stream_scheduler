@@ -6,7 +6,7 @@ import type { MyServicesQuery } from "../generated/graphql";
 import { subscriptions, useSubscriptions } from "../hooks/useSubscriptions";
 import { formatDate } from "../lib/format";
 import { formatDollars, parseDollars } from "../lib/money";
-import { addDays, nextRenewal } from "../lib/renewals";
+import { addDays, upcomingRenewal } from "../lib/renewals";
 import { localToday, when } from "../lib/seasons";
 import {
   monthlySpend,
@@ -343,7 +343,7 @@ function BillingPicker({
 
       <p className="services__note">
         {billing
-          ? `Next renewal: ${when(nextRenewal(billing, today), today)}.`
+          ? `Next renewal: ${when(upcomingRenewal(billing, today), today)}.`
           : "Renewal day not set, so no reminders for this service yet."}
       </p>
     </>

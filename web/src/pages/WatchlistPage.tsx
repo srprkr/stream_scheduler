@@ -41,6 +41,10 @@ export function WatchlistPage() {
             you'd need, and for how long.
           </p>
         </header>
+        {/* Renewals need only the services paid for - with nothing to watch,
+            they're the advice that matters most: cancel, or turn off a
+            yearly renewal. Renders nothing without subscriptions. */}
+        <Renewals />
       </>
     );
   }

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { planRotation } from "../../src/lib/planner";
-import { nextRenewal, renewalAdvice, renewalsBetween } from "../../src/lib/renewals";
+import {
+  nextRenewal,
+  renewalAdvice,
+  renewalsBetween,
+  upcomingRenewal,
+} from "../../src/lib/renewals";
 
 const TODAY = "2026-09-30";
 const monthly = (day: number) => ({ cycle: "monthly", day }) as const;
@@ -25,6 +30,13 @@ describe("nextRenewal", () => {
     const annual = { cycle: "annual", renewsOn: "2025-03-02", cents: 18499 } as const;
     expect(nextRenewal(annual, TODAY)).toBe("2027-03-02");
     expect(nextRenewal({ ...annual, renewsOn: "2026-12-01" }, TODAY)).toBe("2026-12-01");
+  });
+});
+
+describe("upcomingRenewal", () => {
+  it("skips a renewal falling today: it's already been charged", () => {
+    expect(upcomingRenewal(monthly(30), TODAY)).toBe("2026-10-30");
+    expect(upcomingRenewal(monthly(14), TODAY)).toBe("2026-10-14");
   });
 });
 

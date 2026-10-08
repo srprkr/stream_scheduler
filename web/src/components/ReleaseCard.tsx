@@ -7,15 +7,11 @@ export function ReleaseCard({
   release,
   providers,
   onOpen,
-  showProvider,
 }: {
   release: Release;
   onOpen: () => void;
   /** Every service this title arrives on that day; usually one. */
   providers: readonly Release["provider"][];
-
-  /** Only worth the pixels when the feed is mixing services. */
-  showProvider: boolean;
 }) {
   const { media } = release;
   const { text, kind } = badge(release);
@@ -26,6 +22,12 @@ export function ReleaseCard({
 
   return (
     <li className="card">
+      {/* Where it arrives, above the poster as on every other tile - a
+          fixed-height slot, so posters line up across a row. */}
+      <div className="shelf__services">
+        <ProviderLogos providers={providers} />
+      </div>
+
       {/* The poster is the button that opens the release: keyboard and screen
           readers get it for free, and the dialog needs something to return
           focus to. The toggles sit right under it, above the details, so they
@@ -60,8 +62,6 @@ export function ReleaseCard({
       />
 
       <div className="card__body">
-        {showProvider && <ProviderLogos providers={providers} />}
-
         {/* A second way in for the mouse: clicking the title opens the same
             dialog as the poster. Not a button, so keyboard and screen-reader
             users don't meet the same action twice; the poster is theirs. */}

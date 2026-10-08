@@ -8,9 +8,9 @@ import { downloadFile } from "../lib/download";
 import { listTitles } from "../lib/replaces";
 import {
   addDays,
-  nextRenewal,
   renewalAdvice,
   renewalsBetween,
+  upcomingRenewal,
   type RenewalAdvice,
 } from "../lib/renewals";
 import { localToday, when } from "../lib/seasons";
@@ -72,9 +72,10 @@ export function Renewals() {
         : monthlyCents(sub, plans);
     // A yearly plan is always listed, however far off its renewal: getting
     // off it is the point, and its reminder can't wait for the window.
-    const dates = renewalsBetween(sub.billing, today, until);
+    // From tomorrow: a renewal today has already been charged.
+    const dates = renewalsBetween(sub.billing, addDays(today, 1), until);
     if (sub.billing.cycle === "annual" && dates.length === 0) {
-      dates.push(nextRenewal(sub.billing, today));
+      dates.push(upcomingRenewal(sub.billing, today));
     }
     for (const renewsOn of dates) {
       renewals.push({

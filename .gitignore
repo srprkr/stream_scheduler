@@ -8,3 +8,7 @@ dist/
 server/src/generated/
 .cache/
 web/src/generated/
+
+# Playwright run output (screenshot baselines in web/e2e/__screenshots__ are kept)
+web/test-results/
+web/playwright-report/
