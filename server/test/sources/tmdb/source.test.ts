@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { TmdbSource } from "../../../src/sources/tmdb/source.js";
+import type { CatalogFilters, CatalogSort } from "../../../src/sources/types.js";
 import type {
   TmdbMovieListItem,
   TmdbMultiItem,
@@ -95,6 +96,7 @@ describe("TmdbSource.searchMedia", () => {
 });
 
 const NOW = () => new Date("2026-10-08T12:00:00Z");
+const noFilters: CatalogFilters = { minScore: null, fromYear: null, toYear: null };
 function films(ids: number[], totalPages = 1): TmdbPage<TmdbMovieListItem> {
   return {
     page: 1,
@@ -126,10 +128,81 @@ describe("TmdbSource.listDiscCatalog", () => {
       "&without_watch_providers=8|9|15|337|350|386|387|1796|1899|2100|2303|2616" +
       "&sort_by=popularity.desc&vote_count.gte=50&page=1";
     const client = fakeClient({ [path]: films([1, 2], 3) });
-    const page = await new TmdbSource(client, NOW).listDiscCatalog({ sort: "POPULAR", page: 1 });
+    const page = await new TmdbSource(client, NOW).listDiscCatalog({
+      ...noFilters,
+      sort: "POPULAR",
+      page: 1,
+    });
     expect(page.items.map((m) => m.id)).toEqual(["movie:1", "movie:2"]);
     expect(page.nextPage).toBe(2);
     expect(client.calls).toEqual([path]);
+  });
+});
+
+describe("TmdbSource.listCatalog: sorts and filters", () => {
+  const base =
+    "/discover/movie?with_watch_providers=8|1796&watch_region=US&with_watch_monetization_types=flatrate&";
+  const list = async (filters: Partial<typeof noFilters> & { sort: CatalogSort }, path: string) => {
+    const client = fakeClient({ [`${base}${path}&page=1`]: films([1]) });
+    await new TmdbSource(client, NOW).listCatalog({
+      ...noFilters,
+      ...filters,
+      providerSlugs: ["netflix"],
+      kind: "MOVIE",
+      page: 1,
+    });
+    return client.calls;
+  };
+
+  it("sorts oldest first among titles with enough votes to be known", async () => {
+    await list({ sort: "OLDEST" }, "sort_by=primary_release_date.asc&vote_count.gte=50");
+  });
+
+  it("filters by a minimum score with a vote floor, and by first-release years", async () => {
+    await list(
+      { sort: "POPULAR", minScore: 7, fromYear: 1990, toYear: 1999 },
+      "sort_by=popularity.desc&vote_count.gte=50&vote_average.gte=7" +
+        "&primary_release_date.gte=1990-01-01&primary_release_date.lte=1999-12-31",
+    );
+  });
+
+  it("keeps top rated's higher vote floor when a minimum score is set too", async () => {
+    await list(
+      { sort: "TOP_RATED", minScore: 8 },
+      "sort_by=vote_average.desc&vote_count.gte=1000&vote_average.gte=8",
+    );
+  });
+
+  it("sends one latest date for newest: the earlier of today and the last year", async () => {
+    await list(
+      { sort: "NEWEST", toYear: 2009 },
+      "sort_by=primary_release_date.desc&primary_release_date.lte=2009-12-31",
+    );
+    await list(
+      { sort: "NEWEST", toYear: 2029 },
+      "sort_by=primary_release_date.desc&primary_release_date.lte=2026-10-08",
+    );
+  });
+});
+
+describe("TmdbSource.listDiscCatalog: sorts and filters", () => {
+  it("sorts newest by disc date, filters years by first release, and caps disc dates once", async () => {
+    const path =
+      "/discover/movie?region=US&with_release_type=5&release_date.lte=2026-10-08&watch_region=US" +
+      "&without_watch_providers=8|9|15|337|350|386|387|1796|1899|2100|2303|2616" +
+      "&sort_by=release_date.desc&vote_count.gte=50" +
+      "&primary_release_date.gte=1990-01-01&primary_release_date.lte=1999-12-31&page=1";
+    const client = fakeClient({ [path]: films([603]) });
+    const page = await new TmdbSource(client, NOW).listDiscCatalog({
+      sort: "NEWEST",
+      page: 1,
+      minScore: null,
+      fromYear: 1990,
+      toYear: 1999,
+    });
+    expect(client.calls).toEqual([path]);
+    // The list's date is the disc date, so no first-release year.
+    expect(page.items[0]?.releaseYear).toBeNull();
   });
 });
 

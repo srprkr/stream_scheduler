@@ -89,6 +89,7 @@ export function WatchlistPage() {
           // rather than flickering through Own/Want.
           onDisc: detail?.onDisc ?? false,
           availableOn: detail?.availableOn,
+          score: detail?.score,
           // The logos say where to watch it. Under Coming soon that's where
           // it's going too: a film announced for Netflix, or a series' own
           // service before it has a date. Under Available now, where it is - and

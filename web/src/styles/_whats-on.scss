@@ -317,3 +317,10 @@ $filters-fold: 1100px;
     cursor: not-allowed;
   }
 }
+
+// Sort, score and year, side by side; they wrap on a narrow screen.
+.catalog__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}

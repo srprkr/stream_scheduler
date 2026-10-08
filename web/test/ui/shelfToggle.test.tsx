@@ -15,12 +15,19 @@ describe("Own / Want / Watchlist", () => {
     const user = userEvent.setup();
     renderApp(<ShelfToggle item={heat} />);
 
-    await user.click(screen.getByRole("checkbox", { name: "I own Heat" }));
+    await user.click(screen.getByRole("button", { name: "I own Heat" }));
     expect(shelfOf("movie:949")).toBe("owned");
+    expect(screen.getByRole("button", { name: "I own Heat" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
     await user.click(screen.getByRole("button", { name: "Want Heat" }));
     expect(shelfOf("movie:949")).toBe("wanted");
-    expect(screen.getByRole("checkbox", { name: "I own Heat" })).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "I own Heat" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
 
     await user.click(screen.getByRole("button", { name: "Add Heat to your watchlist" }));
     expect(shelfOf("movie:949")).toBe("watchlist");
@@ -41,7 +48,7 @@ describe("Own / Want / Watchlist", () => {
 
   it("offers only the watchlist for a streaming-only title", () => {
     renderApp(<ShelfToggle item={heat} ownable={false} />);
-    expect(screen.queryByRole("checkbox", { name: "I own Heat" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "I own Heat" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add Heat to your watchlist" })).toBeInTheDocument();
   });
 

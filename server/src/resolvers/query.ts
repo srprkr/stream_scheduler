@@ -1,5 +1,6 @@
 import type { QueryResolvers } from "../generated/graphql.js";
 import { decodeCursor, encodeCursor } from "../cursor.js";
+import type { CatalogFilters } from "../sources/types.js";
 
 /** One page of upstream matches: what a service-filtered search chooses from. */
 const SEARCH_POOL = 20;
@@ -58,6 +59,7 @@ export const Query: QueryResolvers = {
       kind: args.kind,
       sort: args.sort ?? "POPULAR",
       page: decodeCursor(args.after),
+      ...filtersFrom(args),
     });
     return {
       items: page.items,
@@ -71,6 +73,7 @@ export const Query: QueryResolvers = {
     const page = await ctx.source.listDiscCatalog({
       sort: args.sort ?? "POPULAR",
       page: decodeCursor(args.after),
+      ...filtersFrom(args),
     });
     return {
       items: page.items,
@@ -81,3 +84,16 @@ export const Query: QueryResolvers = {
   providers: (_p, _a, ctx) => ctx.source.listProviders(),
   provider: (_p, args, ctx) => ctx.loaders.provider.load(args.slug),
 };
+
+/** The score and year filters, unset as null. */
+function filtersFrom(args: {
+  minScore?: number | null;
+  fromYear?: number | null;
+  toYear?: number | null;
+}): CatalogFilters {
+  return {
+    minScore: args.minScore ?? null,
+    fromYear: args.fromYear ?? null,
+    toYear: args.toYear ?? null,
+  };
+}

@@ -13,10 +13,27 @@ import { useDebounced } from "../hooks/useDebounced";
 import { useLibrary } from "../hooks/useLibrary";
 import { useBrowseFilters, useSearchScope, type Kind } from "../hooks/useBrowseFilters";
 import { mergeCatalog, selectedLists } from "../lib/catalog";
+import { passesFilters, type TitleFilters } from "../lib/score";
 
 const CATALOG = graphql(`
-  query Catalog($providerSlugs: [String!]!, $kind: MediaKind!, $sort: CatalogSort, $after: String) {
-    catalog(providerSlugs: $providerSlugs, kind: $kind, sort: $sort, after: $after) {
+  query Catalog(
+    $providerSlugs: [String!]!
+    $kind: MediaKind!
+    $sort: CatalogSort
+    $after: String
+    $minScore: Float
+    $fromYear: Int
+    $toYear: Int
+  ) {
+    catalog(
+      providerSlugs: $providerSlugs
+      kind: $kind
+      sort: $sort
+      after: $after
+      minScore: $minScore
+      fromYear: $fromYear
+      toYear: $toYear
+    ) {
       nextCursor
       items {
         __typename
@@ -24,6 +41,7 @@ const CATALOG = graphql(`
         title
         posterUrl(size: MEDIUM)
         onDisc
+        ...ScoreFields
         availableOn {
           ...ServiceLogo
         }
@@ -42,8 +60,20 @@ const CATALOG = graphql(`
  * catalogue, so they render with the same tile.
  */
 const DISC_CATALOG = graphql(`
-  query DiscCatalog($sort: CatalogSort, $after: String) {
-    discCatalog(sort: $sort, after: $after) {
+  query DiscCatalog(
+    $sort: CatalogSort
+    $after: String
+    $minScore: Float
+    $fromYear: Int
+    $toYear: Int
+  ) {
+    discCatalog(
+      sort: $sort
+      after: $after
+      minScore: $minScore
+      fromYear: $fromYear
+      toYear: $toYear
+    ) {
       nextCursor
       items {
         __typename
@@ -51,6 +81,7 @@ const DISC_CATALOG = graphql(`
         title
         posterUrl(size: MEDIUM)
         onDisc
+        ...ScoreFields
         availableOn {
           ...ServiceLogo
         }
@@ -77,6 +108,7 @@ const SEARCH_MINE = graphql(`
       title
       posterUrl(size: MEDIUM)
       onDisc
+      ...ScoreFields
       availableOn {
         ...ServiceLogo
       }
@@ -98,6 +130,7 @@ const SEARCH_ALL = graphql(`
       title
       posterUrl(size: MEDIUM)
       onDisc
+      ...ScoreFields
       availableOn {
         ...ServiceLogo
       }
@@ -117,7 +150,32 @@ const SORTS: { value: CatalogSort; label: string }[] = [
   { value: "POPULAR", label: "Popular" },
   { value: "TOP_RATED", label: "Top rated" },
   { value: "NEWEST", label: "Newest" },
+  { value: "OLDEST", label: "Oldest" },
 ];
+
+/** Minimum TMDB score; "" is any. */
+const SCORES = [
+  { value: "", label: "Any score" },
+  { value: "6", label: "6+" },
+  { value: "7", label: "7+" },
+  { value: "8", label: "8+" },
+];
+
+/** First released in; "" is any. Each is "from-to", either end open. */
+const DECADES = [
+  { value: "", label: "Any year" },
+  ...[2020, 2010, 2000, 1990, 1980, 1970].map((d) => ({
+    value: `${d}-${d + 9}`,
+    label: `${d}s`,
+  })),
+  { value: "-1969", label: "Before 1970" },
+];
+
+/** A DECADES value as the filters' year range. */
+function yearRange(value: string): { fromYear: number | null; toYear: number | null } {
+  const [from, to] = value.split("-");
+  return { fromYear: from ? Number(from) : null, toYear: to ? Number(to) : null };
+}
 
 type Item = CatalogQuery["catalog"]["items"][number];
 
@@ -135,6 +193,12 @@ export function WhatsOnPage() {
   const [searchScope, setSearchScope] = useSearchScope();
   const hasWatchlist = useLibrary().some((e) => e.shelf === "watchlist");
   const [sort, setSort] = useState<CatalogSort>("POPULAR");
+  const [minScore, setMinScore] = useState("");
+  const [decade, setDecade] = useState("");
+  const titleFilters: TitleFilters = {
+    minScore: minScore ? Number(minScore) : null,
+    ...yearRange(decade),
+  };
   const [openId, setOpenId] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [text, setText] = useState("");
@@ -146,13 +210,16 @@ export function WhatsOnPage() {
   // showing instead). Same document, so each keeps its own cached pages.
   const variables = (kind: Kind) =>
     providerSlugs.length > 0 && kinds.includes(kind) && !searching
-      ? { variables: { providerSlugs, kind, sort } }
+      ? { variables: { providerSlugs, kind, sort, ...titleFilters } }
       : skipToken;
   const seriesQuery = useQuery(CATALOG, variables("SERIES"));
   const filmsQuery = useQuery(CATALOG, variables("MOVIE"));
   // Films out on disc: films only, since TMDB has no disc data for series.
   const discOn = disc && kinds.includes("MOVIE") && !searching;
-  const discQuery = useQuery(DISC_CATALOG, discOn ? { variables: { sort } } : skipToken);
+  const discQuery = useQuery(
+    DISC_CATALOG,
+    discOn ? { variables: { sort, ...titleFilters } } : skipToken,
+  );
   // Only the selected types count, whatever the queries still hold: a
   // skipped query keeps its last result in Apollo 4 (see lib/catalog.ts).
   // The same goes for services all switched off, and for On disc.
@@ -189,8 +256,11 @@ export function WhatsOnPage() {
   );
   // Only the scope in use counts: the other query keeps its last result.
   const search = everywhere ? all : mine;
-  const results = ((search.data ?? search.previousData)?.searchMedia ?? []).filter((r) =>
-    kinds.includes(r.__typename === "Movie" ? "MOVIE" : "SERIES"),
+  // Search comes back unfiltered, so the score and year filters apply here.
+  const results = ((search.data ?? search.previousData)?.searchMedia ?? []).filter(
+    (r) =>
+      kinds.includes(r.__typename === "Movie" ? "MOVIE" : "SERIES") &&
+      passesFilters(r, titleFilters),
   );
 
   // The watchlist leads the grid, top right and two tiles wide, as the
@@ -260,16 +330,40 @@ export function WhatsOnPage() {
           <SearchScope scope={searchScope} onChange={setSearchScope} />
         </div>
         <BrowseFilters filters={filters} />
-        <label className="catalog__sort">
-          Sort
-          <select value={sort} onChange={(e) => setSort(e.target.value as CatalogSort)}>
-            {SORTS.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="catalog__options">
+          <label className="catalog__sort">
+            Sort
+            <select value={sort} onChange={(e) => setSort(e.target.value as CatalogSort)}>
+              {SORTS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {/* TMDB's user score, and when it first came out - each list and
+              search narrowed to match. */}
+          <label className="catalog__sort">
+            Score
+            <select value={minScore} onChange={(e) => setMinScore(e.target.value)}>
+              {SCORES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="catalog__sort">
+            Released
+            <select value={decade} onChange={(e) => setDecade(e.target.value)}>
+              {DECADES.map((d) => (
+                <option key={d.value} value={d.value}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       {showSearch ? (

@@ -104,3 +104,34 @@ test("filter tags hold their place as they're clicked", async ({ page }, info) =
   await expect(films).toHaveAttribute("aria-pressed", "false");
   expect(await lefts()).toEqual(before);
 });
+
+test("tile scores are never cut off", async ({ page }) => {
+  for (const path of ["/whats-on", "/coming-soon", "/watchlist"]) {
+    await page.goto(path);
+    await page.locator(".tile-actions .score").first().waitFor();
+    // The score gives way when its row is full; at rest it never should.
+    const clipped = await page
+      .locator(".tile-actions .score")
+      .evaluateAll((scores) =>
+        scores.filter((s) => s.scrollWidth > s.clientWidth).map((s) => s.textContent),
+      );
+    expect(clipped, `cut-off scores on ${path}`).toEqual([]);
+  }
+});
+
+test("the score steps aside while Own spells out its word, then comes back", async ({ page }) => {
+  await page.goto("/whats-on");
+  const own = page.getByRole("button", { name: /^I own / }).first();
+  const row = own.locator("xpath=ancestor::div[contains(@class,'tile-actions')]");
+  const score = row.locator(".score");
+  await expect(score).toBeVisible();
+
+  await own.click();
+  await expect(own.locator(".icon-toggle__text")).toBeVisible();
+  await expect(score).toBeHidden();
+  // Nothing spills past the tile meanwhile.
+  expect(await row.evaluate((r) => r.scrollWidth <= r.clientWidth)).toBe(true);
+
+  await expect(own.locator(".icon-toggle__text")).toBeHidden();
+  await expect(score).toBeVisible();
+});

@@ -1,6 +1,7 @@
 import { badge, bingeNote, countdown, formatDate, watchTime } from "../lib/format";
 import type { Arrival, Release } from "../lib/format";
 import { DiscGlyph } from "./DiscLogo";
+import { ScoreFact } from "./ScoreBadge";
 import { Sheet } from "./Sheet";
 import { ProviderLogos } from "./ProviderLogos";
 
@@ -36,6 +37,7 @@ export function ReleaseDialog({
       }
     >
       <dl className="facts">
+        <ScoreFact score={release.media.score} />
         <div>
           <dt>{disc ? "Out on disc" : "Arrives"}</dt>
           <dd>

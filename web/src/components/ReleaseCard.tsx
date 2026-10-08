@@ -1,6 +1,7 @@
 import { badge, bingeNote, countdown, formatDate, watchTime } from "../lib/format";
 import type { Arrival, Release } from "../lib/format";
 import { ProviderLogos } from "./ProviderLogos";
+import { ScoreBadge } from "./ScoreBadge";
 import { ShelfToggle } from "./ShelfToggle";
 
 export function ReleaseCard({
@@ -54,15 +55,19 @@ export function ReleaseCard({
       </button>
 
       {/* Own/Want if it is on disc; Watchlist for streaming-only titles. */}
-      <ShelfToggle
-        ownable={media.onDisc}
-        item={{
-          id: media.id,
-          kind: media.__typename,
-          title: media.title,
-          posterUrl: media.posterUrl ?? null,
-        }}
-      />
+      {/* The toggles, then the score at the row's right end. */}
+      <div className="tile-actions">
+        <ShelfToggle
+          ownable={media.onDisc}
+          item={{
+            id: media.id,
+            kind: media.__typename,
+            title: media.title,
+            posterUrl: media.posterUrl ?? null,
+          }}
+        />
+        <ScoreBadge score={media.score} />
+      </div>
 
       <div className="card__body">
         {/* A second way in for the mouse: clicking the title opens the same

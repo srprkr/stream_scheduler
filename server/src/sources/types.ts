@@ -13,7 +13,7 @@
 export type MediaKind = "MOVIE" | "SERIES";
 
 /** Catalogue order, mirroring the GraphQL CatalogSort enum. */
-export type CatalogSort = "POPULAR" | "TOP_RATED" | "NEWEST";
+export type CatalogSort = "POPULAR" | "TOP_RATED" | "NEWEST" | "OLDEST";
 
 /** Requested image dimension, mirroring the GraphQL ImageSize enum. */
 export type ImageSize = "SMALL" | "MEDIUM" | "LARGE" | "ORIGINAL";
@@ -67,6 +67,10 @@ export interface MediaRecord {
   runtimeMinutes: number | null;
   /** SERIES only. */
   seasonCount: number | null;
+  /** TMDB's user score out of 10, and how many voted. Null with no votes. */
+  score: { average: number; votes: number } | null;
+  /** First release (a series' first air date). Null when unknown. */
+  releaseYear: number | null;
   /**
    * True when built from a search result, which carries no detail-only
    * fields: trailer, runtimeMinutes and seasonCount are unknown, not null.
@@ -134,7 +138,14 @@ export interface ReleaseQuery {
   first: number;
 }
 
-export interface CatalogQuery {
+/** Narrowing a catalogue by its titles' score and age. Null means any. */
+export interface CatalogFilters {
+  minScore: number | null;
+  fromYear: number | null;
+  toYear: number | null;
+}
+
+export interface CatalogQuery extends CatalogFilters {
   providerSlugs: readonly string[];
   kind: MediaKind;
   sort: CatalogSort;
@@ -143,7 +154,7 @@ export interface CatalogQuery {
 }
 
 /** A page of films out on disc that no tracked service streams. */
-export interface DiscCatalogQuery {
+export interface DiscCatalogQuery extends CatalogFilters {
   sort: CatalogSort;
   /** 1-based. */
   page: number;

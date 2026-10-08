@@ -45,6 +45,8 @@ enum CatalogSort {
   TOP_RATED
   "Most recently released first."
   NEWEST
+  "Earliest released first: by original release, among titles with enough votes to be known."
+  OLDEST
 }
 
 """
@@ -149,6 +151,16 @@ type Plan {
   yearlyCents: Int
 }
 
+"""
+TMDB's user score: the average of its users' votes, out of 10, and how many
+voted. The app's one rating - IMDb's and Rotten Tomatoes' cost tens of
+thousands a year to license. Few votes make a shaky average; show the count.
+"""
+type Score {
+  average: Float!
+  votes: Int!
+}
+
 # -----------------------------------------------------------------------------
 # Media
 #
@@ -202,6 +214,16 @@ interface MediaItem {
   for, with a hand-kept list of exceptions (TMDB has no disc data for TV).
   """
   onDisc: Boolean!
+
+  "TMDB's user score. Null when nobody has voted."
+  score: Score
+
+  """
+  The year it was first released - a series' first air date. Null when
+  unknown, and on films from discCatalog, whose upstream list dates are disc
+  releases, not first releases.
+  """
+  releaseYear: Int
 }
 
 type Movie implements MediaItem {
@@ -216,6 +238,8 @@ type Movie implements MediaItem {
   otherServices: [OtherService!]!
   upcoming: [Release!]!
   onDisc: Boolean!
+  score: Score
+  releaseYear: Int
 
   runtimeMinutes: Int
 }
@@ -232,6 +256,8 @@ type Series implements MediaItem {
   otherServices: [OtherService!]!
   upcoming: [Release!]!
   onDisc: Boolean!
+  score: Score
+  releaseYear: Int
   seasonCount: Int
   nextSeason: SeasonSchedule
 
@@ -471,6 +497,12 @@ type Query {
     sort: CatalogSort = POPULAR
     "A cursor from a previous page's nextCursor. Omitted means the first page."
     after: String
+    "Keep titles with at least this TMDB score, among those with enough votes to mean it."
+    minScore: Float
+    "Keep titles first released in or after this year."
+    fromYear: Int
+    "Keep titles first released in or before this year."
+    toYear: Int
   ): CatalogPage!
 
   """
@@ -489,6 +521,12 @@ type Query {
     sort: CatalogSort = POPULAR
     "A cursor from a previous page's nextCursor. Omitted means the first page."
     after: String
+    "Keep titles with at least this TMDB score, among those with enough votes to mean it."
+    minScore: Float
+    "Keep titles first released in or after this year."
+    fromYear: Int
+    "Keep titles first released in or before this year."
+    toYear: Int
   ): CatalogPage!
 
   providers: [Provider!]!

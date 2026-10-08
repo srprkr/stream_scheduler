@@ -1,5 +1,6 @@
 import type {
   AvailabilityRecord,
+  CatalogFilters,
   CatalogSource,
   CatalogPageRecord,
   CatalogQuery,
@@ -65,6 +66,8 @@ const MEDIA: MediaRecord[] = [
     trailer: trailer("dQw4w9WgXcQ", "The Quiet Harbor | Official Trailer"),
     runtimeMinutes: null,
     seasonCount: 2,
+    score: { average: 7.9, votes: 1200 },
+    releaseYear: 2024,
   },
   {
     id: "media:2",
@@ -77,6 +80,8 @@ const MEDIA: MediaRecord[] = [
     trailer: trailer("aqz-KE-bpKQ", "Nightshift | Teaser"),
     runtimeMinutes: 108,
     seasonCount: null,
+    score: { average: 6.4, votes: 310 },
+    releaseYear: 2026,
   },
   {
     id: "media:3",
@@ -89,6 +94,8 @@ const MEDIA: MediaRecord[] = [
     trailer: null,
     runtimeMinutes: null,
     seasonCount: 1,
+    score: null,
+    releaseYear: 2026,
   },
   {
     id: "media:4",
@@ -100,6 +107,8 @@ const MEDIA: MediaRecord[] = [
     trailer: trailer("ScMzIvxBSi4", "Cold Open | Trailer"),
     runtimeMinutes: 94,
     seasonCount: null,
+    score: { average: 5.8, votes: 40 },
+    releaseYear: 2019,
   },
   {
     id: "media:5",
@@ -112,6 +121,8 @@ const MEDIA: MediaRecord[] = [
     trailer: trailer("ktvTqknDobU", "The Understudy | Official Trailer"),
     runtimeMinutes: null,
     seasonCount: 3,
+    score: { average: 8.3, votes: 5400 },
+    releaseYear: 2021,
   },
   {
     id: "media:6",
@@ -124,6 +135,8 @@ const MEDIA: MediaRecord[] = [
     trailer: null,
     runtimeMinutes: 101,
     seasonCount: null,
+    score: { average: 7.4, votes: 880 },
+    releaseYear: 1998,
   },
   {
     id: "media:7",
@@ -135,6 +148,8 @@ const MEDIA: MediaRecord[] = [
     trailer: null,
     runtimeMinutes: 97,
     seasonCount: null,
+    score: { average: 6.9, votes: 150 },
+    releaseYear: 2025,
   },
 ];
 
@@ -172,6 +187,14 @@ const RELEASE_PLAN: ReadonlyArray<readonly [string, string, number, number | nul
   ["media:4", "max", 45, null],
   ["media:5", "netflix", 71, 3],
 ];
+
+/** The score and year filters, as TMDB's discover applies them. */
+function passes(m: MediaRecord, f: CatalogFilters): boolean {
+  if (f.minScore !== null && (m.score?.average ?? 0) < f.minScore) return false;
+  if (f.fromYear !== null && (m.releaseYear ?? 0) < f.fromYear) return false;
+  if (f.toYear !== null && (m.releaseYear ?? Infinity) > f.toYear) return false;
+  return true;
+}
 
 export class FixtureSource implements CatalogSource {
   readonly name = "fixture";
@@ -248,7 +271,8 @@ export class FixtureSource implements CatalogSource {
     const matching = MEDIA.filter(
       (m) =>
         m.kind === query.kind &&
-        (AVAILABILITY[m.id] ?? []).some((slug) => query.providerSlugs.includes(slug)),
+        (AVAILABILITY[m.id] ?? []).some((slug) => query.providerSlugs.includes(slug)) &&
+        passes(m, query),
     );
     const start = query.page - 1;
     return {
@@ -270,7 +294,7 @@ export class FixtureSource implements CatalogSource {
 
   /** One title a page, like listCatalog. */
   async listDiscCatalog(query: DiscCatalogQuery): Promise<CatalogPageRecord> {
-    const matching = MEDIA.filter((m) => DISC_ONLY.includes(m.id));
+    const matching = MEDIA.filter((m) => DISC_ONLY.includes(m.id) && passes(m, query));
     const start = query.page - 1;
     return {
       items: matching.slice(start, start + 1).map((m) => ({ ...m, summary: true })),

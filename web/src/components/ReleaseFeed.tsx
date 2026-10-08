@@ -19,6 +19,7 @@ graphql(`
     id
     title
     onDisc
+    ...ScoreFields
     overview
     posterUrl(size: MEDIUM)
     backdropUrl(size: LARGE)

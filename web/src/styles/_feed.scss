@@ -39,10 +39,6 @@
   flex-direction: column;
   gap: 10px;
 
-  .shelf-toggle {
-    justify-content: space-between;
-  }
-
   &__art {
     position: relative;
     aspect-ratio: 2 / 3;

@@ -63,6 +63,11 @@ export function movieRelease(
  */
 export function movieRecord(
   movie: TmdbMovieListItem & Partial<Pick<TmdbMovieDetail, "runtime" | "videos">>,
+  /**
+   * False when the list's release_date isn't the first release: a discover
+   * filtered to one country's disc releases dates each film by its disc.
+   */
+  firstRelease = true,
 ): MediaRecord {
   return {
     id: `movie:${movie.id}`,
@@ -74,6 +79,8 @@ export function movieRecord(
     trailer: pickTrailer(movie.videos?.results),
     runtimeMinutes: movie.runtime ?? null,
     seasonCount: null,
+    score: score(movie),
+    releaseYear: firstRelease ? year(movie.release_date) : null,
   };
 }
 
@@ -91,7 +98,21 @@ export function seriesRecord(
     trailer: pickTrailer(series.videos?.results),
     runtimeMinutes: null,
     seasonCount: series.number_of_seasons ?? null,
+    score: score(series),
+    releaseYear: year(series.first_air_date),
   };
+}
+
+/** No votes, no score: TMDB reports 0.0 for a title nobody has rated. */
+function score(item: { vote_average?: number; vote_count?: number }): MediaRecord["score"] {
+  if (!item.vote_count || item.vote_average === undefined) return null;
+  return { average: item.vote_average, votes: item.vote_count };
+}
+
+/** "1999-03-31" -> 1999; TMDB sends "" for an unknown date. */
+function year(date: string | undefined): number | null {
+  const y = Number(date?.slice(0, 4));
+  return Number.isInteger(y) && y > 0 ? y : null;
 }
 
 /**

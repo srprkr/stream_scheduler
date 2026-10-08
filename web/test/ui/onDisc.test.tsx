@@ -23,6 +23,8 @@ const film = (id: string, title: string, availableOn: (typeof netflix)[] = []) =
   posterUrl: null,
   onDisc: true,
   availableOn,
+  score: null,
+  releaseYear: null,
 });
 
 const page = (items: unknown[]) => ({
@@ -36,19 +38,36 @@ const whatsOnMocks = [
   {
     request: {
       query: CatalogDocument,
-      variables: { providerSlugs: ["hulu", "netflix"], kind: "MOVIE", sort: "POPULAR" },
+      variables: {
+        providerSlugs: ["hulu", "netflix"],
+        kind: "MOVIE",
+        sort: "POPULAR",
+        minScore: null,
+        fromYear: null,
+        toYear: null,
+      },
     },
     result: { data: { catalog: page([film("movie:1", "Heat", [netflix])]) } },
   },
   {
     request: {
       query: CatalogDocument,
-      variables: { providerSlugs: ["hulu", "netflix"], kind: "SERIES", sort: "POPULAR" },
+      variables: {
+        providerSlugs: ["hulu", "netflix"],
+        kind: "SERIES",
+        sort: "POPULAR",
+        minScore: null,
+        fromYear: null,
+        toYear: null,
+      },
     },
     result: { data: { catalog: page([]) } },
   },
   {
-    request: { query: DiscCatalogDocument, variables: { sort: "POPULAR" } },
+    request: {
+      query: DiscCatalogDocument,
+      variables: { sort: "POPULAR", minScore: null, fromYear: null, toYear: null },
+    },
     result: { data: { discCatalog: page([film("movie:2", "Paper Lanterns")]) } },
   },
 ];
@@ -174,6 +193,8 @@ const media = (id: string, title: string, typename: "Movie" | "Series") => ({
   posterUrl: null,
   backdropUrl: null,
   trailer: null,
+  score: null,
+  releaseYear: null,
   ...(typename === "Movie" ? { runtimeMinutes: 101 } : { seasonCount: 2 }),
 });
 

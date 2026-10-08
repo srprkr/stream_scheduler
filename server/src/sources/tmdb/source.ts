@@ -1,6 +1,8 @@
 import type {
+  CatalogFilters,
   CatalogPageRecord,
   CatalogQuery,
+  CatalogSort,
   CatalogSource,
   DiscCatalogQuery,
   DiscReleaseRecord,
@@ -110,6 +112,69 @@ async function mapLimit<T, R>(
 const TALK_GENRE = 10767;
 
 const NEWS_GENRE = 10763;
+
+/**
+ * Votes a title needs before its score counts. Without a floor, "top rated"
+ * and "8 or more" are lists of obscure titles with a handful of ten-star
+ * votes, and "oldest" opens on century-old shorts nobody has seen.
+ */
+const TOP_RATED_VOTES = 1000;
+const SCORE_VOTES = 50;
+
+/**
+ * The discover parameters for an order plus the score and year filters.
+ * Collected by name, so a parameter two rules both set - a vote floor, a
+ * latest date - is sent once, at the stricter value.
+ *
+ * `dated` is the first-release date field; `newest` the one "newest" sorts
+ * on, which for films out on disc is their disc date instead - a date the
+ * caller already caps at today, hence `newestCapped`.
+ */
+function discoverOrder(
+  query: { sort: CatalogSort } & CatalogFilters,
+  dated: string,
+  today: string,
+  {
+    newest = dated,
+    newestCapped = false,
+    voteFloor = 0,
+  }: { newest?: string; newestCapped?: boolean; voteFloor?: number } = {},
+): string {
+  let votes = voteFloor;
+  let sort: string;
+  const latest = new Map<string, string>();
+  switch (query.sort) {
+    case "POPULAR":
+      sort = "popularity.desc";
+      break;
+    case "TOP_RATED":
+      sort = "vote_average.desc";
+      votes = Math.max(votes, TOP_RATED_VOTES);
+      break;
+    case "NEWEST":
+      sort = `${newest}.desc`;
+      // Titles can be listed before they are released.
+      if (!newestCapped) latest.set(newest, today);
+      break;
+    case "OLDEST":
+      sort = `${dated}.asc`;
+      votes = Math.max(votes, SCORE_VOTES);
+      break;
+  }
+  if (query.minScore !== null) votes = Math.max(votes, SCORE_VOTES);
+  if (query.toYear !== null) {
+    const end = `${query.toYear}-12-31`;
+    const already = latest.get(dated);
+    latest.set(dated, already && already < end ? already : end);
+  }
+
+  const params = [`sort_by=${sort}`];
+  if (votes > 0) params.push(`vote_count.gte=${votes}`);
+  if (query.minScore !== null) params.push(`vote_average.gte=${query.minScore}`);
+  if (query.fromYear !== null) params.push(`${dated}.gte=${query.fromYear}-01-01`);
+  for (const [field, date] of latest) params.push(`${field}.lte=${date}`);
+  return params.join("&");
+}
 
 /** TMDB serves at most 500 pages of any discover query. */
 const MAX_DISCOVER_PAGE = 500;
@@ -429,14 +494,7 @@ export class TmdbSource implements CatalogSource {
     if (providerIds.length === 0) return { items: [], nextPage: null };
 
     const dated = query.kind === "MOVIE" ? "primary_release_date" : "first_air_date";
-    const order = {
-      POPULAR: "sort_by=popularity.desc",
-      // Without a vote floor, "top rated" is a list of obscure titles with a
-      // few ten-star votes.
-      TOP_RATED: "sort_by=vote_average.desc&vote_count.gte=1000",
-      // Titles can be listed on a service before they are released.
-      NEWEST: `sort_by=${dated}.desc&${dated}.lte=${isoDate(this.now())}`,
-    }[query.sort];
+    const order = discoverOrder(query, dated, isoDate(this.now()));
     const filters =
       `with_watch_providers=${providerIds.join("|")}&watch_region=${WATCH_REGION}` +
       `&with_watch_monetization_types=flatrate&${order}&page=${query.page}`;
@@ -446,7 +504,11 @@ export class TmdbSource implements CatalogSource {
 
     if (query.kind === "MOVIE") {
       const body = await this.client.get<TmdbPage<TmdbMovieListItem>>(`/discover/movie?${filters}`);
-      return catalogPage(body.results.map(movieRecord), body.total_pages, query.page);
+      return catalogPage(
+        body.results.map((m) => movieRecord(m)),
+        body.total_pages,
+        query.page,
+      );
     }
     const body = await this.client.get<TmdbPage<TmdbTvListItem>>(
       `/discover/tv?${filters}&${notDaily}`,
@@ -463,18 +525,24 @@ export class TmdbSource implements CatalogSource {
   async listDiscCatalog(query: DiscCatalogQuery): Promise<CatalogPageRecord> {
     const today = isoDate(this.now());
     const tracked = PROVIDER_CONFIGS.flatMap((c) => c.watchProviderIds).sort((a, b) => a - b);
-    const order = {
-      POPULAR: `sort_by=popularity.desc&vote_count.gte=${DISC_VOTE_FLOOR}`,
-      TOP_RATED: "sort_by=vote_average.desc&vote_count.gte=1000",
-      // Newest out on disc, not newest in cinemas.
-      NEWEST: `sort_by=release_date.desc&vote_count.gte=${DISC_VOTE_FLOOR}`,
-    }[query.sort];
+    // Years are first releases; "newest" is newest out on disc, not newest
+    // in cinemas, and release_date - the disc date - is capped below.
+    const order = discoverOrder(query, "primary_release_date", today, {
+      newest: "release_date",
+      newestCapped: true,
+      voteFloor: DISC_VOTE_FLOOR,
+    });
     const body = await this.client.get<TmdbPage<TmdbMovieListItem>>(
       `/discover/movie?region=${WATCH_REGION}&with_release_type=${PHYSICAL_RELEASE}` +
         `&release_date.lte=${today}&watch_region=${WATCH_REGION}` +
         `&without_watch_providers=${tracked.join("|")}&${order}&page=${query.page}`,
     );
-    return catalogPage(body.results.map(movieRecord), body.total_pages, query.page);
+    // The list's dates are disc dates here, so no first-release year.
+    return catalogPage(
+      body.results.map((m) => movieRecord(m, false)),
+      body.total_pages,
+      query.page,
+    );
   }
 
   /**

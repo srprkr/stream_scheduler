@@ -116,6 +116,23 @@ describe("GraphQL layer", () => {
     expect(titles(withDisc.data)).not.toContain("The Quiet Harbor");
   });
 
+  it("filters a catalogue by score and year, and reports each title's score", async () => {
+    // Netflix series: The Quiet Harbor (7.9, 2024) and The Understudy (8.3, 2021).
+    const { data, errors } = await run(`{
+      catalog(providerSlugs: ["netflix"], kind: SERIES, minScore: 8, fromYear: 2020) {
+        items { title releaseYear score { average votes } }
+      }
+    }`);
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({
+      catalog: {
+        items: [
+          { title: "The Understudy", releaseYear: 2021, score: { average: 8.3, votes: 5400 } },
+        ],
+      },
+    });
+  });
+
   it("counts days in the caller's timezone", async () => {
     const { data } = await run(`{ releases(first: 1) { daysUntilRelease } }`);
     expect(data).toEqual({ releases: [{ daysUntilRelease: 3 }] });

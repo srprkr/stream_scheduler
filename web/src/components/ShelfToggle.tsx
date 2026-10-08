@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import type { LibraryItem, Shelf } from "../lib/library";
 import { library, useLibrary } from "../hooks/useLibrary";
@@ -20,9 +20,13 @@ import { library, useLibrary } from "../hooks/useLibrary";
  * stays, plus the ★ on a wishlisted title - it's the way to take it back off
  * the wishlist without buying it.
  *
+ * All three are icon pills - Own (a disc and its case), ☆ Want, + Watchlist -
+ * so they take one short line under a poster, with room left for the score
+ * beside them.
+ *
  * Every control's accessible name includes the title. In a list of results, a
- * screen reader hearing "Own, checkbox" twenty times cannot tell which is
- * which.
+ * screen reader hearing "Own, toggle button" twenty times cannot tell which
+ * is which.
  */
 export function ShelfToggle({
   item,
@@ -60,29 +64,47 @@ export function ShelfToggle({
 
   return (
     <div className="shelf-toggle">
-      <label className="shelf-toggle__own">
-        <input
-          type="checkbox"
-          checked={shelf === "owned"}
-          aria-label={`I own ${item.title}`}
-          onChange={(e) => library.shelve(item, e.target.checked ? "owned" : null)}
+      <IconToggle
+        className="shelf-toggle__own"
+        pressed={shelf === "owned"}
+        icon={<OwnIcon />}
+        text={shelf === "owned" ? "Owned" : "Own"}
+        label={`I own ${item.title}`}
+        onClick={() => toggle("owned")}
+      />
+      {(!inLibrary || shelf === "wanted") && (
+        <IconToggle
+          className="shelf-toggle__want"
+          pressed={shelf === "wanted"}
+          icon={shelf === "wanted" ? "★" : "☆"}
+          text={shelf === "wanted" ? "Wanted" : "Want"}
+          label={`Want ${item.title}`}
+          onClick={() => toggle("wanted")}
         />
-        Own
-      </label>
-      <div className="shelf-toggle__icons">
-        {(!inLibrary || shelf === "wanted") && (
-          <IconToggle
-            className="shelf-toggle__want"
-            pressed={shelf === "wanted"}
-            icon={shelf === "wanted" ? "★" : "☆"}
-            text={shelf === "wanted" ? "Wanted" : "Want"}
-            label={`Want ${item.title}`}
-            onClick={() => toggle("wanted")}
-          />
-        )}
-        {!inLibrary && watchlist}
-      </div>
+      )}
+      {!inLibrary && watchlist}
     </div>
+  );
+}
+
+/**
+ * Own's icon: a disc and its case. Off, the disc sits half out of the case's
+ * open side; pressed, it slides in and the case fills - the copy put away on your shelf. One drawing, moved by CSS
+ * on the button's aria-pressed, so the slide plays as it's clicked.
+ */
+function OwnIcon() {
+  return (
+    <svg className="own-icon" viewBox="0 0 21 16" focusable="false">
+      <g className="own-icon__disc">
+        <circle cx="14.6" cy="8" r="5.6" />
+        <circle cx="14.6" cy="8" r="1.1" />
+        {/* A shine across the part that shows, so it reads as a disc. */}
+        <path className="own-icon__shine" d="M15.23 4.45A3.6 3.6 0 0 1 17.72 6.20" />
+      </g>
+      <rect className="own-icon__case" x="1" y="1" width="12.4" height="14" rx="1.6" />
+      {/* The case's window, showing the disc inside once it's in. */}
+      <circle className="own-icon__window" cx="7.2" cy="8" r="2.4" />
+    </svg>
   );
 }
 
@@ -91,8 +113,9 @@ const FLASH_MS = 1200;
 
 /**
  * A pill that shows only its icon, and briefly spells out its word when
- * clicked - "Wanted", "Watchlist" - as confirmation, then folds back so
- * three options fit under a narrow poster. On hover, the browser's own
+ * clicked - "Owned", "Wanted" - as confirmation, then folds back so three
+ * options fit under a narrow poster. The score beside them steps aside
+ * meanwhile (the CSS). On hover, the browser's own
  * tooltip (`tooltip`, or the word itself) says what the icon means.
  *
  * The accessible name comes from `label`; the icon and the word are hidden
@@ -109,7 +132,7 @@ function IconToggle({
 }: {
   className: string;
   pressed: boolean;
-  icon: string;
+  icon: ReactNode;
   text: string;
   /** Hover text, when it should say more than the pill's word. */
   tooltip?: string;

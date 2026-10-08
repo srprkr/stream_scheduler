@@ -3,6 +3,7 @@ import { skipToken, useQuery } from "@apollo/client/react";
 import { ProviderLogos } from "./ProviderLogos";
 import { watchTime } from "../lib/format";
 import { graphql } from "../generated";
+import { ScoreFact } from "./ScoreBadge";
 import { Sheet } from "./Sheet";
 
 import { localToday, seasonLine } from "../lib/seasons";
@@ -19,6 +20,7 @@ const TITLE_DETAIL = graphql(`
       title
       overview
       backdropUrl(size: LARGE)
+      ...ScoreFields
       trailer {
         id
         name
@@ -68,6 +70,7 @@ export function TitleDialog({ id, onClose }: { id: string | null; onClose: () =>
     >
       {media && (
         <dl className="facts">
+          <ScoreFact score={media.score} />
           {seasons && (
             <div>
               <dt>Seasons</dt>

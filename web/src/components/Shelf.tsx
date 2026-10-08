@@ -32,6 +32,7 @@ export function Shelf({
               title: entry.title,
               posterUrl: entry.posterUrl,
               availableOn: details.get(entry.id)?.availableOn,
+              score: details.get(entry.id)?.score,
               // Owned and wanted titles are on disc by definition.
               onDisc: true,
             }}

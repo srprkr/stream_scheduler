@@ -48,38 +48,17 @@
 .shelf-toggle {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex: none;
   font-size: 0.8125rem;
 
-  // On a narrow tile, an expanded pill needs the room: the "Own" word gives
-  // way (min-width: 0 lets it shrink) while the checkbox itself never does.
-  &__own {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    color: var(--muted);
-    cursor: pointer;
-
-    input {
-      flex: none;
-      accent-color: var(--soon);
-      cursor: pointer;
-    }
+  // Pressed colours say which plan it is: white for "it's on my shelf",
+  // amber for "buy a copy" (the same amber as elsewhere for things worth
+  // attention), green for "watch it on a service".
+  &__own[aria-pressed="true"] {
+    color: var(--text);
+    border-color: var(--text);
   }
-
-  &__icons {
-    display: flex;
-    flex: none;
-    gap: 6px;
-  }
-
-  // Pressed colours say which plan it is: amber for "buy a copy" (the same
-  // amber as elsewhere for things worth attention), green for "watch it on a
-  // service".
   &__want[aria-pressed="true"] {
     color: #fbbf24;
     border-color: #fbbf24;
@@ -92,6 +71,68 @@
   // A streaming-only title has one option and the width to spell it out.
   &--solo .icon-toggle__text {
     display: inline;
+  }
+
+  // After a click, the pill spells out its word for a moment - "Owned",
+  // "Wanted" - as confirmation. (A solo pill shows its word all the time.)
+  .icon-toggle[data-flash="true"] .icon-toggle__text {
+    display: inline;
+    animation: icon-toggle-word 160ms ease;
+  }
+}
+
+// Own's icon, a disc and its case. Off: the case is an outline in front of
+// the disc, which pokes out of its open side. Pressed: the disc slides in
+// behind the case, the case fills, and its window shows the disc inside.
+// The case and window are filled with the page colour, so whatever is behind
+// them is hidden - the half of the disc already "in", say.
+.own-icon {
+  display: block;
+  width: 1.3em;
+  height: 1em;
+  overflow: visible;
+
+  &__disc {
+    fill: var(--bg);
+    stroke: currentColor;
+    stroke-width: 1.2;
+    transition: transform 200ms ease;
+  }
+  &__shine {
+    fill: none;
+    stroke-width: 1.1;
+    stroke-linecap: round;
+  }
+  &__case {
+    fill: var(--bg);
+    stroke: currentColor;
+    stroke-width: 1.4;
+    transition: fill 200ms ease;
+  }
+  &__window {
+    fill: var(--bg);
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+
+  [aria-pressed="true"] & {
+    .own-icon__disc {
+      transform: translateX(-7.4px);
+    }
+    .own-icon__case {
+      fill: currentColor;
+    }
+    .own-icon__window {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__disc,
+    &__case,
+    &__window {
+      transition: none;
+    }
   }
 }
 
@@ -122,11 +163,6 @@
     white-space: nowrap;
   }
 
-  &[data-flash="true"] &__text {
-    display: inline;
-    animation: icon-toggle-word 160ms ease;
-  }
-
   // Only unpressed pills brighten: a pressed one keeps its amber or green.
   &:not([aria-pressed="true"]):hover {
     color: var(--text);
@@ -154,7 +190,9 @@
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    // Wide enough for the row under the poster - Own, Want, Watchlist and
+    // the score - which needs about 141px; narrower and the score is cut off.
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 20px 14px;
   }
 
@@ -164,10 +202,6 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-
-    .shelf-toggle {
-      justify-content: space-between;
-    }
   }
 
   &__open {
@@ -230,5 +264,40 @@
   &__unhosted {
     font-size: 0.75rem;
     color: #fbbf24;
+  }
+}
+
+// A title's TMDB score on every tile, at the right end of the Own / Want /
+// Watchlist row: quiet, so the title stays the thing read first.
+.score {
+  margin-left: auto;
+  // Never squeezed in practice - tiles are wide enough for the row, and the
+  // score hides while a pill spells out its word - but if a row is ever
+  // too narrow, the score gives way rather than spilling past the tile.
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.75rem;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+// The star, amber wherever a score shows - tile or dialog.
+.score__star {
+  color: #fbbf24;
+}
+
+// Under a poster: the Own / Want / Watchlist pills, and the score at the
+// row's right end (.score's margin-left: auto). While a pill spells out its
+// word after a click, the score steps aside to make the room, and comes back
+// when the word folds away.
+.tile-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+
+  &:has(.icon-toggle[data-flash="true"]) .score {
+    display: none;
   }
 }

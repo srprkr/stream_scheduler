@@ -11,6 +11,7 @@ const WATCHLIST_DETAILS = graphql(`
       __typename
       id
       onDisc
+      ...ScoreFields
       totalRuntime {
         minutes
         estimated

@@ -1,5 +1,7 @@
 import { ProviderLogos, type LogoProvider } from "./ProviderLogos";
+import { ScoreBadge } from "./ScoreBadge";
 import { ShelfToggle } from "./ShelfToggle";
+import type { Score } from "../lib/score";
 
 import { localToday, seasonLine, type SeasonSchedule } from "../lib/seasons";
 
@@ -19,6 +21,8 @@ export interface CatalogItem {
   comingTo?: readonly LogoProvider[];
   /** On DVD or Blu-ray: Own/Want if so, Watchlist if it's streaming only. */
   onDisc: boolean;
+  /** TMDB's score; undefined while details load. Shown only with enough votes. */
+  score?: Score | null | undefined;
 }
 
 /**
@@ -75,16 +79,20 @@ export function CatalogTile({
           </div>
         )}
       </button>
-      <ShelfToggle
-        ownable={item.onDisc}
-        inLibrary={inLibrary}
-        item={{
-          id: item.id,
-          kind: item.__typename,
-          title: item.title,
-          posterUrl: item.posterUrl ?? null,
-        }}
-      />
+      {/* The toggles, then the score at the row's right end. */}
+      <div className="tile-actions">
+        <ShelfToggle
+          ownable={item.onDisc}
+          inLibrary={inLibrary}
+          item={{
+            id: item.id,
+            kind: item.__typename,
+            title: item.title,
+            posterUrl: item.posterUrl ?? null,
+          }}
+        />
+        <ScoreBadge score={item.score} />
+      </div>
       {/* A second way in for the mouse: clicking the title opens the same
           dialog as the poster. Not a button, so keyboard and screen-reader
           users don't meet the same action twice; the poster is theirs. */}

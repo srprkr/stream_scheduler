@@ -27,3 +27,14 @@ graphql(`
     isFullDrop
   }
 `);
+
+/** A title's TMDB score and first-release year: what tiles show and filters read. */
+graphql(`
+  fragment ScoreFields on MediaItem {
+    score {
+      average
+      votes
+    }
+    releaseYear
+  }
+`);

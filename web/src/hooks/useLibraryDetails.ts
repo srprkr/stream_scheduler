@@ -12,6 +12,7 @@ const LIBRARY_DETAILS = graphql(`
   query LibraryDetails($ids: [ID!]!) {
     mediaItems(ids: $ids) {
       id
+      ...ScoreFields
       totalRuntime {
         minutes
         estimated

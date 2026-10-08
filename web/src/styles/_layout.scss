@@ -1,7 +1,10 @@
 // --- layout ---------------------------------------------------------------
 
+// Wide enough on a big screen for a fuller row of tiles - the grids fill
+// whatever width they're given. Running text keeps its own, narrower measure
+// (.masthead p, .panel__lede), so only the tiles spread out.
 .page {
-  max-width: 1180px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 48px 20px 80px;
 }
@@ -136,6 +139,7 @@
     letter-spacing: -0.02em;
   }
   p {
+    max-width: 75ch;
     margin: 0;
     color: var(--muted);
   }

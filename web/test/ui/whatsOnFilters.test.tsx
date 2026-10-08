@@ -30,7 +30,14 @@ const services = {
 const catalog = (kind: "SERIES" | "MOVIE", titles: string[]) => ({
   request: {
     query: CatalogDocument,
-    variables: { providerSlugs: ["hulu", "netflix"], kind, sort: "POPULAR" },
+    variables: {
+      providerSlugs: ["hulu", "netflix"],
+      kind,
+      sort: "POPULAR",
+      minScore: null,
+      fromYear: null,
+      toYear: null,
+    },
   },
   result: {
     data: {
@@ -45,6 +52,8 @@ const catalog = (kind: "SERIES" | "MOVIE", titles: string[]) => ({
                 title,
                 posterUrl: null,
                 onDisc: false,
+                score: null,
+                releaseYear: null,
                 availableOn: [netflix],
                 nextSeason: null,
               }
@@ -54,6 +63,8 @@ const catalog = (kind: "SERIES" | "MOVIE", titles: string[]) => ({
                 title,
                 posterUrl: null,
                 onDisc: false,
+                score: null,
+                releaseYear: null,
                 availableOn: [hulu],
               },
         ),
@@ -64,7 +75,10 @@ const catalog = (kind: "SERIES" | "MOVIE", titles: string[]) => ({
 
 /** Nothing out on disc: every service is selected to start, On disc included. */
 const noDiscs = {
-  request: { query: DiscCatalogDocument, variables: { sort: "POPULAR" } },
+  request: {
+    query: DiscCatalogDocument,
+    variables: { sort: "POPULAR", minScore: null, fromYear: null, toYear: null },
+  },
   result: {
     data: { discCatalog: { __typename: "CatalogPage" as const, nextCursor: null, items: [] } },
   },
