@@ -2,6 +2,7 @@ import { skipToken, useQuery } from "@apollo/client/react";
 import { useEffect, useRef, useState } from "react";
 
 import { graphql } from "../generated";
+import { ClearButton } from "./ClearButton";
 import { ShelfToggle } from "./ShelfToggle";
 import { TitleDialog } from "./TitleDialog";
 import { useDebounced } from "../hooks/useDebounced";
@@ -100,6 +101,7 @@ export function SearchBox() {
           }}
           onFocus={() => setExpanded(true)}
         />
+        {text !== "" && <ClearButton input={inputRef} onClear={() => setText("")} />}
 
         {showPanel && (
           <div

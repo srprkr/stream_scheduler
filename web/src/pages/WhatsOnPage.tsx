@@ -266,8 +266,10 @@ export function WhatsOnPage() {
   // The watchlist leads the grid, top right and two tiles wide, as the
   // watchlist stats do on Coming Soon: add a title below with + Watchlist
   // and it appears here at once. Left out while the watchlist is empty, so
-  // the tiles start top left.
-  const watchlist = hasWatchlist && (
+  // the tiles start top left - and when On disc is all that's picked: a
+  // grid of discs to buy isn't about what to stream next.
+  const discOnly = disc && providerSlugs.length === 0;
+  const watchlist = hasWatchlist && !discOnly && (
     <li className="grid__lead">
       <WatchlistMini onOpen={setOpenId} />
     </li>

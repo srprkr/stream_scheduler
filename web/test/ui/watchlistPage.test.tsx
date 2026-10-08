@@ -92,7 +92,8 @@ describe("Watchlist page", () => {
     renderApp(<WatchlistPage />, { mocks: [details, planServicesMock()], route: "/watchlist" });
 
     const now = (await screen.findByRole("heading", { name: /Available now/ })).closest("section");
-    const coming = screen.getByRole("heading", { name: /Coming soon/ }).closest("section");
+    // Its own wait: under a loaded test run it can land a moment later.
+    const coming = (await screen.findByRole("heading", { name: /Coming soon/ })).closest("section");
 
     // Premiered and airing weekly counts as available now.
     expect(within(now as HTMLElement).getByText("Airing Show")).toBeInTheDocument();

@@ -52,12 +52,12 @@
   flex: none;
   font-size: 0.8125rem;
 
-  // Pressed colours say which plan it is: white for "it's on my shelf",
-  // amber for "buy a copy" (the same amber as elsewhere for things worth
-  // attention), green for "watch it on a service".
+  // Pressed colours say which plan it is: amber for "buy a copy" (the same
+  // amber as elsewhere for things worth attention), green for the two that
+  // are settled - "it's on my shelf" and "watch it on a service".
   &__own[aria-pressed="true"] {
-    color: var(--text);
-    border-color: var(--text);
+    color: var(--soon);
+    border-color: var(--soon);
   }
   &__want[aria-pressed="true"] {
     color: #fbbf24;

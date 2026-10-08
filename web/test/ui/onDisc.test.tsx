@@ -12,6 +12,7 @@ import {
   SearchEverywhereDocument,
   SearchMyServicesDocument,
 } from "../../src/generated/graphql";
+import { library } from "../../src/hooks/useLibrary";
 import { WhatsOnPage } from "../../src/pages/WhatsOnPage";
 import { hulu, netflix, serviceNames } from "./mocks";
 import { renderApp } from "./render";
@@ -146,6 +147,25 @@ const searchMocks = [
 
 const searchBox = () => screen.getByRole("searchbox", { name: "Search titles" });
 const selectedOnly = () => screen.getByRole("switch", { name: "Search only what's selected" });
+
+describe("What's On: the watchlist box with On disc", () => {
+  it("leaves the watchlist box out when On disc is all that's picked", async () => {
+    const user = userEvent.setup();
+    library.shelve(
+      { id: "tv:1", kind: "Series", title: "The Quiet Harbor", posterUrl: null },
+      "watchlist",
+    );
+    renderApp(<WhatsOnPage />, { mocks: whatsOnMocks, route: "/whats-on" });
+    await screen.findByText("Paper Lanterns");
+    // Services and On disc together: still partly streaming, so it stays.
+    expect(await screen.findByRole("heading", { name: "Your watchlist" })).toBeInTheDocument();
+
+    await user.click(within(services()).getByRole("button", { name: "Clear All" }));
+    await user.click(within(services()).getByRole("button", { name: "On disc" }));
+    await screen.findByText(/owning a copy is the way to watch them/);
+    expect(screen.queryByRole("heading", { name: "Your watchlist" })).not.toBeInTheDocument();
+  });
+});
 
 describe("What's On: search, Selected or Everywhere", () => {
   it("searches titles out on disc when On disc is selected", async () => {
