@@ -83,9 +83,9 @@
 
 // Own's icon, a disc and its sleeve. Off: the sleeve is an outline in front
 // of the disc, which pokes out of its open side. Pressed: the disc slides in
-// behind the sleeve and the sleeve fills. The sleeve is filled with the page
-// colour, so whatever is behind it is hidden - except through its thumb
-// notch, which shows the disc's edge either way.
+// behind the sleeve, and both outlines take the pill's green. The sleeve is
+// filled with the page colour, so whatever is behind it is hidden - except
+// through its thumb notch, which shows the disc either way.
 .own-icon {
   display: block;
   width: 1.3em;
@@ -107,21 +107,17 @@
     fill: var(--bg);
     stroke: currentColor;
     stroke-width: 1.4;
-    transition: fill 200ms ease;
   }
 
-  [aria-pressed="true"] & {
-    .own-icon__disc {
-      transform: translateX(-6.9px);
-    }
-    .own-icon__case {
-      fill: currentColor;
-    }
+  // Pressed, the disc slides in. The sleeve stays unfilled - only its
+  // outline turns green with the pill - so the disc still shows through the
+  // notch, edge and all.
+  [aria-pressed="true"] & .own-icon__disc {
+    transform: translateX(-6px);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    &__disc,
-    &__case {
+    &__disc {
       transition: none;
     }
   }

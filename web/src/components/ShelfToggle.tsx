@@ -100,9 +100,9 @@ export function ShelfToggle({
 /**
  * Own's icon: a disc and its cardboard sleeve, with a thumb notch in the
  * sleeve's open edge that shows the disc behind it. Off, the disc sits half
- * out of the sleeve; pressed, it slides in and the sleeve fills - the copy
- * put away on your shelf. One drawing, moved by CSS on the button's
- * aria-pressed, so the slide plays as it's clicked.
+ * out of the sleeve; pressed, it slides in and the outlines turn the pill's
+ * green - the copy put away on your shelf. One drawing, moved by CSS on the
+ * button's aria-pressed, so the slide plays as it's clicked.
  */
 function OwnIcon() {
   return (
