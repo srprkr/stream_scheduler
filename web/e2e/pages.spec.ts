@@ -135,3 +135,13 @@ test("the score steps aside while Own spells out its word, then comes back", asy
   await expect(own.locator(".icon-toggle__text")).toBeHidden();
   await expect(score).toBeVisible();
 });
+
+test("the footer sits at the bottom of a short page", async ({ page }) => {
+  // A window far taller than Settings, so the page is short whatever the device.
+  await page.setViewportSize({ width: page.viewportSize()!.width, height: 2400 });
+  await page.goto("/settings");
+  await page.getByText("Backup", { exact: true }).first().waitFor();
+  const footer = (await page.locator(".footer").boundingBox())!;
+  // At the bottom, less the page's own bottom padding - not halfway up.
+  expect(2400 - (footer.y + footer.height)).toBeLessThanOrEqual(40);
+});

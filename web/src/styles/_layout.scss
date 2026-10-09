@@ -4,9 +4,18 @@
 // whatever width they're given. Running text keeps its own, narrower measure
 // (.masthead p, .panel__lede), so only the tiles spread out.
 .page {
+  // A column at least the window's height: the main part grows, so the
+  // footer sits at the bottom of a short page and after a long one.
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
   max-width: 1600px;
   margin: 0 auto;
-  padding: 48px 20px 80px;
+  padding: 48px 20px 32px;
+
+  &__main {
+    flex: 1 0 auto;
+  }
 }
 
 .topbar {

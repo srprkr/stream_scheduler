@@ -46,18 +46,22 @@ export function App() {
         </nav>
       </header>
 
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/insights" element={<InsightsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+      {/* Grows to fill the window, so on a short page the footer still sits
+          at the bottom. Also the main landmark screen readers jump to. */}
+      <main className="page__main">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/insights" element={<InsightsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
 
-        <Route element={<Nav />}>
-          <Route path="/whats-on" element={<WhatsOnPage />} />
-          <Route path="/coming-soon" element={<ComingSoonPage />} />
-          <Route path="/watchlist" element={<WatchlistPage />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route element={<Nav />}>
+            <Route path="/whats-on" element={<WhatsOnPage />} />
+            <Route path="/coming-soon" element={<ComingSoonPage />} />
+            <Route path="/watchlist" element={<WatchlistPage />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
 
       <Footer />
     </div>
