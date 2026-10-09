@@ -55,6 +55,7 @@ const catalog = (kind: "SERIES" | "MOVIE", titles: string[]) => ({
                 score: null,
                 releaseYear: null,
                 availableOn: [netflix],
+                otherServices: [],
                 nextSeason: null,
               }
             : {
@@ -66,6 +67,7 @@ const catalog = (kind: "SERIES" | "MOVIE", titles: string[]) => ({
                 score: null,
                 releaseYear: null,
                 availableOn: [hulu],
+                otherServices: [],
               },
         ),
       },

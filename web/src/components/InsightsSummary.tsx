@@ -11,6 +11,7 @@ import { useWatchlist } from "../hooks/useWatchlist";
 import { comingSoonStats } from "../lib/comingSoon";
 import { cumulativeCosts } from "../lib/costChart";
 import { pathsForward, splitDone, type Insight } from "../lib/insights";
+import { formatDate } from "../lib/format";
 import { formatDollars } from "../lib/money";
 import {
   comingLevel,
@@ -28,8 +29,11 @@ import { monthlyCents } from "../lib/subscriptions";
  * Everything is worked out from the same plan and prices as the rest of
  * the app (useRotationPlan), so the numbers here match Renewals, Coming
  * Soon's Cost tab and the chart below.
+ *
+ * `children` go between the two: the page puts the user's services there,
+ * so what they pay for sits just above the steps that change it.
  */
-export function InsightsSummary() {
+export function InsightsSummary({ children }: { children?: ReactNode }) {
   const rotation = useRotationPlan();
   const { plan, priceOf, plansFor, payingNow, alwaysOn, providers, nameOf, hoursPerMonth, today } =
     rotation;
@@ -55,6 +59,11 @@ export function InsightsSummary() {
   );
 
   // Paths forward.
+  const termsCheckedOn =
+    providers
+      .map((p) => p.cancellation?.checkedOn)
+      .filter((d): d is string => Boolean(d))
+      .sort()[0] ?? null;
   const cancellationOf = (slug: string) =>
     providers.find((p) => p.slug === slug)?.cancellation ?? null;
   const wishlistOn = (slug: string) =>
@@ -178,6 +187,8 @@ export function InsightsSummary() {
         />
       </ul>
 
+      {children && <div className="insights__between">{children}</div>}
+
       <section className="panel paths" aria-labelledby="paths-title">
         <h2 id="paths-title" className="panel__title">
           Paths forward
@@ -212,6 +223,14 @@ export function InsightsSummary() {
               </>
             )}
           </>
+        )}
+        {/* How fresh the cancel advice is: the oldest check of any service's
+            terms. Checked by hand for now; the policy watcher, once built,
+            moves these dates on as it confirms nothing has changed. */}
+        {termsCheckedOn && (
+          <p className="panel__note paths__checked">
+            Cancellation terms last checked {formatDate(termsCheckedOn, true)}.
+          </p>
         )}
       </section>
     </>
@@ -256,7 +275,7 @@ function Level({ level, why, children }: { level: LevelValue; why: Why; children
   const reason = level ? why[level] : undefined;
   return (
     <span className="level" data-level={level ?? undefined} title={reason}>
-      {children}
+      {children && <div className="insights__between">{children}</div>}
       {reason && <span className="sr-only"> ({reason})</span>}
     </span>
   );

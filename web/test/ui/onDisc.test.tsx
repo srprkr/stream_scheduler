@@ -23,6 +23,7 @@ const film = (id: string, title: string, availableOn: (typeof netflix)[] = []) =
   posterUrl: null,
   onDisc: true,
   availableOn,
+  otherServices: [],
   score: null,
   releaseYear: null,
 });
@@ -85,6 +86,7 @@ const whatsOnMocks = [
             posterUrl: null,
             onDisc: true,
             availableOn: [],
+            otherServices: [],
             score: null,
             releaseYear: null,
             nextSeason: null,

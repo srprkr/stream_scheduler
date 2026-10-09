@@ -66,4 +66,21 @@ describe("Own / Want / Watchlist", () => {
     await user.click(screen.getByRole("button", { name: "Want Heat" }));
     expect(shelfOf("movie:949")).toBeNull();
   });
+
+  it("offers no watchlist for a disc-only title - owning it is the way to watch it", () => {
+    renderApp(<ShelfToggle item={heat} watchable={false} />);
+    expect(screen.getByRole("button", { name: "I own Heat" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Want Heat" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Add Heat to your watchlist" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the watchlist toggle on a disc-only title already listed, so it can come off", async () => {
+    const user = userEvent.setup();
+    library.shelve(heat, "watchlist");
+    renderApp(<ShelfToggle item={heat} watchable={false} />);
+    await user.click(screen.getByRole("button", { name: "Add Heat to your watchlist" }));
+    expect(shelfOf("movie:949")).toBeNull();
+  });
 });

@@ -321,3 +321,86 @@
     }
   }
 }
+
+// --- discs for your pause months ---------------------------------------------
+
+// Purchases in buying order: when, then what. The date column is a fixed
+// width so the titles line up down the list.
+.disc-plan {
+  margin-bottom: 24px;
+
+  // The wishlist's line when it covers the gaps; amber (__short) when not.
+  &__wishlist {
+    max-width: 75ch;
+    margin: 0 0 12px;
+    font-size: 0.875rem;
+    color: var(--muted);
+  }
+
+  // Text on the left at its readable width, the wishlist's tiles filling
+  // the rest; stacked once there's no room beside it.
+  &__body {
+    display: grid;
+    gap: 16px 32px;
+
+    @media (min-width: 960px) {
+      grid-template-columns: minmax(0, 75ch) minmax(0, 1fr);
+      align-items: start;
+    }
+  }
+
+  // The figures the sentences turn on: a size up, so they read at a glance.
+  &__figure {
+    font-size: 1.25rem;
+    color: var(--text);
+    // "118 h 12 m" reads as one figure; never split across lines.
+    white-space: nowrap;
+
+    // The library covers the gap: the green the app uses for "you're set".
+    &--good {
+      color: var(--soon);
+    }
+  }
+
+  &__tiles {
+    align-self: start;
+  }
+
+  // The disc budget: a figure to keep in mind, not a warning.
+  &__budget {
+    max-width: 75ch;
+    margin: 0 0 12px;
+    font-size: 0.875rem;
+  }
+
+  // The wishlist falls short: amber, as attention elsewhere is.
+  &__short {
+    max-width: 75ch;
+    margin: 0 0 12px;
+    font-size: 0.875rem;
+    color: #fbbf24;
+
+    a {
+      color: inherit;
+    }
+  }
+}
+
+// A quiet footnote under a panel: what a figure leaves out, and why.
+.panel__note {
+  max-width: 75ch;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+// Whatever the page puts between the figures and Paths forward (its
+// services): the same gap below it as between the other panels.
+.insights__between {
+  margin-bottom: 24px;
+}
+
+// Under Paths forward: how fresh the cancellation terms behind it are.
+.paths__checked {
+  margin-top: 12px;
+}

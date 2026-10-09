@@ -45,6 +45,9 @@ const CATALOG = graphql(`
         availableOn {
           ...ServiceLogo
         }
+        otherServices {
+          id
+        }
         ... on Series {
           nextSeason {
             ...SeasonScheduleFields
@@ -87,6 +90,9 @@ const DISC_CATALOG = graphql(`
         availableOn {
           ...ServiceLogo
         }
+        otherServices {
+          id
+        }
         ... on Series {
           nextSeason {
             ...SeasonScheduleFields
@@ -114,6 +120,9 @@ const SEARCH_MINE = graphql(`
       availableOn {
         ...ServiceLogo
       }
+      otherServices {
+        id
+      }
       ... on Series {
         nextSeason {
           ...SeasonScheduleFields
@@ -135,6 +144,9 @@ const SEARCH_ALL = graphql(`
       ...ScoreFields
       availableOn {
         ...ServiceLogo
+      }
+      otherServices {
+        id
       }
       ... on Series {
         nextSeason {

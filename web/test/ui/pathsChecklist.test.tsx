@@ -108,4 +108,11 @@ describe("Paths forward checklist", () => {
     expect(screen.getByRole("checkbox", { name: "Cancel Netflix now" })).not.toBeChecked();
     expect(screen.queryByRole("heading", { name: "Done" })).not.toBeInTheDocument();
   });
+
+  it("says when the cancellation terms behind its advice were last checked", async () => {
+    renderApp(<InsightsSummary />, { mocks });
+    expect(
+      await screen.findByText("Cancellation terms last checked Oct 5, 2026."),
+    ).toBeInTheDocument();
+  });
 });

@@ -15,6 +15,11 @@ export interface CatalogItem {
   /** Undefined while it's still loading: the slot keeps its height, empty. */
   availableOn: readonly LogoProvider[] | undefined;
   /**
+   * Untracked services that stream it (Starz, Crunchyroll), where known:
+   * the watchlist plans for those too, so they keep it watchable.
+   */
+  otherServices?: readonly { id: string }[];
+  /**
    * Services it's still to arrive on, shown after the current ones just the
    * same - where it sits (a "Coming soon" section) already says when.
    */
@@ -83,6 +88,13 @@ export function CatalogTile({
       <div className="tile-actions">
         <ShelfToggle
           ownable={item.onDisc}
+          // Streaming anywhere - a tracked service now or soon, or an
+          // untracked one - or unknown while it loads: the toggle stays.
+          watchable={
+            item.availableOn === undefined ||
+            logos.length > 0 ||
+            (item.otherServices?.length ?? 0) > 0
+          }
           inLibrary={inLibrary}
           item={{
             id: item.id,

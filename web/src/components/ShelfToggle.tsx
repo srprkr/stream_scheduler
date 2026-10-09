@@ -8,6 +8,10 @@ import { library, useLibrary } from "../hooks/useLibrary";
  *
  * - On disc (ownable): Own, Want and Watchlist - own a copy, plan to buy one,
  *   or just watch it on a service instead.
+ * - On disc only (ownable, not `watchable`): Own and Want. The watchlist is
+ *   for watching on a service, and no tracked service has it or is getting
+ *   it - owning a copy is the only way to see it. A title already on the
+ *   watchlist keeps the toggle, so it can be taken off.
  * - Streaming only: Watchlist. A digital "purchase" isn't ownership - it's a
  *   licence the store can lose - so these can only be watched on a service.
  *
@@ -31,11 +35,17 @@ import { library, useLibrary } from "../hooks/useLibrary";
 export function ShelfToggle({
   item,
   ownable = true,
+  watchable = true,
   inLibrary = false,
 }: {
   item: LibraryItem;
   /** False for streaming-only titles. Defaults to true where it's unknown. */
   ownable?: boolean;
+  /**
+   * False when no tracked service streams it or is getting it. Defaults to
+   * true where that's unknown, as in Home's search.
+   */
+  watchable?: boolean;
   /** On a library shelf: Own only, and ★ while the title is wanted. */
   inLibrary?: boolean;
 }) {
@@ -82,7 +92,7 @@ export function ShelfToggle({
           onClick={() => toggle("wanted")}
         />
       )}
-      {!inLibrary && watchlist}
+      {!inLibrary && (watchable || shelf === "watchlist") && watchlist}
     </div>
   );
 }

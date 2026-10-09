@@ -17,6 +17,7 @@ const item = (title: string, score: { average: number; votes: number } | null) =
   posterUrl: null,
   onDisc: false,
   availableOn: [netflix],
+  otherServices: [],
   score,
   releaseYear: 1995,
 });
