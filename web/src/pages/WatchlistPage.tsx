@@ -6,6 +6,8 @@ import { Renewals } from "../components/Renewals";
 import { WatchServices } from "../components/WatchServices";
 import { useHoursPerMonth } from "../hooks/useSettings";
 import { useSubscriptions } from "../hooks/useSubscriptions";
+import { removedLabel, useKeptOnScreen } from "../hooks/useKeptOnScreen";
+import { useLibrary } from "../hooks/useLibrary";
 import { useWatchlist } from "../hooks/useWatchlist";
 import { localToday, when } from "../lib/seasons";
 import { formatHours, formatMonths, libraryStats } from "../lib/stats";
@@ -30,25 +32,6 @@ export function WatchlistPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const today = localToday();
 
-  if (entries.length === 0) {
-    return (
-      <>
-        <header className="masthead">
-          <h1>Watchlist</h1>
-          <p>
-            Nothing here yet. Streaming-only titles have a + Watchlist button on What's On and
-            Coming Soon: add the ones you want to watch, and this page works out which services
-            you'd need, and for how long.
-          </p>
-        </header>
-        {/* Renewals need only the services paid for - with nothing to watch,
-            they're the advice that matters most: cancel, or turn off a
-            yearly renewal. Renders nothing without subscriptions. */}
-        <Renewals />
-      </>
-    );
-  }
-
   const total = libraryStats(
     [...titles.values()].map((t) => t.runtime),
     hoursPerMonth,
@@ -72,7 +55,35 @@ export function WatchlistPage() {
     .sort((a, b) => a.order - b.order)
     .map((x) => x.entry);
 
-  const tile = (entry: (typeof entries)[number], coming: boolean) => {
+  // A title taken off the watchlist stays, greyed, in its section until
+  // the page is left, so a slip can be undone where it happened. One that
+  // has only moved section (its details arrived) just moves.
+  const listed = new Set(entries.map((e) => e.id));
+  const gone = (id: string) => !listed.has(id);
+  const nowShown = useKeptOnScreen(watchNow, gone);
+  const comingShown = useKeptOnScreen(comingSoon, gone);
+  const library = useLibrary();
+
+  if (nowShown.length + comingShown.length === 0) {
+    return (
+      <>
+        <header className="masthead">
+          <h1>Watchlist</h1>
+          <p>
+            Nothing here yet. Streaming-only titles have a + Watchlist button on What's On and
+            Coming Soon: add the ones you want to watch, and this page works out which services
+            you'd need, and for how long.
+          </p>
+        </header>
+        {/* Renewals need only the services paid for - with nothing to watch,
+            they're the advice that matters most: cancel, or turn off a
+            yearly renewal. Renders nothing without subscriptions. */}
+        <Renewals />
+      </>
+    );
+  }
+
+  const tile = (entry: (typeof entries)[number], coming: boolean, removed: boolean) => {
     const detail = byId.get(entry.id);
     const t = titles.get(entry.id);
     // A film on its way says when, where a series says where its season is.
@@ -107,7 +118,8 @@ export function WatchlistPage() {
               : [],
           nextSeason: detail?.__typename === "Series" ? detail.nextSeason : null,
         }}
-        note={arrival ? `Arrives ${when(arrival, today)}` : null}
+        note={!removed && arrival ? `Arrives ${when(arrival, today)}` : null}
+        removed={removed ? removedLabel(library.find((e) => e.id === entry.id)) : null}
         onOpen={() => setOpenId(entry.id)}
       />
     );
@@ -138,16 +150,19 @@ export function WatchlistPage() {
       <Renewals />
 
       {[
-        { heading: "Available now", list: watchNow, coming: false },
-        { heading: "Coming soon", list: comingSoon, coming: true },
+        { heading: "Available now", list: nowShown, coming: false },
+        { heading: "Coming soon", list: comingShown, coming: true },
       ].map(
         ({ heading, list, coming }) =>
           list.length > 0 && (
             <section key={heading} className="shelf">
               <h2 className="shelf__title">
-                {heading} <span className="shelf__count">{list.length}</span>
+                {heading}{" "}
+                <span className="shelf__count">{list.filter((x) => !x.removed).length}</span>
               </h2>
-              <ul className="shelf__grid">{list.map((e) => tile(e, coming))}</ul>
+              <ul className="shelf__grid">
+                {list.map(({ item, removed }) => tile(item, coming, removed))}
+              </ul>
             </section>
           ),
       )}

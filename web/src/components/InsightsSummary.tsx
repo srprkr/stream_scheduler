@@ -48,7 +48,13 @@ export function InsightsSummary({ children }: { children?: ReactNode }) {
   // At a glance, coloured by the user's own thresholds (Settings).
   const monthMinutes = hoursPerMonth * 60;
   const [levels] = useLevels();
-  const { points } = cumulativeCosts(plan, priceOf, payingNow, alwaysOn);
+  const { points } = cumulativeCosts(
+    plan,
+    priceOf,
+    rotation.billing.monthly,
+    rotation.billing.alwaysOn,
+    rotation.billing.yearly,
+  );
   const end = points.at(-1);
   const saved = end ? end.keep - end.plan : 0;
   const coming = comingSoonStats([...titles.values()], new Set(mine.map((s) => s.slug)), today);

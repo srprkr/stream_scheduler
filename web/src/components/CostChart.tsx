@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useRotationPlan } from "../hooks/useRotationPlan";
-import { cumulativeCosts, niceTicks, type CostPoint } from "../lib/costChart";
+import {
+  cumulativeCosts,
+  monthlyCosts,
+  niceTicks,
+  stepPath,
+  type CostPoint,
+} from "../lib/costChart";
 import { formatDollars } from "../lib/money";
 import { listTitles } from "../lib/replaces";
 import { formatDate } from "../lib/format";
@@ -9,6 +15,13 @@ import { when } from "../lib/seasons";
 import { MaxWait } from "./MaxWait";
 
 const HEIGHT = 260;
+
+type CostView = "total" | "month";
+
+const VIEWS: { id: CostView; label: string }[] = [
+  { id: "total", label: "Running total" },
+  { id: "month", label: "Per month" },
+];
 // Room for the y-axis labels on the left and the end-of-line labels on the right.
 const MARGIN = { top: 16, right: 132, bottom: 40, left: 56 };
 
@@ -29,10 +42,20 @@ const axisDollars = (cents: number) => `$${Math.round(cents / 100).toLocaleStrin
  */
 export function CostChart() {
   const rotation = useRotationPlan();
-  const { plan, priceOf, payingNow, alwaysOn, alwaysOnSlugs, nameOf, today } = rotation;
-  const { points, unpriced } = cumulativeCosts(plan, priceOf, payingNow, alwaysOn);
+  const { plan, priceOf, payingNow, alwaysOn, alwaysOnSlugs, nameOf, today, billing } = rotation;
+  const { points, unpriced } = cumulativeCosts(
+    plan,
+    priceOf,
+    billing.monthly,
+    billing.alwaysOn,
+    billing.yearly,
+  );
 
   const [showTable, setShowTable] = useState(false);
+  // Running totals show the saving build up; per month shows each month's
+  // bill - the paused months as valleys, a yearly renewal as a spike.
+  const [view, setView] = useState<CostView>("total");
+  const shownPoints = view === "total" ? points : monthlyCosts(points);
   const last = points.at(-1);
   const saved = last ? last.keep - last.plan : 0;
   const months = last?.index ?? 0;
@@ -65,7 +88,7 @@ export function CostChart() {
             )}
           </p>
           <p className="panel__lede">
-            Running totals from today.
+            {view === "total" ? "Running totals from today." : "What each month costs."}
             {payingNow + alwaysOn === 0 &&
               " You haven't said which services you pay for, so keeping everything costs nothing here."}
             {alwaysOn > 0 &&
@@ -77,6 +100,21 @@ export function CostChart() {
                 unpriced === 1 ? "isn't" : "aren't"
               } counted.`}
           </p>
+
+          <div className="cost-chart__views" role="group" aria-label="View">
+            {VIEWS.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                className={`tag${view === v.id ? " tag--on" : ""}`}
+                data-label={v.label}
+                aria-pressed={view === v.id}
+                onClick={() => setView(v.id)}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
 
           <ul className="cost-chart__legend">
             <li>
@@ -93,7 +131,7 @@ export function CostChart() {
             </li>
           </ul>
 
-          <CostLines points={points} today={today} nameOf={nameOf} />
+          <CostLines points={shownPoints} view={view} today={today} nameOf={nameOf} />
 
           <button
             type="button"
@@ -103,7 +141,9 @@ export function CostChart() {
           >
             {showTable ? "Hide table" : "Show as a table"}
           </button>
-          {showTable && <CostTable points={points} today={today} nameOf={nameOf} />}
+          {showTable && (
+            <CostTable points={shownPoints} view={view} today={today} nameOf={nameOf} />
+          )}
         </>
       )}
 
@@ -115,10 +155,13 @@ export function CostChart() {
 /** The SVG itself, sized to its container's width. Exported for a render check. */
 export function CostLines({
   points,
+  view = "total",
   today,
   nameOf,
 }: {
+  /** Running totals (one more point than months), or one point a month. */
   points: CostPoint[];
+  view?: CostView;
   today: string;
   nameOf: (key: string) => string;
 }) {
@@ -145,8 +188,12 @@ export function CostLines({
   const yMax = ticks.at(-1) || 1;
   const x = (i: number) => MARGIN.left + (n === 0 ? 0 : (i / n) * innerW);
   const y = (cents: number) => MARGIN.top + innerH - (cents / yMax) * innerH;
+  // Running totals as steps - each month's charge lands at once (stepPath).
+  // Per month, a line through each month's bill: its hills and valleys.
   const path = (key: "keep" | "plan") =>
-    points.map((p, i) => `${i === 0 ? "M" : "L"}${x(p.index)},${y(p[key])}`).join(" ");
+    view === "total"
+      ? stepPath(points, key, x, y)
+      : points.map((p, i) => `${i === 0 ? "M" : "L"}${x(p.index)},${y(p[key])}`).join(" ");
 
   // End labels, nudged apart if the lines finish close together.
   const end = points[n] as CostPoint;
@@ -184,7 +231,11 @@ export function CostLines({
         width={width}
         height={HEIGHT}
         role="img"
-        aria-label={`Running cost over ${n} months: keeping everything reaches ${formatDollars(end.keep)}, your plan ${formatDollars(end.plan)}.`}
+        aria-label={
+          view === "total"
+            ? `Running cost over ${n} months: keeping everything reaches ${formatDollars(end.keep)}, your plan ${formatDollars(end.plan)}.`
+            : `Cost each month over ${points.length} months: keeping everything up to ${formatDollars(Math.max(...points.map((p) => p.keep)))}, your plan up to ${formatDollars(Math.max(...points.map((p) => p.plan)))}.`
+        }
         tabIndex={0}
         onPointerMove={(e) => pick(e.clientX)}
         onPointerLeave={() => setActive(null)}
@@ -244,6 +295,24 @@ export function CostLines({
         })}
         <path className="cost-chart__keep" d={path("keep")} />
         <path className="cost-chart__plan" d={path("plan")} />
+        {/* Per month, a dot on each month's bill, so a single month reads. */}
+        {view === "month" &&
+          points.map((p) => (
+            <g key={p.index} aria-hidden="true">
+              <circle
+                className="cost-chart__mark cost-chart__dot--keep"
+                cx={x(p.index)}
+                cy={y(p.keep)}
+                r="2.5"
+              />
+              <circle
+                className="cost-chart__mark cost-chart__dot--plan"
+                cx={x(p.index)}
+                cy={y(p.plan)}
+                r="2.5"
+              />
+            </g>
+          ))}
 
         {/* Direct labels at the ends, so neither line relies on colour. */}
         <text className="cost-chart__end" x={x(n) + 8} y={keepY} dy="0.32em">
@@ -294,14 +363,16 @@ export function CostLines({
               <line className="cost-chart__keep" x1="1" y1="3" x2="15" y2="3" />
             </svg>
             <strong>{formatDollars(shown.keep)}</strong> keeping everything
+            {view === "month" && " this month"}
           </p>
           <p>
             <svg width="16" height="6" aria-hidden="true">
               <line className="cost-chart__plan" x1="1" y1="3" x2="15" y2="3" />
             </svg>
             <strong>{formatDollars(shown.plan)}</strong> on the plan
+            {view === "month" && " this month"}
           </p>
-          {shown.index < n && (
+          {(view === "month" || shown.index < n) && (
             <p className="cost-chart__tip-note">
               {shown.service ? `This month: ${nameOf(shown.service)}` : "This month: nothing"}
             </p>
@@ -315,13 +386,23 @@ export function CostLines({
 /** Every number in the chart, readable without hovering. */
 function CostTable({
   points,
+  view,
   today,
   nameOf,
 }: {
   points: CostPoint[];
+  view: CostView;
   today: string;
   nameOf: (key: string) => string;
 }) {
+  // Each row is a month: its bill, or the running total once it's paid.
+  const rows =
+    view === "month"
+      ? points
+      : points.slice(0, -1).map((p, i) => {
+          const after = points[i + 1] as CostPoint;
+          return { ...p, keep: after.keep, plan: after.plan };
+        });
   return (
     <table className="cost-chart__table">
       <thead>
@@ -333,17 +414,14 @@ function CostTable({
         </tr>
       </thead>
       <tbody>
-        {points.slice(0, -1).map((p, i) => {
-          const after = points[i + 1] as CostPoint;
-          return (
-            <tr key={p.index}>
-              <td>{when(p.date, today)}</td>
-              <td>{p.service ? nameOf(p.service) : "Nothing"}</td>
-              <td>{formatDollars(after.keep)}</td>
-              <td>{formatDollars(after.plan)}</td>
-            </tr>
-          );
-        })}
+        {rows.map((p) => (
+          <tr key={p.index}>
+            <td>{when(p.date, today)}</td>
+            <td>{p.service ? nameOf(p.service) : "Nothing"}</td>
+            <td>{formatDollars(p.keep)}</td>
+            <td>{formatDollars(p.plan)}</td>
+          </tr>
+        ))}
       </tbody>
     </table>
   );

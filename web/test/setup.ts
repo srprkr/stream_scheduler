@@ -21,6 +21,15 @@ if (typeof window !== "undefined") {
     };
   }
 
+  // jsdom does no layout, so it has no ResizeObserver; the cost chart sizes
+  // itself with one. A stand-in that never reports: the chart keeps its
+  // starting width, which is all a test needs.
+  window.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+
   // Each test starts from an empty page and empty browser storage.
   afterEach(() => {
     cleanup();

@@ -1,3 +1,4 @@
+import type { YearlyRenewal } from "./costChart";
 import type { Plan } from "./planner";
 import { addDays } from "./renewals";
 
@@ -134,18 +135,25 @@ export function planDiscs({
  * months past the plan's end pause everything. A plan month with no known
  * price is left out of the saving and counted in `unpriced`. Services kept
  * whatever happens cost the same either way, so they don't enter into it.
+ * A yearly plan saves its whole price if it would renew in the window - the
+ * plan turns its auto-renew off - and nothing if it renews after.
  */
 export function windowSaving(
   plan: Plan,
   today: string,
   priceOf: (key: string) => number | null,
   payingNow: number,
+  yearly: readonly YearlyRenewal[] = [],
 ): { cents: number; unpriced: number } {
   let cents = 0;
   let unpriced = 0;
   for (let i = 0; i < DISC_PLAN_MONTHS; i++) {
     const start = addDays(today, i * MONTH_DAYS);
     const service = plan.months.find((m) => m.start === start)?.service ?? null;
+    const end = addDays(start, MONTH_DAYS);
+    for (const y of yearly) {
+      if (!y.leftOut && y.renewsOn >= start && y.renewsOn < end) cents += y.cents;
+    }
     const price = service ? priceOf(service) : 0;
     if (price === null) {
       unpriced++;

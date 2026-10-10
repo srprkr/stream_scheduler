@@ -108,3 +108,13 @@ describe("windowSaving", () => {
     });
   });
 });
+
+describe("windowSaving with a yearly plan", () => {
+  it("saves a yearly plan's whole price when it would renew in the window", () => {
+    const renewing = [{ renewsOn: "2026-11-20", cents: 13999, leftOut: false }];
+    expect(windowSaving(plan(), today, () => 0, 0, renewing).cents).toBe(13999);
+    // After the window it's already paid: nothing to save.
+    const later = [{ renewsOn: "2027-09-01", cents: 13999, leftOut: false }];
+    expect(windowSaving(plan(), today, () => 0, 0, later).cents).toBe(0);
+  });
+});

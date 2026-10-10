@@ -3,6 +3,8 @@ import { useQuery } from "@apollo/client/react";
 import { graphql } from "../generated";
 import { planRotation, type PlanService } from "../lib/planner";
 import { localToday } from "../lib/seasons";
+import type { YearlyRenewal } from "../lib/costChart";
+import { upcomingRenewal } from "../lib/renewals";
 import { monthlyCents, monthlySpend } from "../lib/subscriptions";
 import { stillToCome, watchlistByService } from "../lib/watchlist";
 import { useHoursPerMonth, useMaxWaitMonths } from "./useSettings";
@@ -106,6 +108,27 @@ export function useRotationPlan() {
     return plansFor(key).find((p) => p.isDefault)?.monthlyCents ?? null;
   };
   const spend = monthlySpend(mine, plansFor);
+
+  // What the cost chart charges, month by month. A yearly plan with a known
+  // price is charged in full when it next renews - not a twelfth a month,
+  // which would smooth away the renewal - so it leaves the monthly totals.
+  const yearlyKnown = (s: (typeof mine)[number]) =>
+    s.billing?.cycle === "annual" && s.billing.cents !== null;
+  const monthlyOnly = monthlySpend(
+    mine.filter((s) => !yearlyKnown(s)),
+    plansFor,
+  );
+  const yearly: YearlyRenewal[] = mine.flatMap((s) =>
+    s.billing?.cycle === "annual" && s.billing.cents !== null
+      ? [
+          {
+            renewsOn: upcomingRenewal(s.billing, today),
+            cents: s.billing.cents,
+            leftOut: Boolean(s.leftOut),
+          },
+        ]
+      : [],
+  );
   const planFor = (waitMonths: number) =>
     planRotation(planServices, {
       today,
@@ -150,6 +173,11 @@ export function useRotationPlan() {
     alwaysOnSlugs,
     /** Watchlist titles on always-kept services: free to watch any month. */
     anyTime,
+    /**
+     * What the cost chart charges: monthly bills (kept and always-kept) and
+     * yearly renewals on their dates. See cumulativeCosts.
+     */
+    billing: { monthly: monthlyOnly.cents, alwaysOn: monthlyOnly.leftOutCents, yearly },
     hoursPerMonth,
     maxWaitMonths,
     setMaxWaitMonths,

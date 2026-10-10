@@ -191,7 +191,33 @@
     gap: 8px;
   }
 
+  // Taken off during this visit: greyed in place, its toggles still live.
+  &__item--removed {
+    .shelf__open img,
+    .shelf__poster--empty,
+    .shelf__name,
+    .shelf__next,
+    .shelf__services {
+      opacity: 0.35;
+    }
+  }
+
+  // "Removed" / "Now owned", over the top of a greyed poster.
+  &__removed {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 1;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--bg);
+    background: var(--text);
+  }
+
   &__open {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 6px;

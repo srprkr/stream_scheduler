@@ -138,7 +138,7 @@ describe("Insights: discs for your pause months", () => {
     renderApp(<DiscPlan />, { mocks: [details, planServicesMock()] });
     expect(
       await paragraph(/saved from pausing subscriptions for the next 6 months/),
-    ).toHaveTextContent("Keep what you spend on discs below $53.94");
+    ).toHaveTextContent("Keep what you spend on discs lower than $53.94");
   });
 
   it("asks for the services paid for before it can set a budget", async () => {

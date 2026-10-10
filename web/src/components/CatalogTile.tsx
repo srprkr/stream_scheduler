@@ -43,6 +43,7 @@ export function CatalogTile({
   inLibrary = false,
   flagNotStreaming = false,
   disc = false,
+  removed = null,
 }: {
   item: CatalogItem;
   onOpen: () => void;
@@ -57,6 +58,12 @@ export function CatalogTile({
   flagNotStreaming?: boolean;
   /** Mark it On disc, after any services: listed because a disc is how to watch it. */
   disc?: boolean;
+  /**
+   * Taken off this view's shelf during the visit (useKeptOnScreen): what
+   * happened - "Removed", "Now owned". The tile stays where it was, greyed,
+   * with every toggle offered, so a slip can be put right on the spot.
+   */
+  removed?: string | null;
 }) {
   // Where it streams, then where it's coming - each service once: a new
   // season of a show on Prime is still just Prime.
@@ -64,7 +71,11 @@ export function CatalogTile({
     (p, i, all) => all.findIndex((x) => x.id === p.id) === i,
   );
   return (
-    <li className="shelf__item">
+    <li className={`shelf__item${removed ? " shelf__item--removed" : ""}`}>
+      {/* Said aloud when the tile is taken off, since it doesn't vanish. */}
+      <span className="sr-only" role="status">
+        {removed ? `${item.title}: ${removed.toLowerCase()}` : ""}
+      </span>
       {/* Renders even while loading, at a fixed height, so every poster in
           a row starts on the same line whatever its slot is showing. */}
       <div className="shelf__services">
@@ -76,6 +87,11 @@ export function CatalogTile({
       {/* Poster, then the toggles, then the title and season line: toggles
           sit on one line across a row because every poster is the same height. */}
       <button className="shelf__open" onClick={onOpen} aria-label={item.title}>
+        {removed && (
+          <span className="shelf__removed" aria-hidden="true">
+            {removed}
+          </span>
+        )}
         {item.posterUrl ? (
           <img src={item.posterUrl} alt="" loading="lazy" />
         ) : (
@@ -95,7 +111,8 @@ export function CatalogTile({
             logos.length > 0 ||
             (item.otherServices?.length ?? 0) > 0
           }
-          inLibrary={inLibrary}
+          // A removed tile offers every shelf, so it can go back to any.
+          inLibrary={inLibrary && !removed}
           item={{
             id: item.id,
             kind: item.__typename,

@@ -15,6 +15,19 @@
     }
   }
 
+  // Running total / Per month.
+  &__views {
+    display: flex;
+    gap: 6px;
+    margin: 0 0 10px;
+  }
+
+  // Per month, a small mark on each month's bill: no outline, unlike the
+  // crosshair's dots, so a row of them stays light.
+  &__mark {
+    stroke: none;
+  }
+
   &__legend {
     display: flex;
     flex-wrap: wrap;
@@ -339,12 +352,16 @@
 
   // Text on the left at its readable width, the wishlist's tiles filling
   // the rest; stacked once there's no room beside it.
+  // The wishlist's tiles on the left, sized to fit them (up to four
+  // across, --tile-cols), with the text beside them at its readable width;
+  // both start just under the title. Stacked on a narrow screen, text first.
   &__body {
     display: grid;
     gap: 16px 32px;
 
     @media (min-width: 960px) {
-      grid-template-columns: minmax(0, 75ch) minmax(0, 1fr);
+      grid-template-columns: max-content minmax(0, 75ch);
+      justify-content: start;
       align-items: start;
     }
   }
@@ -364,6 +381,11 @@
 
   &__tiles {
     align-self: start;
+
+    @media (min-width: 960px) {
+      order: -1;
+      grid-template-columns: repeat(var(--tile-cols, 1), 150px);
+    }
   }
 
   // The disc budget: a figure to keep in mind, not a warning.

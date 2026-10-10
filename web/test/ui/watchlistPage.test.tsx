@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { WatchlistDetailsDocument } from "../../src/generated/graphql";
@@ -127,5 +128,21 @@ describe("Watchlist page", () => {
     expect(await screen.findByText(/Nothing here yet/)).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Renewals" })).toBeInTheDocument();
     expect(screen.getByText("Go monthly")).toBeInTheDocument();
+  });
+
+  it("keeps a title taken off the watchlist in place, greyed, until the page is left", async () => {
+    const user = userEvent.setup();
+    renderApp(<WatchlistPage />, { mocks: [details, planServicesMock()], route: "/watchlist" });
+    const now = (await screen.findByRole("heading", { name: /Available now/ })).closest(
+      "section",
+    ) as HTMLElement;
+
+    await user.click(
+      within(now).getByRole("button", { name: "Add Airing Show to your watchlist" }),
+    );
+
+    const tile = within(now).getByRole("button", { name: "Airing Show" }).closest("li");
+    expect(tile).toHaveClass("shelf__item--removed");
+    expect(within(tile as HTMLElement).getByText("Removed")).toBeInTheDocument();
   });
 });
