@@ -19,8 +19,8 @@ const HEIGHT = 260;
 type CostView = "total" | "month";
 
 const VIEWS: { id: CostView; label: string }[] = [
-  { id: "total", label: "Running total" },
   { id: "month", label: "Per month" },
+  { id: "total", label: "Running total" },
 ];
 // Room for the y-axis labels on the left and the end-of-line labels on the right.
 const MARGIN = { top: 16, right: 132, bottom: 40, left: 56 };
@@ -54,7 +54,7 @@ export function CostChart() {
   const [showTable, setShowTable] = useState(false);
   // Running totals show the saving build up; per month shows each month's
   // bill - the paused months as valleys, a yearly renewal as a spike.
-  const [view, setView] = useState<CostView>("total");
+  const [view, setView] = useState<CostView>("month");
   const shownPoints = view === "total" ? points : monthlyCosts(points);
   const last = points.at(-1);
   const saved = last ? last.keep - last.plan : 0;
