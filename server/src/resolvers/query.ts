@@ -1,5 +1,6 @@
 import type { QueryResolvers } from "../generated/graphql.js";
 import { decodeCursor, encodeCursor } from "../cursor.js";
+import type { Genre } from "../genres.js";
 import type { CatalogFilters } from "../sources/types.js";
 
 /** One page of upstream matches: what a service-filtered search chooses from. */
@@ -89,10 +90,12 @@ function filtersFrom(args: {
   minScore?: number | null;
   fromYear?: number | null;
   toYear?: number | null;
+  genre?: Genre | null;
 }): CatalogFilters {
   return {
     minScore: args.minScore ?? null,
     fromYear: args.fromYear ?? null,
     toYear: args.toYear ?? null,
+    genre: args.genre ?? null,
   };
 }

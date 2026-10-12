@@ -81,6 +81,7 @@ export function movieRecord(
     seasonCount: null,
     score: score(movie),
     releaseYear: firstRelease ? year(movie.release_date) : null,
+    genreIds: genreIdsOf(movie),
   };
 }
 
@@ -100,7 +101,13 @@ export function seriesRecord(
     seasonCount: series.number_of_seasons ?? null,
     score: score(series),
     releaseYear: year(series.first_air_date),
+    genreIds: genreIdsOf(series),
   };
+}
+
+/** A list result's genre_ids, or a detail's genres. */
+function genreIdsOf(item: { genre_ids?: number[]; genres?: { id: number }[] }): number[] {
+  return item.genre_ids ?? item.genres?.map((g) => g.id) ?? [];
 }
 
 /** No votes, no score: TMDB reports 0.0 for a title nobody has rated. */

@@ -145,3 +145,24 @@ test("the footer sits at the bottom of a short page", async ({ page }) => {
   // At the bottom, less the page's own bottom padding - not halfway up.
   expect(2400 - (footer.y + footer.height)).toBeLessThanOrEqual(40);
 });
+
+test("Sort comes after the filters, which fold on a phone", async ({ page }, info) => {
+  await page.goto("/whats-on");
+  const sort = page.getByRole("combobox", { name: "Sort" });
+  const genre = page.getByRole("combobox", { name: "Genre" });
+  const fold = page.getByRole("button", { name: /^Narrow:/ });
+  await expect(sort).toBeVisible();
+  if (info.project.name === "desktop") {
+    await expect(fold).toBeHidden();
+    const released = (await page.getByRole("combobox", { name: "Released" }).boundingBox())!;
+    const sortBox = (await sort.boundingBox())!;
+    expect(sortBox.x).toBeGreaterThan(released.x);
+    // At the row's right end, not just after the filters.
+    const row = (await page.locator(".catalog__options").boundingBox())!;
+    expect(row.x + row.width - (sortBox.x + sortBox.width)).toBeLessThanOrEqual(2);
+  } else {
+    await expect(genre).toBeHidden();
+    await fold.click();
+    await expect(genre).toBeVisible();
+  }
+});

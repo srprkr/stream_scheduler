@@ -282,7 +282,6 @@ $filters-fold: 1100px;
     // Pushes itself and the type group to the row's right edge.
     &__pipe--end {
       display: block;
-      margin-left: auto;
     }
   }
 
@@ -319,8 +318,64 @@ $filters-fold: 1100px;
 }
 
 // Sort, score and year, side by side; they wrap on a narrow screen.
+// Score, genre and year on the left, Sort at the right end. On a phone the
+// three filters fold behind a "Narrow: ..." button, beside Sort, and open
+// on a line of their own below.
+$narrow-fold: 640px;
+
 .catalog__options {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px 20px;
+  // The controls line their children up at their own width; this row takes
+  // the full width, so there's room to push Sort to the end.
+  justify-self: stretch;
+}
+
+// Between the filters and Sort, as between the groups of the row above.
+// Pushes itself and Sort to the right end.
+.catalog__pipe {
+  color: var(--border);
+  font-size: 1.25rem;
+  line-height: 1;
+  user-select: none;
+}
+
+.catalog__narrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+
+  @media (max-width: $narrow-fold) {
+    order: 3;
+    flex-basis: 100%;
+
+    &[data-open="false"] {
+      display: none;
+    }
+  }
+}
+
+.catalog__narrow-toggle {
+  display: none;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+
+  @media (max-width: $narrow-fold) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--soon);
+    outline-offset: 2px;
+  }
 }

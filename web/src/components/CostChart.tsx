@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { useRotationPlan } from "../hooks/useRotationPlan";
 import {
@@ -169,10 +169,14 @@ export function CostLines({
   const [width, setWidth] = useState(640);
   const [active, setActive] = useState<number | null>(null);
 
-  // Redraw at the container's width, so text stays its real size on any screen.
-  useEffect(() => {
+  // Redraw at the container's width, so text stays its real size on any
+  // screen. Measured before the first paint, too: drawn at the starting
+  // 640px on a phone, the chart would push the page sideways for a frame.
+  useLayoutEffect(() => {
     const el = box.current;
     if (!el) return;
+    const measured = Math.round(el.getBoundingClientRect().width);
+    if (measured > 0) setWidth(Math.max(280, measured));
     const observer = new ResizeObserver(([entry]) => {
       if (entry) setWidth(Math.max(280, Math.round(entry.contentRect.width)));
     });

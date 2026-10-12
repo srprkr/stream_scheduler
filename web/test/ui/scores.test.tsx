@@ -77,6 +77,7 @@ const catalog = (kind: "SERIES" | "MOVIE", extra: Record<string, unknown>, title
       minScore: null,
       fromYear: null,
       toYear: null,
+      genre: null,
       ...extra,
     },
   },
@@ -106,6 +107,7 @@ describe("What's On: sort, score and year", () => {
             minScore: null,
             fromYear: null,
             toYear: null,
+            genre: null,
           },
         },
         result: {
@@ -124,5 +126,75 @@ describe("What's On: sort, score and year", () => {
     const heat = await screen.findByText("Heat");
     expect(within(heat.closest("li") as HTMLElement).getByText("★", { exact: false })).toBeTruthy();
     expect(screen.queryByText("Anything")).not.toBeInTheDocument();
+  });
+
+  it("asks the server for the chosen genre", async () => {
+    const user = userEvent.setup();
+    saveSubscriptions([{ slug: "netflix", choice: { planId: "x" } }]);
+    const mocks = [
+      serviceNames(netflix),
+      catalog("MOVIE", {}, ["Anything"]),
+      catalog("SERIES", {}, []),
+      catalog("MOVIE", { genre: "CRIME" }, ["Heat"]),
+      catalog("SERIES", { genre: "CRIME" }, []),
+    ];
+    renderApp(<WhatsOnPage />, { mocks, route: "/whats-on" });
+    await screen.findByText("Anything");
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Genre" }), "Crime");
+    expect(await screen.findByText("Heat")).toBeInTheDocument();
+    expect(screen.queryByText("Anything")).not.toBeInTheDocument();
+    // Genres TMDB has for one kind only say so.
+    expect(screen.getByRole("option", { name: "Horror (films)" })).toBeInTheDocument();
+  });
+
+  it("names the filters when nothing matches, and sets them back to Any", async () => {
+    const user = userEvent.setup();
+    saveSubscriptions([{ slug: "netflix", choice: { planId: "x" } }]);
+    const mocks = [
+      serviceNames(netflix),
+      catalog("MOVIE", {}, ["Heat"]),
+      catalog("SERIES", {}, []),
+      catalog("MOVIE", { genre: "WESTERN", minScore: 8 }, []),
+      catalog("SERIES", { genre: "WESTERN", minScore: 8 }, []),
+      catalog("MOVIE", { minScore: 8 }, ["Heat"]),
+      catalog("SERIES", { minScore: 8 }, []),
+    ];
+    renderApp(<WhatsOnPage />, { mocks, route: "/whats-on" });
+    await screen.findByText("Heat");
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Score" }), "8+");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Genre" }), "Western");
+
+    expect(
+      await screen.findByText(/Filtered by Score 8\+, Genre: Western - if a title you expect/),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Set filters to Any" }));
+    expect(await screen.findByText("Heat")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Genre" })).toHaveValue("");
+    expect(screen.getByRole("combobox", { name: "Score" })).toHaveValue("");
+  });
+
+  it("folds the filters behind a button that names the ones set", async () => {
+    const user = userEvent.setup();
+    saveSubscriptions([{ slug: "netflix", choice: { planId: "x" } }]);
+    const mocks = [
+      serviceNames(netflix),
+      catalog("MOVIE", {}, ["Heat"]),
+      catalog("SERIES", {}, []),
+      catalog("MOVIE", { genre: "WESTERN" }, ["Heat"]),
+      catalog("SERIES", { genre: "WESTERN" }, []),
+    ];
+    renderApp(<WhatsOnPage />, { mocks, route: "/whats-on" });
+    await screen.findByText("Heat");
+
+    const fold = screen.getByRole("button", { name: /^Narrow:/ });
+    expect(fold).toHaveTextContent("Narrow: Any");
+    expect(fold).toHaveAttribute("aria-expanded", "false");
+    await user.click(fold);
+    expect(fold).toHaveAttribute("aria-expanded", "true");
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Genre" }), "Western");
+    expect(fold).toHaveTextContent("Narrow: Western");
   });
 });

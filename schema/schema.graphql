@@ -50,6 +50,38 @@ enum CatalogSort {
 }
 
 """
+A genre, one list for films and series alike: TMDB tags them from two
+different lists, and the server maps both onto these. A few exist for one
+kind only - TMDB has no TV "Horror", and no film "Reality".
+"""
+enum Genre {
+  "Action and adventure."
+  ACTION
+  ANIMATION
+  COMEDY
+  CRIME
+  DOCUMENTARY
+  DRAMA
+  "Family and kids."
+  FAMILY
+  "Films only."
+  HORROR
+  "Films only."
+  MUSIC
+  "Mystery and thriller."
+  MYSTERY
+  "Series only."
+  REALITY
+  "Films only."
+  ROMANCE
+  "Science fiction and fantasy."
+  SCIFI
+  "War, history and politics."
+  WAR
+  WESTERN
+}
+
+"""
 Requested image dimension. The source maps this onto whatever size buckets
 its upstream serves: a grid and a detail page want different sizes of one
 image.
@@ -224,6 +256,9 @@ interface MediaItem {
   releases, not first releases.
   """
   releaseYear: Int
+
+  "Its genres, as the app's one list. Empty when TMDB has tagged none."
+  genres: [Genre!]!
 }
 
 type Movie implements MediaItem {
@@ -240,6 +275,7 @@ type Movie implements MediaItem {
   onDisc: Boolean!
   score: Score
   releaseYear: Int
+  genres: [Genre!]!
 
   runtimeMinutes: Int
 }
@@ -258,6 +294,7 @@ type Series implements MediaItem {
   onDisc: Boolean!
   score: Score
   releaseYear: Int
+  genres: [Genre!]!
   seasonCount: Int
   nextSeason: SeasonSchedule
 
@@ -484,6 +521,8 @@ type Query {
     fromYear: Int
     "Keep titles first released in or before this year."
     toYear: Int
+    "Keep titles of this genre."
+    genre: Genre
   ): CatalogPage!
 
   """
@@ -504,6 +543,8 @@ type Query {
     fromYear: Int
     "Keep titles first released in or before this year."
     toYear: Int
+    "Keep titles of this genre."
+    genre: Genre
   ): CatalogPage!
 
   providers: [Provider!]!

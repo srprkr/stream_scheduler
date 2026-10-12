@@ -1,5 +1,5 @@
 import { skipToken, useQuery } from "@apollo/client/react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { BrowseFilters } from "../components/BrowseFilters";
 import { CatalogTile } from "../components/CatalogTile";
@@ -8,7 +8,7 @@ import { SearchScope } from "../components/SearchScope";
 import { WatchlistMini } from "../components/WatchlistMini";
 import { TitleDialog } from "../components/TitleDialog";
 import { graphql } from "../generated";
-import type { CatalogQuery, CatalogSort } from "../generated/graphql";
+import type { CatalogQuery, CatalogSort, Genre } from "../generated/graphql";
 import { useDebounced } from "../hooks/useDebounced";
 import { useLibrary } from "../hooks/useLibrary";
 import { useBrowseFilters, useSearchScope, type Kind } from "../hooks/useBrowseFilters";
@@ -24,6 +24,7 @@ const CATALOG = graphql(`
     $minScore: Float
     $fromYear: Int
     $toYear: Int
+    $genre: Genre
   ) {
     catalog(
       providerSlugs: $providerSlugs
@@ -33,6 +34,7 @@ const CATALOG = graphql(`
       minScore: $minScore
       fromYear: $fromYear
       toYear: $toYear
+      genre: $genre
     ) {
       nextCursor
       items {
@@ -70,6 +72,7 @@ const DISC_CATALOG = graphql(`
     $minScore: Float
     $fromYear: Int
     $toYear: Int
+    $genre: Genre
   ) {
     discCatalog(
       kind: $kind
@@ -78,6 +81,7 @@ const DISC_CATALOG = graphql(`
       minScore: $minScore
       fromYear: $fromYear
       toYear: $toYear
+      genre: $genre
     ) {
       nextCursor
       items {
@@ -116,6 +120,7 @@ const SEARCH_MINE = graphql(`
       title
       posterUrl(size: MEDIUM)
       onDisc
+      genres
       ...ScoreFields
       availableOn {
         ...ServiceLogo
@@ -141,6 +146,7 @@ const SEARCH_ALL = graphql(`
       title
       posterUrl(size: MEDIUM)
       onDisc
+      genres
       ...ScoreFields
       availableOn {
         ...ServiceLogo
@@ -185,6 +191,29 @@ const DECADES = [
   { value: "-1969", label: "Before 1970" },
 ];
 
+/**
+ * Genres, as the server's one list for films and series. A few TMDB tags for
+ * one kind only, which the label says, so an empty Series list isn't a puzzle.
+ */
+const GENRES: { value: Genre | ""; label: string }[] = [
+  { value: "", label: "Any genre" },
+  { value: "ACTION", label: "Action & adventure" },
+  { value: "ANIMATION", label: "Animation" },
+  { value: "COMEDY", label: "Comedy" },
+  { value: "CRIME", label: "Crime" },
+  { value: "DOCUMENTARY", label: "Documentary" },
+  { value: "DRAMA", label: "Drama" },
+  { value: "FAMILY", label: "Family & kids" },
+  { value: "HORROR", label: "Horror (films)" },
+  { value: "MUSIC", label: "Music (films)" },
+  { value: "MYSTERY", label: "Mystery & thriller" },
+  { value: "REALITY", label: "Reality (series)" },
+  { value: "ROMANCE", label: "Romance (films)" },
+  { value: "SCIFI", label: "Sci-fi & fantasy" },
+  { value: "WAR", label: "War & history" },
+  { value: "WESTERN", label: "Western" },
+];
+
 /** A DECADES value as the filters' year range. */
 function yearRange(value: string): { fromYear: number | null; toYear: number | null } {
   const [from, to] = value.split("-");
@@ -209,10 +238,43 @@ export function WhatsOnPage() {
   const [sort, setSort] = useState<CatalogSort>("POPULAR");
   const [minScore, setMinScore] = useState("");
   const [decade, setDecade] = useState("");
+  const [genre, setGenre] = useState<Genre | "">("");
   const titleFilters: TitleFilters = {
     minScore: minScore ? Number(minScore) : null,
     ...yearRange(decade),
+    genre: genre || null,
   };
+  // The filters narrowing the list, by name - for the empty-result hint.
+  const filtersOn = [
+    minScore && `Score ${SCORES.find((o) => o.value === minScore)?.label}`,
+    genre && `Genre: ${GENRES.find((o) => o.value === genre)?.label}`,
+    decade && `Released: ${DECADES.find((o) => o.value === decade)?.label}`,
+  ].filter((f): f is string => Boolean(f));
+  // The same, as short as the folded button can say them: "Western, 8+".
+  const filtersShort = [
+    genre && GENRES.find((o) => o.value === genre)?.label.replace(/ \((films|series)\)$/, ""),
+    minScore && SCORES.find((o) => o.value === minScore)?.label,
+    decade && DECADES.find((o) => o.value === decade)?.label,
+  ].filter((f): f is string => Boolean(f));
+  const [narrowOpen, setNarrowOpen] = useState(false);
+  const narrowId = useId();
+  const resetFilters = () => {
+    setMinScore("");
+    setGenre("");
+    setDecade("");
+  };
+  // A title in the wrong genre, or with too few votes for a score, just
+  // doesn't show: when a list comes up empty, say which filters are on.
+  const filterHint = filtersOn.length > 0 && (
+    <span className="catalog__filter-hint">
+      {" "}
+      Filtered by {filtersOn.join(", ")} - if a title you expect is missing, set{" "}
+      {filtersOn.length === 1 ? "it" : "them"} back to Any.{" "}
+      <button type="button" className="link-button" onClick={resetFilters}>
+        Set filters to Any
+      </button>
+    </span>
+  );
   const [openId, setOpenId] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [text, setText] = useState("");
@@ -359,34 +421,70 @@ export function WhatsOnPage() {
         </div>
         <BrowseFilters filters={filters} />
         <div className="catalog__options">
-          <label className="catalog__sort">
+          {/* On a phone the filters fold behind this, which names the ones
+              set, so a filter can't hide in a closed panel unnoticed. Hidden
+              at wider widths, where everything fits on the row. */}
+          <button
+            type="button"
+            className="catalog__narrow-toggle"
+            aria-expanded={narrowOpen}
+            aria-controls={narrowId}
+            onClick={() => setNarrowOpen(!narrowOpen)}
+          >
+            Narrow: {filtersShort.length > 0 ? filtersShort.join(", ") : "Any"}
+            <span aria-hidden="true"> ▾</span>
+          </button>
+          <div
+            id={narrowId}
+            className="catalog__narrow"
+            data-open={narrowOpen}
+            role="group"
+            aria-label="Score, genre and year"
+          >
+            {/* TMDB's user score, genre, and when it first came out - each
+                list and search narrowed to match. */}
+            <label className="catalog__sort">
+              Score
+              <select value={minScore} onChange={(e) => setMinScore(e.target.value)}>
+                {SCORES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="catalog__sort">
+              Genre
+              <select value={genre} onChange={(e) => setGenre(e.target.value as Genre | "")}>
+                {GENRES.map((g) => (
+                  <option key={g.value} value={g.value}>
+                    {g.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="catalog__sort">
+              Released
+              <select value={decade} onChange={(e) => setDecade(e.target.value)}>
+                {DECADES.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {/* Last, and apart: the filters decide what's in the list, this its
+              order. */}
+          <span className="catalog__pipe" aria-hidden="true">
+            |
+          </span>
+          <label className="catalog__sort catalog__sort--order">
             Sort
             <select value={sort} onChange={(e) => setSort(e.target.value as CatalogSort)}>
               {SORTS.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          {/* TMDB's user score, and when it first came out - each list and
-              search narrowed to match. */}
-          <label className="catalog__sort">
-            Score
-            <select value={minScore} onChange={(e) => setMinScore(e.target.value)}>
-              {SCORES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="catalog__sort">
-            Released
-            <select value={decade} onChange={(e) => setDecade(e.target.value)}>
-              {DECADES.map((d) => (
-                <option key={d.value} value={d.value}>
-                  {d.label}
                 </option>
               ))}
             </select>
@@ -413,6 +511,7 @@ export function WhatsOnPage() {
                 </button>
               </>
             )}
+            {!search.loading && results.length === 0 && filterHint}
           </p>
           <ul className="shelf__grid">
             {watchlist}
@@ -435,7 +534,10 @@ export function WhatsOnPage() {
           {loading && <p className="state">Loading what's on…</p>}
           {error && <p className="state state--error">{error.message}</p>}
           {!loading && !error && items.length === 0 && (
-            <p className="state">Nothing here yet for this combination.</p>
+            <p className="state">
+              Nothing here yet for this combination.
+              {filterHint}
+            </p>
           )}
           <ul className="shelf__grid">
             {watchlist}

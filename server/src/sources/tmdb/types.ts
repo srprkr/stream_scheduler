@@ -16,6 +16,9 @@ export interface TmdbTvListItem {
   first_air_date: string;
   vote_average?: number;
   vote_count?: number;
+  /** On list and search results; details carry `genres` instead. */
+  genre_ids?: number[];
+  genres?: { id: number }[];
 }
 
 export interface TmdbMovieListItem {
@@ -27,6 +30,9 @@ export interface TmdbMovieListItem {
   release_date: string;
   vote_average?: number;
   vote_count?: number;
+  /** On list and search results; details carry `genres` instead. */
+  genre_ids?: number[];
+  genres?: { id: number }[];
 }
 
 /**

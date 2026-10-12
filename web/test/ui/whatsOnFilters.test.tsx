@@ -37,6 +37,7 @@ const catalog = (kind: "SERIES" | "MOVIE", titles: string[]) => ({
       minScore: null,
       fromYear: null,
       toYear: null,
+      genre: null,
     },
   },
   result: {
@@ -79,7 +80,7 @@ const catalog = (kind: "SERIES" | "MOVIE", titles: string[]) => ({
 const noDiscs = (kind: "SERIES" | "MOVIE") => ({
   request: {
     query: DiscCatalogDocument,
-    variables: { kind, sort: "POPULAR", minScore: null, fromYear: null, toYear: null },
+    variables: { kind, sort: "POPULAR", minScore: null, fromYear: null, toYear: null, genre: null },
   },
   result: {
     data: { discCatalog: { __typename: "CatalogPage" as const, nextCursor: null, items: [] } },

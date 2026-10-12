@@ -10,6 +10,8 @@
  * later.
  */
 
+import type { Genre } from "../genres.js";
+
 export type MediaKind = "MOVIE" | "SERIES";
 
 /** Catalogue order, mirroring the GraphQL CatalogSort enum. */
@@ -71,6 +73,8 @@ export interface MediaRecord {
   score: { average: number; votes: number } | null;
   /** First release (a series' first air date). Null when unknown. */
   releaseYear: number | null;
+  /** TMDB's genre ids, from its film or TV list by `kind` (genres.ts maps them). */
+  genreIds: number[];
   /**
    * True when built from a search result, which carries no detail-only
    * fields: trailer, runtimeMinutes and seasonCount are unknown, not null.
@@ -136,6 +140,7 @@ export interface CatalogFilters {
   minScore: number | null;
   fromYear: number | null;
   toYear: number | null;
+  genre: Genre | null;
 }
 
 export interface CatalogQuery extends CatalogFilters {

@@ -123,6 +123,19 @@ describe("GraphQL layer", () => {
     });
   });
 
+  it("reports each title's genres, and filters a catalogue by one", async () => {
+    // Netflix series: The Quiet Harbor (drama, mystery), The Understudy (drama).
+    const { data, errors } = await run(`{
+      catalog(providerSlugs: ["netflix"], kind: SERIES, genre: MYSTERY) {
+        items { title genres }
+      }
+    }`);
+    expect(errors).toBeUndefined();
+    expect(data).toEqual({
+      catalog: { items: [{ title: "The Quiet Harbor", genres: ["DRAMA", "MYSTERY"] }] },
+    });
+  });
+
   it("counts days in the caller's timezone", async () => {
     const { data } = await run(`{ releases(first: 1) { daysUntilRelease } }`);
     expect(data).toEqual({ releases: [{ daysUntilRelease: 3 }] });

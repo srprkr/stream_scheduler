@@ -16,6 +16,7 @@ import type {
   VideoRecord,
 } from "../types.js";
 import { addDays, isoDate } from "../../dates.js";
+import { genreIds } from "../../genres.js";
 import type { TmdbClient } from "./client.js";
 import { DISC_NETWORKS, EXCEPTIONS, seriesOnDisc } from "./discs.js";
 import {
@@ -120,6 +121,8 @@ const SCORE_VOTES = 50;
  * Collected by name, so a parameter two rules both set - a vote floor, a
  * latest date - is sent once, at the stricter value.
  *
+ * `genres` are the TMDB ids of the genre asked for, for this kind of title.
+ *
  * `dated` is the first-release date field; `newest` the one "newest" sorts
  * on, which for films out on disc is their disc date instead - a date the
  * caller already caps at today, hence `newestCapped`.
@@ -132,7 +135,8 @@ function discoverOrder(
     newest = dated,
     newestCapped = false,
     voteFloor = 0,
-  }: { newest?: string; newestCapped?: boolean; voteFloor?: number } = {},
+    genres = [],
+  }: { newest?: string; newestCapped?: boolean; voteFloor?: number; genres?: number[] } = {},
 ): string {
   let votes = voteFloor;
   let sort: string;
@@ -166,6 +170,8 @@ function discoverOrder(
   if (votes > 0) params.push(`vote_count.gte=${votes}`);
   if (query.minScore !== null) params.push(`vote_average.gte=${query.minScore}`);
   if (query.fromYear !== null) params.push(`${dated}.gte=${query.fromYear}-01-01`);
+  // Any of the genre's ids: one app genre can be two of TMDB's.
+  if (genres.length > 0) params.push(`with_genres=${genres.join("|")}`);
   for (const [field, date] of latest) params.push(`${field}.lte=${date}`);
   return params.join("&");
 }
@@ -486,9 +492,12 @@ export class TmdbSource implements CatalogSource {
       .flatMap((c) => c.watchProviderIds)
       .sort((a, b) => a - b);
     if (providerIds.length === 0) return { items: [], nextPage: null };
+    // A genre TMDB doesn't have for this kind - TV "Horror" - matches nothing.
+    const genres = query.genre ? genreIds(query.kind, query.genre) : [];
+    if (query.genre && genres.length === 0) return { items: [], nextPage: null };
 
     const dated = query.kind === "MOVIE" ? "primary_release_date" : "first_air_date";
-    const order = discoverOrder(query, dated, isoDate(this.now()));
+    const order = discoverOrder(query, dated, isoDate(this.now()), { genres });
     const filters =
       `with_watch_providers=${providerIds.join("|")}&watch_region=${WATCH_REGION}` +
       `&with_watch_monetization_types=flatrate&${order}&page=${query.page}`;
@@ -519,13 +528,16 @@ export class TmdbSource implements CatalogSource {
   async listDiscCatalog(query: DiscCatalogQuery): Promise<CatalogPageRecord> {
     const today = isoDate(this.now());
     const tracked = PROVIDER_CONFIGS.flatMap((c) => c.watchProviderIds).sort((a, b) => a - b);
-    if (query.kind === "SERIES") return this.discSeries(query, today, tracked);
+    const genres = query.genre ? genreIds(query.kind, query.genre) : [];
+    if (query.genre && genres.length === 0) return { items: [], nextPage: null };
+    if (query.kind === "SERIES") return this.discSeries(query, today, tracked, genres);
     // Years are first releases; "newest" is newest out on disc, not newest
     // in cinemas, and release_date - the disc date - is capped below.
     const order = discoverOrder(query, "primary_release_date", today, {
       newest: "release_date",
       newestCapped: true,
       voteFloor: DISC_VOTE_FLOOR,
+      genres,
     });
     const body = await this.client.get<TmdbPage<TmdbMovieListItem>>(
       `/discover/movie?region=${WATCH_REGION}&with_release_type=${PHYSICAL_RELEASE}` +
@@ -551,9 +563,13 @@ export class TmdbSource implements CatalogSource {
     query: DiscCatalogQuery,
     today: string,
     tracked: readonly number[],
+    genres: number[],
   ): Promise<CatalogPageRecord> {
     const networks = [...DISC_NETWORKS.keys()].sort((a, b) => a - b);
-    const order = discoverOrder(query, "first_air_date", today, { voteFloor: DISC_VOTE_FLOOR });
+    const order = discoverOrder(query, "first_air_date", today, {
+      voteFloor: DISC_VOTE_FLOOR,
+      genres,
+    });
     const body = await this.client.get<TmdbPage<TmdbTvListItem>>(
       `/discover/tv?with_networks=${networks.join("|")}&watch_region=${WATCH_REGION}` +
         `&without_watch_providers=${tracked.join("|")}` +

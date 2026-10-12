@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { passesFilters, scoreText, votesText } from "../../src/lib/score";
 
-const any = { minScore: null, fromYear: null, toYear: null };
+const any = { minScore: null, fromYear: null, toYear: null, genre: null };
 
 describe("scoreText", () => {
   it("shows one decimal, and nothing on too few votes to trust", () => {
@@ -37,5 +37,13 @@ describe("passesFilters", () => {
     expect(passesFilters(heat, { ...any, fromYear: 1990, toYear: 1999 })).toBe(true);
     expect(passesFilters(heat, { ...any, fromYear: 2000, toYear: 2009 })).toBe(false);
     expect(passesFilters({ releaseYear: null }, { ...any, toYear: 1969 })).toBe(false);
+  });
+});
+
+describe("passesFilters by genre", () => {
+  it("keeps titles of the genre, and drops ones with none known", () => {
+    expect(passesFilters({ genres: ["CRIME", "DRAMA"] }, { ...any, genre: "CRIME" })).toBe(true);
+    expect(passesFilters({ genres: ["COMEDY"] }, { ...any, genre: "CRIME" })).toBe(false);
+    expect(passesFilters({}, { ...any, genre: "CRIME" })).toBe(false);
   });
 });

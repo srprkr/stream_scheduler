@@ -46,6 +46,7 @@ const whatsOnMocks = [
         minScore: null,
         fromYear: null,
         toYear: null,
+        genre: null,
       },
     },
     result: { data: { catalog: page([film("movie:1", "Heat", [netflix])]) } },
@@ -60,6 +61,7 @@ const whatsOnMocks = [
         minScore: null,
         fromYear: null,
         toYear: null,
+        genre: null,
       },
     },
     result: { data: { catalog: page([]) } },
@@ -67,14 +69,28 @@ const whatsOnMocks = [
   {
     request: {
       query: DiscCatalogDocument,
-      variables: { kind: "MOVIE", sort: "POPULAR", minScore: null, fromYear: null, toYear: null },
+      variables: {
+        kind: "MOVIE",
+        sort: "POPULAR",
+        minScore: null,
+        fromYear: null,
+        toYear: null,
+        genre: null,
+      },
     },
     result: { data: { discCatalog: page([film("movie:2", "Paper Lanterns")]) } },
   },
   {
     request: {
       query: DiscCatalogDocument,
-      variables: { kind: "SERIES", sort: "POPULAR", minScore: null, fromYear: null, toYear: null },
+      variables: {
+        kind: "SERIES",
+        sort: "POPULAR",
+        minScore: null,
+        fromYear: null,
+        toYear: null,
+        genre: null,
+      },
     },
     result: {
       data: {
@@ -144,9 +160,16 @@ describe("What's On: On disc", () => {
   });
 });
 
-const hit = (id: string, title: string, onDisc: boolean, availableOn: (typeof netflix)[] = []) => ({
+const hit = (
+  id: string,
+  title: string,
+  onDisc: boolean,
+  availableOn: (typeof netflix)[] = [],
+  genres: string[] = [],
+) => ({
   ...film(id, title, availableOn),
   onDisc,
+  genres,
 });
 
 const searchMocks = [
@@ -174,6 +197,22 @@ const searchMocks = [
         searchMedia: [
           hit("movie:8", "Toonami: The Movie", true),
           hit("movie:9", "Toonami Rewind", false),
+        ],
+      },
+    },
+  },
+];
+
+/** Everywhere search results tagged with genres, for the genre filter to narrow. */
+const genreSearchMocks = [
+  ...whatsOnMocks,
+  {
+    request: { query: SearchEverywhereDocument, variables: { query: "toonami" } },
+    result: {
+      data: {
+        searchMedia: [
+          hit("movie:8", "Toonami: The Movie", true, [], ["ACTION"]),
+          hit("movie:9", "Toonami Rewind", false, [], ["COMEDY"]),
         ],
       },
     },
@@ -215,6 +254,19 @@ describe("What's On: search, Selected or Everywhere", () => {
     expect(
       within(tile("Paper Lanterns")).getByRole("img", { name: "On disc" }),
     ).toBeInTheDocument();
+  });
+
+  it("narrows search results to the chosen genre", async () => {
+    const user = userEvent.setup();
+    renderApp(<WhatsOnPage />, { mocks: genreSearchMocks, route: "/whats-on" });
+    await screen.findByText("Paper Lanterns");
+    await user.click(selectedOnly());
+    await user.selectOptions(screen.getByRole("combobox", { name: "Genre" }), "Comedy");
+    await user.type(searchBox(), "toonami");
+
+    expect(await screen.findByText(/1 result for “toonami” everywhere/)).toBeInTheDocument();
+    expect(screen.getByText("Toonami Rewind")).toBeInTheDocument();
+    expect(screen.queryByText("Toonami: The Movie")).not.toBeInTheDocument();
   });
 
   it("offers Everywhere when Selected finds nothing, and remembers the choice", async () => {

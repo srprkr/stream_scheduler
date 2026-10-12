@@ -1,3 +1,5 @@
+import type { Genre } from "../generated/graphql";
+
 /** TMDB's user score, as the API sends it. */
 export interface Score {
   average: number;
@@ -27,11 +29,12 @@ export function votesText(votes: number): string {
   return `${votes.toLocaleString()} ${votes === 1 ? "vote" : "votes"}`;
 }
 
-/** What's On's score and decade filters. Null means any. */
+/** What's On's score, decade and genre filters. Null means any. */
 export interface TitleFilters {
   minScore: number | null;
   fromYear: number | null;
   toYear: number | null;
+  genre: Genre | null;
 }
 
 /**
@@ -40,9 +43,10 @@ export interface TitleFilters {
  * or too few votes fails a filter on it, as it does upstream.
  */
 export function passesFilters(
-  item: { score?: Score | null; releaseYear?: number | null },
-  { minScore, fromYear, toYear }: TitleFilters,
+  item: { score?: Score | null; releaseYear?: number | null; genres?: readonly Genre[] },
+  { minScore, fromYear, toYear, genre }: TitleFilters,
 ): boolean {
+  if (genre !== null && !(item.genres ?? []).includes(genre)) return false;
   if (minScore !== null) {
     const s = item.score;
     if (!s || s.votes < FILTER_SCORE_VOTES || s.average < minScore) return false;

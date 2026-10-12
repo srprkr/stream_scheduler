@@ -39,12 +39,12 @@ export function createCache(): InMemoryCache {
           catalog: {
             // One cached list per filter combination. `after` is left out on
             // purpose: every page of the same list lands in the same entry.
-            keyArgs: ["providerSlugs", "kind", "sort", "minScore", "fromYear", "toYear"],
+            keyArgs: ["providerSlugs", "kind", "sort", "minScore", "fromYear", "toYear", "genre"],
             merge: appendPages,
           },
           // Titles out on disc page the same way: one list per kind, order and filters.
           discCatalog: {
-            keyArgs: ["kind", "sort", "minScore", "fromYear", "toYear"],
+            keyArgs: ["kind", "sort", "minScore", "fromYear", "toYear", "genre"],
             merge: appendPages,
           },
         },

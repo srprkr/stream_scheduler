@@ -17,6 +17,7 @@ import type {
 } from "./types.js";
 
 import { addDays, isoDate } from "../dates.js";
+import { genreIds } from "../genres.js";
 
 /**
  * An in-memory CatalogSource: what the tests run against, and what
@@ -67,6 +68,7 @@ const MEDIA: MediaRecord[] = [
     seasonCount: 2,
     score: { average: 7.9, votes: 1200 },
     releaseYear: 2024,
+    genreIds: [18, 9648],
   },
   {
     id: "media:2",
@@ -81,6 +83,7 @@ const MEDIA: MediaRecord[] = [
     seasonCount: null,
     score: { average: 6.4, votes: 310 },
     releaseYear: 2026,
+    genreIds: [35],
   },
   {
     id: "media:3",
@@ -95,6 +98,7 @@ const MEDIA: MediaRecord[] = [
     seasonCount: 1,
     score: null,
     releaseYear: 2026,
+    genreIds: [80, 18],
   },
   {
     id: "media:4",
@@ -108,6 +112,7 @@ const MEDIA: MediaRecord[] = [
     seasonCount: null,
     score: { average: 5.8, votes: 40 },
     releaseYear: 2019,
+    genreIds: [27, 53],
   },
   {
     id: "media:5",
@@ -122,6 +127,7 @@ const MEDIA: MediaRecord[] = [
     seasonCount: 3,
     score: { average: 8.3, votes: 5400 },
     releaseYear: 2021,
+    genreIds: [18],
   },
   {
     id: "media:6",
@@ -136,6 +142,7 @@ const MEDIA: MediaRecord[] = [
     seasonCount: null,
     score: { average: 7.4, votes: 880 },
     releaseYear: 1998,
+    genreIds: [35, 18],
   },
 
   {
@@ -150,6 +157,7 @@ const MEDIA: MediaRecord[] = [
     seasonCount: 4,
     score: { average: 8.1, votes: 640 },
     releaseYear: 2003,
+    genreIds: [18, 10751],
   },
 ];
 
@@ -186,6 +194,9 @@ const RELEASE_PLAN: ReadonlyArray<readonly [string, string, number, number | nul
 
 /** The score and year filters, as TMDB's discover applies them. */
 function passes(m: MediaRecord, f: CatalogFilters): boolean {
+  if (f.genre !== null && !genreIds(m.kind, f.genre).some((id) => m.genreIds.includes(id))) {
+    return false;
+  }
   if (f.minScore !== null && (m.score?.average ?? 0) < f.minScore) return false;
   if (f.fromYear !== null && (m.releaseYear ?? 0) < f.fromYear) return false;
   if (f.toYear !== null && (m.releaseYear ?? Infinity) > f.toYear) return false;

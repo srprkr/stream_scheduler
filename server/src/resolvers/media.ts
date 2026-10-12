@@ -1,5 +1,6 @@
 import type { Context } from "../context.js";
 import { addDays, isoDate } from "../dates.js";
+import { genresOf } from "../genres.js";
 import type { MediaRecord, ProviderRecord, ReleaseRecord } from "../sources/types.js";
 import type {
   MediaItemResolvers,
@@ -78,6 +79,8 @@ async function upcoming(m: MediaRecord, _a: unknown, ctx: Context): Promise<Rele
  * interface declares, implementations are literally identical.
  */
 const shared = {
+  // Summaries carry genre ids too, so this needs no detail fetch.
+  genres: (m) => genresOf(m.kind, m.genreIds),
   posterUrl: (m, args, ctx) => ctx.source.imageUrl(m.posterPath, args.size ?? "MEDIUM"),
   backdropUrl: (m, args, ctx) => ctx.source.imageUrl(m.backdropPath, args.size ?? "LARGE"),
   trailer: async (m, _a, ctx) => (await full(m, ctx)).trailer,

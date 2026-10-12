@@ -97,7 +97,7 @@ describe("TmdbSource.searchMedia", () => {
 });
 
 const NOW = () => new Date("2026-10-08T12:00:00Z");
-const noFilters: CatalogFilters = { minScore: null, fromYear: null, toYear: null };
+const noFilters: CatalogFilters = { minScore: null, fromYear: null, toYear: null, genre: null };
 function films(ids: number[], totalPages = 1): TmdbPage<TmdbMovieListItem> {
   return {
     page: 1,
@@ -156,6 +156,24 @@ describe("TmdbSource.listCatalog: sorts and filters", () => {
     return client.calls;
   };
 
+  it("asks for any of a genre's TMDB ids", async () => {
+    await list({ sort: "POPULAR", genre: "ACTION" }, "sort_by=popularity.desc&with_genres=28|12");
+  });
+
+  it("makes no request for a genre the kind doesn't have", async () => {
+    const client = fakeClient({});
+    const page = await new TmdbSource(client, NOW).listCatalog({
+      ...noFilters,
+      genre: "HORROR",
+      providerSlugs: ["netflix"],
+      kind: "SERIES",
+      sort: "POPULAR",
+      page: 1,
+    });
+    expect(page).toEqual({ items: [], nextPage: null });
+    expect(client.calls).toEqual([]);
+  });
+
   it("sorts oldest first among titles with enough votes to be known", async () => {
     await list({ sort: "OLDEST" }, "sort_by=primary_release_date.asc&vote_count.gte=50");
   });
@@ -199,6 +217,7 @@ describe("TmdbSource.listDiscCatalog: sorts and filters", () => {
       kind: "MOVIE",
       sort: "NEWEST",
       page: 1,
+      genre: null,
       minScore: null,
       fromYear: 1990,
       toYear: 1999,
