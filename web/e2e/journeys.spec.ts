@@ -69,3 +69,45 @@ test.describe("journeys", () => {
     await fresh.close();
   });
 });
+
+test("the question mark in the top bar opens How it works", async ({ page }, info) => {
+  await page.goto("/");
+  // On a phone it's in the menu.
+  if (info.project.name === "phone") await page.getByRole("button", { name: "Open menu" }).click();
+  await page.getByRole("link", { name: "How it works" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "How it works" })).toBeVisible();
+  // Picking it closed the menu; open it again to see it marked as the page.
+  if (info.project.name === "phone") await page.getByRole("button", { name: "Open menu" }).click();
+  await expect(page.getByRole("link", { name: "How it works" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+});
+
+test("below tablet width, the links fold into a menu the two bars open", async ({ page }, info) => {
+  await page.goto("/");
+  const insights = page.getByRole("link", { name: "Insights" });
+  const menu = page.getByRole("button", { name: /menu$/ });
+  if (info.project.name === "desktop") {
+    await expect(menu).toBeHidden();
+    await expect(insights).toBeVisible();
+    return;
+  }
+  await expect(insights).toBeHidden();
+  await menu.click();
+  await expect(page.getByRole("button", { name: "Close menu" })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  // The two bars have crossed into an X.
+  const bars = page.locator(".menu-toggle__bar");
+  await expect(bars.first()).toHaveCSS("transform", /matrix\(0\.7/);
+  await insights.click();
+  await expect(page).toHaveURL(/\/insights$/);
+  await expect(insights).toBeHidden();
+
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await page.keyboard.press("Escape");
+  await expect(insights).toBeHidden();
+  await expect(page.getByRole("button", { name: "Open menu" })).toBeFocused();
+});

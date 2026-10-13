@@ -18,26 +18,68 @@
   }
 }
 
+// Below tablet width the links fold into a menu behind the two-bar button.
+$menu-fold: 767px;
+
 .topbar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
   margin-bottom: 32px;
+}
 
-  // A phone has room for the brand, three links and the gear only with
-  // tighter spacing - at the desktop gaps the gear ran off the screen.
-  @media (max-width: 480px) {
-    gap: 12px;
+// Two bars that cross into an X while the menu is open: each slides to the
+// middle and turns 45 degrees, one each way.
+.menu-toggle {
+  display: none;
+  position: relative;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--text);
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
 
-    .brand {
-      font-size: 1.05rem;
+  @media (max-width: $menu-fold) {
+    display: block;
+  }
+
+  &__bar {
+    position: absolute;
+    left: 10px;
+    width: 20px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transition: transform 200ms ease;
+
+    &:first-child {
+      top: 15px;
     }
-    .nav {
-      gap: 12px;
+    &:last-child {
+      top: 23px;
     }
-    .nav__settings {
-      margin-left: 0;
+  }
+
+  &[aria-expanded="true"] &__bar:first-child {
+    transform: translateY(4px) rotate(45deg);
+  }
+  &[aria-expanded="true"] &__bar:last-child {
+    transform: translateY(-4px) rotate(-45deg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--soon);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__bar {
+      transition: none;
     }
   }
 }
@@ -61,8 +103,72 @@
   align-items: center;
   gap: 20px;
 
-  // The gear, last in the row and so in the top-right corner.
-  &__settings {
+  // The menu: a panel under the bar, one link a line, the icons with their
+  // names written out.
+  @media (max-width: $menu-fold) {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    left: 0;
+    z-index: 20;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgb(0 0 0 / 0.4);
+
+    &[data-open="false"] {
+      display: none;
+    }
+
+    .nav__link,
+    .nav__icon {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: auto;
+      height: auto;
+      margin: 0;
+      padding: 10px 12px;
+      font-weight: 600;
+      text-decoration: none;
+      border: 0;
+      border-radius: 8px;
+    }
+
+    // The current page, as a tint: the bar's underline would run the
+    // panel's whole width.
+    .nav__link[aria-current],
+    .nav__icon[aria-current] {
+      color: var(--text);
+      background: var(--bg);
+      border-bottom: 0;
+    }
+
+    // The sections first, then a rule, then How it works and Settings - the
+    // same order as the bar, so no reordering is needed.
+    .nav__link + .nav__icon {
+      margin-top: 4px;
+      border-top: 1px solid var(--border);
+      border-radius: 0 0 8px 8px;
+    }
+  }
+
+  // Shown only in the menu, beside each icon.
+  &__icon-label {
+    display: none;
+
+    @media (max-width: $menu-fold) {
+      display: inline;
+    }
+  }
+
+  // The question mark and the gear, last in the row and so in the top-right
+  // corner.
+  &__icon {
     display: grid;
     place-items: center;
     width: 32px;
@@ -79,6 +185,10 @@
       stroke-width: 1.8;
       stroke-linecap: round;
       stroke-linejoin: round;
+    }
+    // The question mark's dot: filled, where the rest is outline.
+    .nav__icon-dot {
+      fill: currentColor;
     }
     &:hover,
     &[aria-current] {

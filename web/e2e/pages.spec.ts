@@ -16,6 +16,7 @@ const PAGES = [
   { path: "/watchlist", name: "watchlist", ready: "Renewals" },
   { path: "/insights", name: "insights", ready: "Paths forward" },
   { path: "/settings", name: "settings", ready: "Backup" },
+  { path: "/how-it-works", name: "how-it-works", ready: "Coming soon." },
 ];
 
 test.beforeEach(async ({ page }) => {
@@ -155,11 +156,12 @@ test("Sort comes after the filters, which fold on a phone", async ({ page }, inf
   if (info.project.name === "desktop") {
     await expect(fold).toBeHidden();
     const released = (await page.getByRole("combobox", { name: "Released" }).boundingBox())!;
+    // Filters, then the pipe, then Sort, on one line.
+    const pipe = (await page.locator(".catalog__pipe").boundingBox())!;
     const sortBox = (await sort.boundingBox())!;
-    expect(sortBox.x).toBeGreaterThan(released.x);
-    // At the row's right end, not just after the filters.
-    const row = (await page.locator(".catalog__options").boundingBox())!;
-    expect(row.x + row.width - (sortBox.x + sortBox.width)).toBeLessThanOrEqual(2);
+    expect(pipe.x).toBeGreaterThan(released.x + released.width);
+    expect(sortBox.x).toBeGreaterThan(pipe.x);
+    expect(Math.abs(sortBox.y - released.y)).toBeLessThanOrEqual(4);
   } else {
     await expect(genre).toBeHidden();
     await fold.click();
