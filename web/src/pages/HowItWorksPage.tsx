@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+
 /**
  * How the app works, in Sean's words: a placeholder until he writes it.
  *
@@ -14,33 +16,44 @@ export function HowItWorksPage() {
       <header className="masthead">
         <h1>How it works</h1>
       </header>
-      <main>
-        <p>This web app has three purposes.</p>
+      <section>
+        <h2>This web app has three purposes.</h2>
         <ol>
-          <li>Empower users to outright <a href="/home">own the content</a> they consume.</li>
-          <li>Serve as a one-stop shop that allows users to <a href="/whats-on">intentionally search and choose</a> which content they <a href="/coming-soon">want to watch</a> (instead of relying on algorithms to make them watch mediocre content).</li>
-          <li>Help users <a href="/insights">curate plans to pause streaming services</a> they won't be using for the month and use the savings fill the missing watch time with physical content they actually own (whose future ownership cannot be revoked).</li>
+          <li>Empower users to outright <Link to="/">own the content</Link> they consume.</li>
+          <li>Serve as a one-stop shop that allows users to <Link to="/whats-on">intentionally search and choose</Link> which content they <Link to="/coming-soon">want to watch</Link> (instead of relying on algorithms to make them watch mediocre content).</li>
+          <li>Help users <Link to="/insights">curate plans to pause streaming services</Link> they won't be using for the month and use the savings to fill the missing watch time with physical content they actually own (whose future ownership cannot be revoked).</li>
         </ol>
         <p>
-          Streaming used to be a refuge from high cable bills and content saturated with ads. As streaming services got more of a stranglehold on the market share (and intellectual property), this sector became plagued with the same issues the medium they replaced (cable/satelite tv) had.
+          Streaming used to be a refuge from high cable bills and content saturated with ads. As streaming services got more of a stranglehold on the market share (and intellectual property), this sector became plagued with the same issues the medium they replaced (cable/satellite tv) had.
         </p>
         <p>
           These tech companies feel entitled to our money and data. It's time to prove to them (and ourselves) that this is not the case.
         </p>
-        <h2>Coming soon:</h2>
+
+        <h2>Ground rules (the app handles these for you)</h2>
+          <ul>
+            <li>One service per month</li>
+            <li>Cancel the day you subscribe. This prevents monthly autorenewal and you keep access until that month ends</li>
+            <li>Plan waits for the entire season to be available for streaming before paying for it.</li>
+            <li>The monthly watch time you set sizes everything</li>
+            <li>Renewals give reminders in a calendar file</li>
+          </ul>
+
+
+        <h2>Coming soon</h2>
           <ul>
             <li>
-              search content offered by the free streaming services (which require ads) like, Tubi, Plex, and PlutoTV
-          </li>
-          <li>
-            Features the community decides (through Patreon).
-          </li>
-          <li>
-            "Done" status - often an app gets too complicated to be especially useful. While this app will have minor support, I want to hit a stopping point on new features and use donations to pursue other product lines that promote the same goals of tech user privacy and autonomy. If you like this app, you'll love the other apps I have in the works.
-          </li>
-          </ul>
-      </main>
-
+              Search content offered by the free streaming services (which require ads) like Tubi, Plex, and Pluto TV
+            </li>
+            <li>
+              Feature voting for the community to decide what features get built.
+            </li>
+            <li>
+              "Done" status - often an app gets too complicated to be especially useful. While this app will have minor support, I want to hit a stopping point on new features and use donations to pursue other product lines that promote the same goals of tech user privacy and autonomy. If you like this app, you'll love the other apps I have in the works.
+            </li>
+        </ul>
+        
+      </section>
     </>
   );
 }
