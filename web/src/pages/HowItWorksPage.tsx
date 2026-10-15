@@ -19,7 +19,7 @@ export function HowItWorksPage() {
       <section>
         <h2>This web app has three purposes.</h2>
         <ol>
-          <li>Empower users to outright <Link to="/">own the content</Link> they consume.</li>
+          <li>Empower users to outright <Link to="/">own the content</Link> they consume. This means DVD purchases, because digital copy licenses run out and can get revoked.</li>
           <li>Serve as a one-stop shop that allows users to <Link to="/whats-on">intentionally search and choose</Link> which content they <Link to="/coming-soon">want to watch</Link> (instead of relying on algorithms to make them watch mediocre content).</li>
           <li>Help users <Link to="/insights">curate plans to pause streaming services</Link> they won't be using for the month and use the savings to fill the missing watch time with physical content they actually own (whose future ownership cannot be revoked).</li>
         </ol>
@@ -36,12 +36,14 @@ export function HowItWorksPage() {
             <li>Cancel the day you subscribe. This prevents monthly autorenewal and you keep access until that month ends</li>
             <li>Plan waits for the entire season to be available for streaming before paying for it.</li>
             <li>The monthly watch time you set sizes everything</li>
-            <li>Renewals give reminders in a calendar file</li>
+          <li>Renewals give reminders in a calendar file</li>
+          <li>Logins are optional, really. You can export or import you library and watchlist from the settings page. You have the option of privacy. If the data never leaves your browser it can't be read by outside sources.</li>
           </ul>
 
 
         <h2>Coming soon</h2>
-          <ul>
+        <ul>
+            <li>Optional login for cross device saves. Currently you can hand copy exported settings to the various devices and browsers you want to use. The private option will remain available.</li>
             <li>
               Search content offered by the free streaming services (which require ads) like Tubi, Plex, and Pluto TV
             </li>
