@@ -16,7 +16,7 @@ const PAGES = [
   { path: "/watchlist", name: "watchlist", ready: "Renewals" },
   { path: "/insights", name: "insights", ready: "Paths forward" },
   { path: "/settings", name: "settings", ready: "Backup" },
-  { path: "/how-it-works", name: "how-it-works", ready: "Coming soon." },
+  { path: "/how-it-works", name: "how-it-works", ready: "Coming soon" },
 ];
 
 test.beforeEach(async ({ page }) => {

@@ -322,3 +322,37 @@ $menu-fold: 767px;
     flex: none;
   }
 }
+
+// --- how it works ---------------------------------------------------------
+
+// The page's parts as boxes: two to a row on a desktop, the text in each
+// at a readable measure; one above the other below that.
+.how-it-works {
+  display: grid;
+  gap: 24px;
+
+  @media (min-width: 960px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  &__box {
+    font-size: 0.9375rem;
+    line-height: 1.55;
+
+    p {
+      margin: 0 0 12px;
+    }
+    ol,
+    ul {
+      margin: 8px 0 0;
+      padding-left: 1.25em;
+    }
+    li + li {
+      margin-top: 8px;
+    }
+    a {
+      color: var(--text);
+    }
+  }
+}
