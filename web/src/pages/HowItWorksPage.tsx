@@ -19,8 +19,8 @@ export function HowItWorksPage() {
       {/* Each part of the page in its own box: two to a row on a desktop,
           one above the other on a phone. */}
       <div className="how-it-works">
-        <section className="panel purposes__box" aria-labelledby="how-purposes">
-          <h2 id="how-purposes" className="panel__title">
+        <section className="panel purposes__box" aria-labelledby="site-tour">
+          <h2 id="site-tour" className="panel__title">
             What does each part do?
           </h2>
           <ol>
@@ -28,10 +28,10 @@ export function HowItWorksPage() {
               Own/Library - Shows the physical copies the user owns. They can look up titles in the search box and mark it as owned
             </li>
             <li>
-              Want - From any search result or content tile you can mark an item as wanted. This will then be added to the insights page to get the ball rolling on getting you savings to purchase this (and other) media to replace a streaming "rental" with watchtime that you'll now own forever. 
+              Want - From any search result or content tile you can mark an item as wanted. This will then be added to the insights page to get the ball rolling on getting you savings to purchase this (and other) media below a savings ceiling in order to replace a streaming "rental" with watchtime that you'll now own forever. 
             </li>
             <li>
-              Watchlist - Helps you plan "binge months" for streaming exclusive content or stuff that you don't necessarily want to own but would watch when the service it's on resumes for that month.
+              Watchlist - Helps you plan "binge months" for streaming exclusive content or stuff that you don't necessarily want to own but would watch when the service it happens to be on resumes for that month.
             </li>
           </ol>
         </section>
@@ -54,7 +54,7 @@ export function HowItWorksPage() {
             <li>
               Help users <Link to="/insights">curate plans to pause streaming services</Link> they
               won't be using for the month and use the savings to fill the missing watch time with
-              physical content they actually own (whose future ownership cannot be revoked).
+              physical content they actually own (whose future ownership cannot be revoked). Insights shows a ceiling on what to spend on discs and still come out ahead.
             </li>
           </ol>
         </section>
@@ -71,8 +71,10 @@ export function HowItWorksPage() {
             (cable/satellite tv) had.
           </p>
           <p>
-            These tech companies feel entitled to our money and data. It's time to prove to them
-            (and ourselves) that this is not the case.
+            Rent seeking throught subscriptions diminishes the quality of product. If more users have the tools to make a plan and vote with their dollars, companies will be required to improve their product.
+          </p>
+          <p>
+            Sources: The Movie DataBase supplies titles, runtimes, scores, and genres. JustWatch gives streaming sources. Currently only the US is covered on the 8 major streaming services (more to come).
           </p>
         </section>
 
@@ -81,7 +83,9 @@ export function HowItWorksPage() {
             Ground rules (the app handles most of these for you)
           </h2>
           <ul>
-            <li>One service per month</li>
+            <li>No tracking, no affiliate links, if ads are used any user data won't be served to the sponsoring company.</li>
+            <li>Cancellation terms for each streaming service change. Such changes are periodically checked but users are advised to look that over before hitting "pause" themselves.</li>
+            <li>Only subscribe to one service per month</li>
             <li>
               Cancel the day you subscribe. This prevents monthly autorenewal and you keep access
               until that month ends
@@ -90,10 +94,9 @@ export function HowItWorksPage() {
               Plan waits for the entire season to be available for streaming before paying for it.
             </li>
             <li>The monthly watch time you set sizes everything</li>
-            <li>Renewals give a calendar file of reminders for the user to manually "pause" subscriptions.</li>
+            <li><Link to="/watchlist">Renewals give a calendar file</Link> of reminders for the user to manually "pause" subscriptions.</li>
             <li>
-              Logins are optional... really. You can export or import your library and watchlist from
-              the settings page. You have the option of privacy. If the data never leaves your
+              Logins are optional... really. You can export or import your library and watchlist from <Link to="/settings">the settings page</Link>. You have the option of privacy. If the data never leaves your
               browser it can't be read by outside sources.
             </li>
           </ul>
